@@ -34,7 +34,7 @@ namespace CascLibTest
 
 		TEST_METHOD(HashFilename)
 		{
-			auto hash = Hash::lookup3("SPELLS\BONE_CYCLONE_STATE.M2", 0);
+			auto hash = Hash::lookup3("SPELLS\\BONE_CYCLONE_STATE.M2", 0);
 			Assert::AreEqual(0x21F9EFA8u, hash);
 		}
 
