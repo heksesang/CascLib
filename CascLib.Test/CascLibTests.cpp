@@ -14,12 +14,17 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #include "../CascLib/Shmem.hpp"
 
 using namespace Casc;
-
+ 
 namespace CascLibTest
 {
 	TEST_CLASS(CascLibTests)
 	{
 	public:
+
+        TEST_METHOD(LoadContainer)
+        {
+            auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft Beta\)");
+        }
 
 		TEST_METHOD(GetRootFile)
 		{
