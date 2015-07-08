@@ -11,6 +11,18 @@
 
 namespace Casc
 {
+    struct CascIndexRecord
+    {
+    public:
+        typedef std::array<char, 9> key_t;
+
+    public:
+        key_t hash;
+        uint8_t location;
+        uint32_t offset;
+        uint32_t length;
+    };
+
 	/**
 	 * Contains the index of files in the CASC files.
 	 */
@@ -87,22 +99,12 @@ namespace Casc
 			auto data = std::make_unique<char[]>(size);
 			fs.read(data.get(), size);
 
-			for (char *ptr = data.get(), *end = data.get() + size; ptr != end;)
+			for (char *ptr = data.get(), *end = data.get() + size; ptr < end;)
 			{
-				key_t hash;
-				std::copy(ptr, ptr + 9, hash.begin());
-				ptr += hash.size();
+                CascIndexRecord *record = reinterpret_cast<CascIndexRecord*>(ptr);
+                ptr += sizeof(CascIndexRecord);
 
-				uint8_t location = *ptr;
-				ptr += 1;
-
-				uint32_t offset = readBE<uint32_t>(ptr);
-				ptr += sizeof(uint32_t);
-
-				uint32_t length = readLE<uint32_t>(ptr);
-				ptr += sizeof(uint32_t);
-
-				files[hash] = MemoryInfo(location, offset, length);
+                files[record->hash] = MemoryInfo(record->location, readBE<uint32_t>(record->offset), readLE<uint32_t>(record->length));
 			}
 
 			fs.seekg(0x1000 - ((8 + size) % 0x1000), std::ios_base::cur);
