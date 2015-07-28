@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 #include "CascBuffer.hpp"
 
 namespace Casc
@@ -12,15 +13,19 @@ namespace Casc
 	class CascStream : public std::istream
 	{
 		// The underlying buffer which allows direct data streaming.
-		CascBuffer buffer_;
+		std::unique_ptr<CascBuffer> buffer;
 
 	public:
 		/**
 		 * Default constructor.
 		 */
 		CascStream()
-			: std::istream(&buffer_)
+			: buffer(reinterpret_cast<CascBuffer*>(rdbuf())), std::istream(new CascBuffer())
 		{
+			buffer->registerHandlers(
+			{
+				new ZlibHandler<>()
+			});
 		}
 
 		/**
@@ -30,10 +35,19 @@ namespace Casc
 		 * @param offset	the offset where the file starts.
 		 */
 		CascStream(const std::string &filename, size_t offset)
-			: std::istream(&buffer_)
+			: buffer(reinterpret_cast<CascBuffer*>(rdbuf())), std::istream(new CascBuffer())
 		{
+			buffer->registerHandlers(
+			{
+				new ZlibHandler<>()
+			});
 			open(filename, offset);
 		}
+
+		/**
+		* Move constructor.
+		*/
+		CascStream(CascStream&&) = default;
 
 		/**
 		 * Destructor.
@@ -47,13 +61,18 @@ namespace Casc
 		}
 
 		/**
+		* Move operator.
+		*/
+		CascStream& CascStream::operator= (CascStream &&) = default;
+
+		/**
 		 * Opens a file from the currently opened CASC file.
 		 *
 		 * @param offset	the offset where the file starts.
 		 */
 		void open(size_t offset)
 		{
-			buffer_.open(offset);
+			buffer->open(offset);
 		}
 
 		/**
@@ -64,7 +83,7 @@ namespace Casc
 		 */
 		void open(const char *filename, size_t offset)
 		{
-			buffer_.open(filename, offset);
+			buffer->open(filename, offset);
 		}
 
 		/**
@@ -83,7 +102,7 @@ namespace Casc
 		 */
 		void close()
 		{
-			buffer_.close();
+			buffer->close();
 		}
 
 		/**
@@ -93,7 +112,7 @@ namespace Casc
 		 */
 		bool is_open() const
 		{
-			return buffer_.is_open();
+			return buffer->is_open();
 		}
 	};
 }

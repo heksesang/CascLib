@@ -22,6 +22,9 @@
     <Filter Include="Header Files\Helpers">
       <UniqueIdentifier>{211b2e34-31cd-4361-a13e-8704eae7aa96}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Types\Shared">
+      <UniqueIdentifier>{81f00e5d-e659-4b49-8bb9-c2223486936c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CascContainer.hpp">
@@ -71,6 +74,24 @@
     </ClInclude>
     <ClInclude Include="Hash.hpp">
       <Filter>Header Files\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="CascEncoding.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="CascIndexRecord.h">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="CascHandler.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared\ChunkInfo.hpp">
+      <Filter>Header Files\Types\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared\BufferInfo.hpp">
+      <Filter>Header Files\Types\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared\CompressionMode.hpp">
+      <Filter>Header Files\Types\Shared</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

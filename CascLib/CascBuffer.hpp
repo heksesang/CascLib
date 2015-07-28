@@ -7,9 +7,15 @@
 #include <sstream>
 #include <stdint.h>
 #include <vector>
+#include <map>
 #include "zlib.hpp"
 #include "Endian.hpp"
 #include "Hex.hpp"
+#include "CascHandler.hpp"
+#include "Shared/BufferInfo.hpp"
+#include "Shared/ChunkInfo.hpp"
+#include "Shared/CompressionMode.hpp"
+using namespace Casc::Shared;
 
 namespace Casc
 {
@@ -17,36 +23,16 @@ namespace Casc
 	 * A buffer which can be used to read compressed data from CASC file.
 	 * When used with a stream, the stream will be able to transparently output decompressed data.
 	 */
-	class CascBuffer : public std::filebuf
+	template <typename Traits, size_t BufferSize>
+	class BaseCascBuffer : public std::filebuf
 	{
-		/**
-		 * The available compression modes for chunks.
-		 */
-		enum CompressionMode
-		{
-			None = 0x4E,
-			Zlib = 0x5A
-		};
+	public:
+		// Typedefs
+		typedef BufferInfo<typename Traits> BufferInfo;
+		typedef ChunkInfo<typename Traits> ChunkInfo;
+		typedef typename Traits::off_type off_type;
 
-		/**
-		 * Description of a chunk.
-		 */
-		struct Chunk
-		{
-			// The offset of the first byte in the decompressed data.
-			off_type begin;
-
-			// The offset of the last byte in the decompressed data.
-			off_type end;
-
-			// The offset where the compressed data starts.
-			// The base position is this->offset.
-			off_type offset;
-
-			// The size of the compressed data.
-			size_t size;
-		};
-
+	private:
 		// True when the file is properly initialized.
 		// The file is properly initialized once all the headers have been read.
 		bool isInitialized = false;
@@ -60,124 +46,23 @@ namespace Casc
 		// This is where the first header is found.
 		size_t offset = 0;
 
-		// The length of the data.
-		// This includes all headers.
+		// The size of the decompressed file.
 		size_t length = 0;
 
-		// The input buffer for zlib decompression.
-		std::unique_ptr<ZStreamBase::char_t[]> in = nullptr;
-
 		// The buffer containing the decompressed data for the current chunk.
-		std::unique_ptr<ZStreamBase::char_t[]> out = nullptr;
+		std::unique_ptr<char[]> out;
 
-		// The current chunk.
-		Chunk currentChunk;
+		// The buffer to use while buffering.
+		std::unique_ptr<char[]> temp;
+
+        // Currently buffered range
+        BufferInfo currentBuffer;
 
 		// The available chunks.
-		std::vector<Chunk> chunks;
+		std::vector<ChunkInfo> chunks;
 
-		/**
-		 * Read the decompressed data from a chunk into the buffer.
-		 *
-		 * @param chunk the chunk to read.
-		 */
-		void bufferChunk(Chunk &chunk)
-		{
-			isBuffering = true;
-
-			out = std::unique_ptr<ZStreamBase::char_t[]>(readChunk(in.get(), chunk));
-
-			currentChunk = chunk;
-
-			auto beg = reinterpret_cast<char*>(out.get());
-			auto end = reinterpret_cast<char*>(out.get() + (chunk.end - chunk.begin) + 1);
-			auto cur = beg;
-
-			setg(beg, cur, end);
-
-			isBuffering = false;
-		}
-
-		/**
-		 * Read the decompressed data from a chunk.
-		 *
-		 * @param in		the input buffer to use for zlib decompression.
-		 * @param chunk		the chunk to read.
-		 * @return			a smart pointer to the output byte array.
-		 */
-		std::unique_ptr<ZStreamBase::char_t[]> readChunk(ZStreamBase::char_t *in, Chunk& chunk)
-		{
-			size_t avail_in = chunk.size - 1;
-			off_type offset = chunk.offset;
-			size_t avail_out = 0;
-			
-			auto ptr = readChunk(in, avail_in, offset, avail_out);
-
-			chunk.end = chunk.begin + avail_out - 1;
-			
-			return ptr;
-		}
-
-		/**
-		 * Read the decompressed data from a chunk.
-		 *
-		 * @param in		the input buffer to use for zlib decompression.
-		 * @param avail_in	the amount of available input bytes.
-		 * @param offset	the offset of the beginning of data (the position of the compression mode byte).
-		 * @param avail_out	reference to the output variable where the decompressed size will be written.
-		 * @return			a smart pointer to the output byte array.
-		 */
-		std::unique_ptr<ZStreamBase::char_t[]> readChunk(ZStreamBase::char_t *in, size_t avail_in, off_type offset, size_t &avail_out)
-		{
-			auto pos = std::filebuf::seekpos(this->offset + offset);
-			
-			if (pos == std::streamoff(-1))
-			{
-				throw std::exception("Seek failed");
-			}
-
-			CompressionMode mode = (CompressionMode)std::filebuf::sbumpc();
-			return readChunk(mode, in, avail_in, avail_out);
-		}
-
-		/**
-		 * Read the decompressed data from a chunk.
-		 *
-		 * @param mode		the compression mode to use when reading data.
-		 * @param in			the input buffer to use for zlib decompression.
-		 * @param avail_in	the amount of available input bytes.
-		 * @param avail_out	reference to the output variable where the decompressed size will be written.
-		 * @return			a smart pointer to the output byte array.
-		 */
-		std::unique_ptr<ZStreamBase::char_t[]> readChunk(CompressionMode mode, ZStreamBase::char_t *in, size_t avail_in, size_t &avail_out)
-		{
-			if (in == nullptr)
-			{
-				throw std::invalid_argument("in cannot be nullptr");
-			}
-
-			ZStreamBase::char_t *out = nullptr;
-			ZInflateStream stream(in, avail_in);
-
-			switch (mode)
-			{
-			case 0x5A:
-				std::filebuf::xsgetn(reinterpret_cast<char*>(in), avail_in);
-				stream.readAll(&out, avail_out);
-				break;
-
-			case 0x4E:
-				out = new ZStreamBase::char_t[avail_in];
-				std::filebuf::xsgetn(reinterpret_cast<char*>(out), avail_in);
-				avail_out = avail_in;
-				break;
-
-			default:
-				throw std::exception("Invalid compression mode");
-			}
-
-			return std::unique_ptr<ZStreamBase::char_t[]>(out);
-		}
+        // Chunk handlers
+        std::map<char, std::unique_ptr<CascHandler>> handlers;
 
 		/**
 		 * Read the header for the current file.
@@ -224,8 +109,6 @@ namespace Casc
 					auto compressedSize = readBE<uint32_t>(pos);
 					pos += sizeof(uint32_t);
 
-					bufferSize = std::max(compressedSize, bufferSize);
-
 					auto decompressedSize = readBE<uint32_t>(pos);
 					pos += sizeof(uint32_t);
 
@@ -233,10 +116,10 @@ namespace Casc
 					std::copy(pos, pos + 16, checksum.begin());
 					pos += 16;
 
-					Chunk chunk
+					ChunkInfo chunk
 					{
 						0,
-						decompressedSize - 1,
+						decompressedSize,
 						38 + readBytes,
 						compressedSize
 					};
@@ -245,8 +128,8 @@ namespace Casc
 					{
 						auto last = chunks.back();
 
-						chunk.begin = last.end + 1;
-						chunk.end = chunk.begin + decompressedSize - 1;
+						chunk.begin = last.end;
+						chunk.end = chunk.begin + decompressedSize;
 						chunk.offset = last.offset + last.size;
 					}
 
@@ -261,125 +144,239 @@ namespace Casc
 					38,
 					size
 				});
-
-				bufferSize = size;
 			}
-
-			in = std::make_unique<ZStreamBase::char_t[]>(bufferSize);
 		}
+
+        /**
+        * Checks if the buffer is at the end of the current chunk.
+        *
+        * @return true if the buffer is at the end.
+        */
+        bool eoc()
+        {
+            if (currentBuffer.offset > currentBuffer.chunk.end)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        /**
+        * Checks if the offset is in the current chunk.
+        *
+        * @return true if the offset is within the chunk.
+        */
+        bool is_current(off_type offset)
+        {
+            size_t i = 0;
+            for (auto chunk : chunks)
+            {
+                if (chunk.begin <= offset && chunk.end >= offset)
+                {
+                    return true;
+                }
+
+                ++i;
+            }
+
+            return false;
+        }
+
+        /**
+        * Finds the chunk that corresponds to the given virtual offset.
+        *
+        * @param offset	the virtual offset of the decompressed data.
+        * @param out		reference to the output variable where the chunk will be written.
+        * @return			true on success, false on failure.
+        */
+        bool find(off_type offset, ChunkInfo &out)
+        {
+            for (auto chunk : chunks)
+            {
+                if (chunk.begin <= offset && chunk.end > offset)
+                {
+                    out = chunk;
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
 		/**
-		 * Finds the chunk that corresponds to the given virtual offset.
-		 *
-		 * @param offset	the virtual offset of the decompressed data.
-		 * @param out		reference to the output variable where the chunk will be written.
-		 * @return			true on success, false on failure.
-		 */
-		bool findChunk(off_type offset, Chunk &out)
+		* The current position in the stream.
+		*/
+		pos_type pos()
 		{
-			for (auto chunk : chunks)
+			return pos_type(currentBuffer.offset);
+		}
+
+        /**
+        * Seeks within the current buffer.
+        *
+        * @param offset the offset to seek to.
+        * @param dir    the seek direction.
+        */
+		pos_type seekbuf(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
+        {
+            switch (dir)
+            {
+            case std::ios_base::cur:
+                setg(eback(), gptr() + offset, egptr());
+				currentBuffer.offset += offset;
+                break;
+
+            case std::ios_base::beg:
+                setg(eback(), eback() + offset, egptr());
+				currentBuffer.offset = offset;
+                break;
+
+            case std::ios_base::end:
+                setg(eback(), egptr() - offset, egptr());
+				currentBuffer.offset = currentBuffer.end - offset;
+                break;
+            }
+
+			return pos();
+        }
+
+        /**
+        * Seeks relatively within the file.
+        *
+        * @param offset the offset to seek to.
+        * @param dir    the seek direction.
+        */
+		pos_type seekrel(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
+        {
+			if (dir != std::ios_base::cur)
 			{
-				if (chunk.begin <= offset && chunk.end >= offset)
-				{
-					out = chunk;
-					return true;
-				}
+				return pos();
 			}
 
-			return false;
-		}
+			currentBuffer.offset += offset;
+
+			return buffer(currentBuffer.offset);
+        }
 
 		/**
-		 * Finds the index of the chunk that corresponds to the given virtual offset.
-		 *
-		 * @param offset	the virtual offset of the decompressed data.
-		 * @param out		reference to the output variable where the chunk index will be written.
-		 * @return			true on success, false on failure.
-		 */
-		bool findChunk(off_type offset, size_t &out)
+		* Seeks absolutely within the file.
+		*
+		* @param offset the offset to seek to.
+		* @param dir    the seek direction.
+		*/
+		pos_type seekabs(off_type offset, std::ios_base::seekdir dir = std::ios_base::beg)
 		{
-			size_t i = 0;
-			for (auto chunk : chunks)
+			if (dir != std::ios_base::beg && dir != std::ios_base::end)
 			{
-				if (chunk.begin <= offset && chunk.end >= offset)
-				{
-					out = i;
-					return true;
-				}
-
-				++i;
+				return pos();
 			}
 
-			return false;
+			if (dir == std::ios_base::end)
+			{
+				offset = length - offset;
+			}
+
+			return buffer(offset);
 		}
+
+        /**
+        * Seeks within the file.
+        *
+        * @param offset the offset to seek to.
+        * @param dir    the seek direction.
+        */
+		pos_type seek(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
+        {
+			if (dir == std::ios_base::cur)
+			{
+				return seekrel(offset, dir);
+			}
+			else
+			{
+				return seekabs(offset, dir);
+			}
+        }
+
+        /**
+        * Read the decompressed data from the current chunk into the buffer.
+        *
+        * @param offset    the offset into the chunk to start reading.
+        */
+		pos_type buffer(off_type offset)
+        {
+			if (isBuffering)
+				throw std::exception("Reentered buffer method while buffering.");
+
+            isBuffering = true;
+
+			setg(temp.get(), temp.get(), temp.get() + BufferSize);
+
+			// Use smaller than configured buffer if near end-of-file.
+			size_t bufferSize = std::min<size_t>(BufferSize,
+				static_cast<size_t>(chunks.back().end - offset));
+			
+			pos_type end = offset + bufferSize;
+
+			ChunkInfo chunk;
+			size_t count;
+			off_type pos;
+
+			for (pos = 0; offset < end;)
+			{
+				if (!find(offset, chunk))
+				{
+					return pos_type(-1);
+				}
+
+				count = std::min<size_t>(static_cast<size_t>(chunk.end - offset), bufferSize);
+
+				// Read the compression mode.
+				std::filebuf::seekpos(this->offset + chunk.offset, std::ios_base::in);
+				CompressionMode mode = (CompressionMode)std::filebuf::sbumpc();
+
+				// Call the handler for the compression mode.
+				std::filebuf::seekpos(this->offset + chunk.offset + 1);
+				auto data = handlers[mode]->buffer(*this, offset - chunk.begin, chunk.size - 1, count);
+				std::memcpy(out.get() + pos, data.get(), count);
+				
+				offset += count;
+				pos += count;
+				bufferSize -= count;
+			}
+
+			currentBuffer.begin = offset - pos;
+			currentBuffer.offset = currentBuffer.begin;
+			currentBuffer.end = offset;
+
+            setg(out.get(), out.get(), out.get() + currentBuffer.end - currentBuffer.begin);
+
+            isBuffering = false;
+
+            return pos_type(offset);
+        }
 
 	protected:
 		pos_type seekpos(pos_type pos,
 			std::ios_base::openmode which = std::ios_base::in) override
 		{
+			if (isBuffering)
+			{
+				return std::filebuf::seekpos(pos, which);
+			}
+
 			return seekoff(pos, std::ios_base::beg, which);
 		}
 
 		pos_type seekoff(off_type off, std::ios_base::seekdir dir,
 			std::ios_base::openmode which = std::ios_base::in) override
 		{
-			Chunk chunk;
-			off_type offset = 0;
-
-			switch (dir)
+			if (isBuffering)
 			{
-			case std::ios_base::beg:
-				offset = off;
-				break;
-
-			case std::ios_base::cur:
-				offset = off + (gptr() - eback()) + currentChunk.begin;
-				break;
-
-			case std::ios_base::end:
-				offset = chunks.back().end - off + 1;
-				break;
+				return std::filebuf::seekoff(off, dir, which);
 			}
 
-			if (currentChunk.begin <= offset && currentChunk.end >= offset)
-			{
-				setg(eback(), eback() + (offset - currentChunk.begin), egptr());
-			}
-			else if (findChunk(offset, chunk))
-			{
-				try
-				{
-					bufferChunk(chunk);
-
-					setg(eback(), eback() + (offset - currentChunk.begin), egptr());
-				}
-				catch (std::exception&)
-				{
-					return pos_type(off_type(-1));
-				}
-			}
-			else if (offset == (chunks.back().end + 1))
-			{
-				if (chunks.back().offset != currentChunk.offset)
-				{
-					try
-					{
-						bufferChunk(chunks.back());
-					}
-					catch (std::exception&)
-					{
-						return pos_type(off_type(-1));
-					}
-				}
-
-				setg(eback(), eback() + (offset - currentChunk.begin), egptr());
-			}
-			else
-			{
-				return pos_type(off_type(-1));
-			}
-
-			return pos_type(off_type(offset));
+            return seek(off, dir);
 		}
 
 		std::streamsize showmanyc() override
@@ -389,50 +386,31 @@ namespace Casc
 
 		int_type underflow() override
 		{
-			Chunk chunk;
+			if (seek(0) == pos_type(-1))
+			{
+				setg(nullptr, nullptr, nullptr);
+				return traits_type::eof();
+			}
 
-			if (findChunk(currentChunk.end + 1, chunk))
-			{
-				try
-				{
-					auto out = readChunk(in.get(), chunk);
-					return std::filebuf::traits_type::to_int_type(out[0]);
-				}
-				catch (std::exception&)
-				{
-					return std::filebuf::traits_type::eof();
-				}
-			}
-			else
-			{
-				return std::filebuf::traits_type::eof();
-			}
+			return traits_type::to_int_type(out.get()[0]);
 		}
 
 		int_type uflow() override
 		{
 			if (isInitialized && !isBuffering)
 			{
-				Chunk chunk;
+				if (seek(0) == pos_type(-1))
+				{
+					setg(nullptr, nullptr, nullptr);
+					return traits_type::eof();	
+				}
 
-				if (findChunk(currentChunk.end + 1, chunk))
-				{
-					try
-					{
-						bufferChunk(chunk);
-					}
-					catch (std::exception&)
-					{
-						return std::filebuf::traits_type::eof();
-					}
-				}
-				else
-				{
-					return std::filebuf::traits_type::eof();
-				}
+				seekbuf(1);
+
+				return traits_type::to_int_type(out.get()[0]);
 			}
-			
-			return std::filebuf::uflow();
+
+            return std::filebuf::uflow();
 		}
 
 		std::streambuf *setbuf(char_type *s, std::streamsize n) override
@@ -440,20 +418,67 @@ namespace Casc
 			return this;
 		}
 
+		std::streamsize xsgetn(char_type* s, std::streamsize count) override
+		{
+			if (isBuffering)
+			{
+				return std::filebuf::xsgetn(s, count);
+			}
+
+			std::streamsize copied = 0;
+			
+			if (count <= showmanyc())
+			{
+				std::memcpy(s, gptr(), static_cast<size_t>(count));
+				seekbuf(count);
+				copied = count;
+			}
+			else
+			{
+				do
+				{
+					std::memcpy(s, gptr(), std::min<size_t>(
+						static_cast<size_t>(showmanyc()), static_cast<size_t>(count - copied)));
+					copied += showmanyc();
+					seek(showmanyc());
+				} while (copied < count && underflow() != traits_type::eof());
+			}
+
+			return copied;
+		}
+
 	public:
 		/**
 		 * Default constructor.
 		 */
-		CascBuffer()
+		BaseCascBuffer()
+			: out(std::make_unique<char[]>(BufferSize)),
+			  temp(std::make_unique<char[]>(BufferSize))
 		{
+			registerHandlers({ new DefaultHandler<>() });
+		}
+
+		/**
+		* Constructor with handler initialization.
+		*/
+		BaseCascBuffer(std::initializer_list<CascHandler*> handlers)
+			: CascBuffer()
+		{
+			registerHandlers(handlers);
 		}
 
 		/**
 		 * Destructor.
 		 */
-		~CascBuffer() override
+		~BaseCascBuffer() override
 		{
 			this->close();
+		}
+
+		void registerHandlers(std::initializer_list<CascHandler*> handlers)
+		{
+			for (CascHandler* handler : handlers)
+				this->handlers[handler->compressionMode()] = std::unique_ptr<CascHandler>(handler);
 		}
 
 		/**
@@ -477,9 +502,14 @@ namespace Casc
 
 			this->readHeader();
 
+			this->currentBuffer.begin = 0;
+			this->currentBuffer.end = -1;
+			this->currentBuffer.offset = 0;
+
 			if (chunks.size() > 0)
 			{
-				bufferChunk(chunks[0]);
+				this->length = static_cast<size_t>(chunks.back().end);
+                seek(0);
 			}
 
 			this->isInitialized = true;
@@ -518,4 +548,6 @@ namespace Casc
 			isInitialized = false;
 		}
 	};
+
+	typedef BaseCascBuffer<std::filebuf::traits_type, 4096U> CascBuffer;
 }

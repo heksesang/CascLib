@@ -2,28 +2,27 @@
 
 #include <filesystem>
 #include <vector>
+using namespace std::experimental::filesystem;
 
 namespace Casc
 {
-	using namespace std::tr2;
-
 	class FileSearch
 	{
 		std::vector<std::string> results_;
 
 		void search(std::string filename, std::string path)
 		{
-			for (sys::directory_iterator iter(path), end; iter != end; ++iter)
+			for (v1::directory_iterator iter(path), end; iter != end; ++iter)
 			{
 				auto current = iter->path();
 
-				if (sys::is_directory(current))
+				if (v1::is_directory(current))
 				{
-					search(filename, current);
+					search(filename, current.string());
 				}
 				else if (current.filename().compare(filename) == 0)
 				{
-					results_.push_back(current);
+					results_.push_back(current.string());
 				}
 			}
 		}

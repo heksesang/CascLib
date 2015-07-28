@@ -10,7 +10,8 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-using namespace std::tr2;
+//using namespace std::tr2;
+using namespace std::experimental::filesystem;
 
 #include "Endian.hpp"
 #include "MemoryInfo.hpp"
@@ -35,6 +36,9 @@ namespace Casc
 			Header = 4,
 			WriteableMemory = 1
 		};
+
+        // The base directory of the archive.
+        std::string base_;
 
 		// The directory where the data files are stored.
 		std::string path_;
@@ -77,6 +81,7 @@ namespace Casc
 		 * Reads a chunk of type ShmemType::Header.
 		 *
 		 * @param file the file stream to read the data from.
+         * @param base the path of the base directory.
 		 */
 		void readHeader(std::ifstream &file)
 		{
@@ -98,21 +103,25 @@ namespace Casc
 			}
 
 			path.resize(path.find_first_of('\0'));
+			
+            if (v1::path(path).is_relative())
+            {
+                path = v1::path(base_).append(path).string();
+            }
 
-			path_ = path;
+            path_ = path;
 
-
-			for (sys::directory_iterator iter(path), end; iter != end; ++iter)
+			for (v1::directory_iterator iter(path), end; iter != end; ++iter)
 			{
-				if (!sys::is_directory(iter->path()))
+				if (!v1::is_directory(iter->path()))
 				{
 					auto ext = iter->path().extension();
 					auto fn = iter->path().filename();
-
+					
 					if (ext.compare(".idx") == 0)
 					{
 						std::stringstream ss;
-						ss << std::hex << fn.substr(0, 2);
+						ss << std::hex << fn.string().substr(0, 2);
 
 						unsigned int index;
 						ss >> index;
@@ -161,7 +170,7 @@ namespace Casc
 		 *
 		 * @param path the path of the SHMEM file.
 		 */
-		void readFile(std::string &path)
+        void readFile(std::string path)
 		{
 			using namespace Endian;
 			std::ifstream file;
@@ -189,8 +198,10 @@ namespace Casc
 		 * Constructor.
 		 *
 		 * @param path the path of the SHMEM file.
+         * @param base the path of the base directory.
 		 */
-		Shmem(std::string path)
+		Shmem(std::string path, std::string base)
+            : base_(base)
 		{
 			readFile(path);
 		}

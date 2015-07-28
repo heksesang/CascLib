@@ -23,17 +23,17 @@ namespace CascLibTest
 
         TEST_METHOD(LoadContainer)
         {
-            auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft Beta\)");
+            auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
         }
 
 		TEST_METHOD(GetRootFile)
 		{
-			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft Beta\)");
-			//auto root = container->findFile(container->buildConfig()["root"].front());
-			auto root = container->findFile("16B35FCCABC6BE82DD");
+			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
+			auto root = container->findFile(container->buildConfig()["root"].front());
+			//auto root = container->findFile("16B35FCCABC6BE82DD");
 			
 
-			root.seekg(0, std::ios_base::end);
+			/*root.seekg(0, std::ios_base::end);
 			auto size = root.tellg();
 
 			auto data = std::make_unique<char[]>(size);
@@ -46,26 +46,37 @@ namespace CascLibTest
 
 			fs.write(data.get(), size);
 
-			fs.close();
+			fs.close();*/
 		}
 
 		TEST_METHOD(GetEncodingFile)
 		{
-			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft Beta\)");
-			auto encoding = container->findFile(container->buildConfig()["encoding"].back());
+			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
+
+			MemoryInfo loc;
+			loc.file_ = 28;
+			loc.offset_ = 368053824;
+			loc.size_ = 52535596;
+
+			auto encoding = container->openStream(loc);
+
+			//auto encoding = container->findFile(container->buildConfig()["encoding"].back());
 
 			encoding.seekg(0, std::ios_base::end);
 			auto size = encoding.tellg();
 
-			auto data = std::make_unique<char[]>(size);
+			if (size <= 0)
+				throw std::exception("Invalid size");
 
-			encoding.seekg(0, std::ios_base::beg);
-			encoding.read(data.get(), size);
+			auto data = std::make_unique<char[]>(static_cast<size_t>(size));
+
+			encoding.seekg(22 + 65885 + 245728, std::ios_base::beg);
+            encoding.read(data.get(), 4096);
 
 			std::ofstream fs;
 			fs.open("encoding", std::ios_base::out | std::ios_base::binary);
 
-			fs.write(data.get(), size);
+			fs.write(data.get(), 4096);
 
 			fs.close();
 		}
@@ -82,7 +93,7 @@ namespace CascLibTest
 
 		TEST_METHOD(ReadShmem)
 		{
-			Shmem shmem(R"(shmem)");
+            Shmem shmem(R"(shmem)", R"(I:\World of Warcraft\)");
 		}
 
 	};

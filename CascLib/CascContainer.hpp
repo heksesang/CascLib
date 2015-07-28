@@ -23,7 +23,7 @@ namespace Casc {
 		CascConfiguration cdnConfig_;
 		Shmem shmem_;
 		std::vector<CascIndex> indices_;
-
+	public:
 		CascStream openStream(MemoryInfo &loc) const
 		{
 			std::stringstream ss;
@@ -38,9 +38,9 @@ namespace Casc {
 			  buildInfo_(path + ".build.info"),
 			  buildConfig_(FileSearch(buildInfo_.build(0).at("Build Key"), path_).results().at(0)),
 			  cdnConfig_(FileSearch(buildInfo_.build(0).at("CDN Key"), path_).results().at(0)),
-			  shmem_(FileSearch("shmem", path_).results().at(0))
+			  shmem_(FileSearch("shmem", path_).results().at(0), path)
 		{
-			for (size_t i = 0; i < shmem_.versions().size(); ++i)
+			/*for (size_t i = 0; i < shmem_.versions().size(); ++i)
 			{
 				std::stringstream ss;
 
@@ -50,7 +50,7 @@ namespace Casc {
 				ss << ".idx";
 
 				indices_.push_back(ss.str());
-			}
+			}*/
 		}
 
 		CascStream findFile(const std::string &key) const

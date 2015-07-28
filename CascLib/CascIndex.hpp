@@ -8,23 +8,12 @@
 #include "Hex.hpp"
 #include "MemoryInfo.hpp"
 #include "StreamOps.hpp"
+#include "CascIndexRecord.h"
 
 namespace Casc
 {
-    struct CascIndexRecord
-    {
-    public:
-        typedef std::array<char, 9> key_t;
-
-    public:
-        key_t hash;
-        uint8_t location;
-        uint32_t offset;
-        uint32_t length;
-    };
-
 	/**
-	 * Contains the index of files in the CASC files.
+	 * Contains the index of files in the CASC archive.
 	 */
 	class CascIndex
 	{
