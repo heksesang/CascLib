@@ -3,12 +3,12 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-#include "../CascLib/MemoryInfo.hpp"
-#include "../CascLib/Endian.hpp"
-#include "../CascLib/Hash.hpp"
+#include "../CascLib/Shared/MemoryInfo.hpp"
+#include "../CascLib/Shared/Utils.hpp"
 
-using namespace Casc;
-using namespace Casc::Endian;
+using namespace Casc::Shared;
+using namespace Casc::Shared::Endian;
+using namespace Casc::Shared::Hash;
 
 namespace CascLibTest
 {
@@ -34,7 +34,7 @@ namespace CascLibTest
 
 		TEST_METHOD(HashFilename)
 		{
-			auto hash = Hash::lookup3("SPELLS\\BONE_CYCLONE_STATE.M2", 0);
+			auto hash = lookup3("SPELLS\\BONE_CYCLONE_STATE.M2", 0);
 			Assert::AreEqual(0x21F9EFA8u, hash);
 		}
 

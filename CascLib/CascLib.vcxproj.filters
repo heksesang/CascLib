@@ -30,26 +30,14 @@
     <ClInclude Include="CascContainer.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
-    <ClInclude Include="Endian.hpp">
-      <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="Shmem.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
     <ClInclude Include="StreamOps.hpp">
       <Filter>Header Files\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="Reference.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
     <ClInclude Include="CascIndex.hpp">
       <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="MemoryInfo.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="FileSearch.hpp">
-      <Filter>Header Files\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="zlib.hpp">
       <Filter>Header Files\Functions</Filter>
@@ -60,20 +48,11 @@
     <ClInclude Include="CascStream.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
-    <ClInclude Include="Hex.hpp">
-      <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="CascBuildInfo.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
     <ClInclude Include="CascConfiguration.hpp">
       <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="StringUtils.hpp">
-      <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="Hash.hpp">
-      <Filter>Header Files\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="CascEncoding.hpp">
       <Filter>Header Files\Types</Filter>
@@ -92,6 +71,21 @@
     </ClInclude>
     <ClInclude Include="Shared\CompressionMode.hpp">
       <Filter>Header Files\Types\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared\MemoryInfo.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared\Reference.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared\Utils.hpp">
+      <Filter>Header Files\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared\Hex.hpp">
+      <Filter>Header Files\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared\FileSearch.hpp">
+      <Filter>Header Files\Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

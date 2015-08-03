@@ -11,6 +11,7 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #include "../CascLib/CascConfiguration.hpp"
 #include "../CascLib/CascBuildInfo.hpp"
 #include "../CascLib/CascContainer.hpp"
+#include "../CascLib/CascEncoding.hpp"
 #include "../CascLib/Shmem.hpp"
 
 using namespace Casc;
@@ -29,7 +30,7 @@ namespace CascLibTest
 		TEST_METHOD(GetRootFile)
 		{
 			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
-			auto root = container->findFile(container->buildConfig()["root"].front());
+			auto root = container->openFileByKey(container->buildConfig()["root"].front());
 			//auto root = container->findFile("16B35FCCABC6BE82DD");
 			
 
@@ -53,32 +54,16 @@ namespace CascLibTest
 		{
 			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
 
-			MemoryInfo loc;
+			/*MemoryInfo loc;
 			loc.file_ = 28;
 			loc.offset_ = 368053824;
-			loc.size_ = 52535596;
+			loc.size_ = 52535596;*/
 
-			auto encoding = container->openStream(loc);
+			//auto encoding = container->openStream(loc);
+            auto encoding = container->openFileByKey(container->buildConfig()["encoding"].back());
+			CascEncoding enc(&encoding);
 
-			//auto encoding = container->findFile(container->buildConfig()["encoding"].back());
-
-			encoding.seekg(0, std::ios_base::end);
-			auto size = encoding.tellg();
-
-			if (size <= 0)
-				throw std::exception("Invalid size");
-
-			auto data = std::make_unique<char[]>(static_cast<size_t>(size));
-
-			encoding.seekg(22 + 65885 + 245728, std::ios_base::beg);
-            encoding.read(data.get(), 4096);
-
-			std::ofstream fs;
-			fs.open("encoding", std::ios_base::out | std::ios_base::binary);
-
-			fs.write(data.get(), 4096);
-
-			fs.close();
+			auto key = enc.findKey(container->buildConfig()["root"].front());
 		}
 
 		TEST_METHOD(ReadConfiguration)

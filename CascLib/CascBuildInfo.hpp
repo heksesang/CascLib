@@ -9,187 +9,226 @@
 
 namespace Casc
 {
-	class CascBuildInfo
-	{
-		struct Key
-		{
-			std::string name;
-			std::string type;
-			int length;
-		};
+    /**
+    * Class for parsing CASC .build.info files.
+    */
+    class CascBuildInfo
+    {
+        // The key structure.
+        struct Key
+        {
+            std::string name;
+            std::string type;
+            int length;
+        };
 
-		enum class State
-		{
-			KeyBegin,
-			Key,
-			Type,
-			Size,
-			ValueBegin,
-			Value
-		};
+        // Parser states.
+        enum class State
+        {
+            KeyBegin,
+            Key,
+            Type,
+            Size,
+            ValueBegin,
+            Value
+        };
 
-		std::vector<std::map<std::string, std::string>> values;
+        // The parsed values.
+        std::vector<std::map<std::string, std::string>> values;
 
-		void parse(std::string path)
-		{
-			State currentState = State::KeyBegin;
+    public:
+        /**
+        * Default constructor.
+        */
+        CascBuildInfo()
+        {
+        }
 
-			int bufferCurrent = -1;
-			int bufferSize = 0;
-			std::unique_ptr<char[]> buffer = nullptr;
+        /**
+         * Constructor.
+         *
+         * @param path	the path of the .build.info file.
+         */
+        CascBuildInfo(std::string path)
+        {
+            parse(path);
+        }
 
-			std::ifstream fs;
+        /**
+         * Destructor.
+         */
+        virtual ~CascBuildInfo()
+        {
+        }
 
-			fs.open(path, std::ios_base::in);
-			fs.seekg(0, std::ios_base::end);
+        /**
+        * Gets the values for a build from the last parsed .build.info file.
+        *
+        * @param build	the index of the build to get values for.
+        * @return		the values.
+        */
+        const std::map<std::string, std::string> &build(int index) const
+        {
+            return values.at(index);
+        }
 
-			bufferSize = (int)fs.tellg();
-			bufferSize += 1;
+        /**
+         * Gets the number of values stored from the last parsed .build.info file.
+         *
+         * @return	the number of values stored.
+         */
+        int size() const
+        {
+            return values.size();
+        }
 
-			buffer = std::make_unique<char[]>(bufferSize);
+        /**
+         * Clears old values and parses a .build.info file.
+         *
+         * @param path	the path of the .build.info file.
+         */
+        void parse(std::string path)
+        {
+            values.clear();
 
-			fs.seekg(0, std::ios_base::beg);
+            State currentState = State::KeyBegin;
 
-			std::vector<Key> keys;
-			std::string str;
-			
-			int index = -1;
+            int bufferCurrent = -1;
+            int bufferSize = 0;
+            std::unique_ptr<char[]> buffer = nullptr;
 
-			while (!fs.eof())
-			{
-				char ch = fs.get();
-				std::stringstream ss;
+            std::ifstream fs;
 
-				switch (currentState)
-				{
-				case State::KeyBegin:
-					currentState = State::Key;
-					buffer[++bufferCurrent] = ch;
-					break;
+            fs.open(path, std::ios_base::in);
+            fs.seekg(0, std::ios_base::end);
 
-				case State::Key:
-					switch (ch)
-					{
-					case '!':
-						currentState = State::Type;
-						buffer[++bufferCurrent] = '\0';
-						bufferCurrent = -1;
+            bufferSize = (int)fs.tellg();
+            bufferSize += 1;
 
-						keys.push_back({ buffer.get() });
-						break;
+            buffer = std::make_unique<char[]>(bufferSize);
 
-					default:
-						buffer[++bufferCurrent] = ch;
-						break;
-					}
-					break;
+            fs.seekg(0, std::ios_base::beg);
 
-				case State::Type:
-					switch (ch)
-					{
-					case ':':
-						currentState = State::Size;
-						buffer[++bufferCurrent] = '\0';
-						bufferCurrent = -1;
+            std::vector<Key> keys;
+            std::string str;
 
-						keys.back().type = buffer.get();
-						break;
+            int index = -1;
 
-					default:
-						buffer[++bufferCurrent] = ch;
-						break;
-					}
-					break;
+            while (!fs.eof())
+            {
+                char ch = fs.get();
+                std::stringstream ss;
 
-				case State::Size:
-					switch (ch)
-					{
-					case '|':
-						currentState = State::KeyBegin;
-						buffer[++bufferCurrent] = '\0';
-						bufferCurrent = -1;
-						
-						ss << buffer.get();
-						ss >> keys.back().length;
+                switch (currentState)
+                {
+                case State::KeyBegin:
+                    currentState = State::Key;
+                    buffer[++bufferCurrent] = ch;
+                    break;
 
-						keys.back().type = buffer.get();
-						break;
+                case State::Key:
+                    switch (ch)
+                    {
+                    case '!':
+                        currentState = State::Type;
+                        buffer[++bufferCurrent] = '\0';
+                        bufferCurrent = -1;
 
-					case '\n':
-						currentState = State::ValueBegin;
-						buffer[++bufferCurrent] = '\0';
-						bufferCurrent = -1;
+                        keys.push_back({ buffer.get() });
+                        break;
 
-						ss << buffer.get();
-						ss >> keys.back().length;
+                    default:
+                        buffer[++bufferCurrent] = ch;
+                        break;
+                    }
+                    break;
 
-						keys.back().type = buffer.get();
-						break;
+                case State::Type:
+                    switch (ch)
+                    {
+                    case ':':
+                        currentState = State::Size;
+                        buffer[++bufferCurrent] = '\0';
+                        bufferCurrent = -1;
 
-					default:
-						buffer[++bufferCurrent] = ch;
-						break;
-					}
-					break;
+                        keys.back().type = buffer.get();
+                        break;
 
-				case State::ValueBegin:
-					if (fs.eof())
-					{
-						break;
-					}
+                    default:
+                        buffer[++bufferCurrent] = ch;
+                        break;
+                    }
+                    break;
 
-					currentState = State::Value;
-					buffer[++bufferCurrent] = ch;
+                case State::Size:
+                    switch (ch)
+                    {
+                    case '|':
+                        currentState = State::KeyBegin;
+                        buffer[++bufferCurrent] = '\0';
+                        bufferCurrent = -1;
 
-					values.resize(values.size() + 1);
-					break;
+                        ss << buffer.get();
+                        ss >> keys.back().length;
 
-				case State::Value:
-					switch (ch)
-					{
-					case '|':
-						buffer[++bufferCurrent] = '\0';
-						bufferCurrent = -1;
+                        keys.back().type = buffer.get();
+                        break;
 
-						str = buffer.get();
-						
-						values.back()[keys[++index].name] = buffer.get();
-						break;
+                    case '\n':
+                        currentState = State::ValueBegin;
+                        buffer[++bufferCurrent] = '\0';
+                        bufferCurrent = -1;
 
-					case '\n':
-						currentState = State::ValueBegin;
-						index = -1;
-						break;
+                        ss << buffer.get();
+                        ss >> keys.back().length;
 
-					default:
-						buffer[++bufferCurrent] = ch;
-						break;
-					}
-					break;
-				}
-			}
+                        keys.back().type = buffer.get();
+                        break;
 
-			fs.close();
-		}
+                    default:
+                        buffer[++bufferCurrent] = ch;
+                        break;
+                    }
+                    break;
 
-	public:
-		CascBuildInfo(std::string path)
-		{
-			parse(path);
-		}
+                case State::ValueBegin:
+                    if (fs.eof())
+                    {
+                        break;
+                    }
 
-		virtual ~CascBuildInfo()
-		{
-		}
+                    currentState = State::Value;
+                    buffer[++bufferCurrent] = ch;
 
-		const std::map<std::string, std::string>& build(int index) const
-		{
-			return values.at(index);
-		}
+                    values.resize(values.size() + 1);
+                    break;
 
-		int size() const
-		{
-			return values.size();
-		}
-	};
+                case State::Value:
+                    switch (ch)
+                    {
+                    case '|':
+                        buffer[++bufferCurrent] = '\0';
+                        bufferCurrent = -1;
+
+                        str = buffer.get();
+
+                        values.back()[keys[++index].name] = buffer.get();
+                        break;
+
+                    case '\n':
+                        currentState = State::ValueBegin;
+                        index = -1;
+                        break;
+
+                    default:
+                        buffer[++bufferCurrent] = ch;
+                        break;
+                    }
+                    break;
+                }
+            }
+
+            fs.close();
+        }
+    };
 }

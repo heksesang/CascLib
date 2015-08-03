@@ -14,7 +14,7 @@ namespace Casc
     {
     public:
         // Typedefs
-        typedef std::array<char, 9> key_t;
+        typedef std::array<uint8_t, 9> key_t;
 
     public:
         // The file key.

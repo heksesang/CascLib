@@ -5,100 +5,141 @@
 #include <string>
 #include <vector>
 
-#include "../CascLib/StringUtils.hpp"
+#include "../CascLib/Shared/Utils.hpp"
 
 namespace Casc
 {
-	class CascConfiguration
-	{
-		enum class TokenType
-		{
-			None,
-			Comment,
-			Key,
-			Operator,
-			Value
-		};
+    using namespace Casc::Shared;
 
-		TokenType currentToken = TokenType::None;
+    /**
+     * Class for parsing CASC configuration files.
+     */
+    class CascConfiguration
+    {
+        // The token types that can be parsed.
+        enum class TokenType
+        {
+            None,
+            Comment,
+            Key,
+            Operator,
+            Value
+        };
 
-		std::map<std::string, std::vector<std::string>> values_;
+        // The type of the token currently being parsed.
+        TokenType currentToken = TokenType::None;
 
-		void parse(std::string path)
-		{
-			std::ifstream fs;
-			fs.open(path, std::ios_base::in);
+        // The parsed values.
+        std::map<std::string, std::vector<std::string>> values_;
 
-			char ch{};
-			char buffer[256]{};
-			
-			std::string key;
-			std::string value;
+    public:
+        /**
+         * Default constructor.
+         */
+        CascConfiguration()
+        {
+        }
 
-			while (!fs.eof())
-			{
-				switch (currentToken)
-				{
-				case TokenType::None:
-					ch = fs.peek();
+        /**
+         * Constructor.
+         *
+         * @param path	the path of the configuration file.
+         */
+        CascConfiguration(std::string path)
+        {
+            parse(path);
+        }
 
-					switch (ch)
-					{
-					case '#':
-						currentToken = TokenType::Comment;
-						break;
+        /**
+         * Destructor.
+         */
+        virtual ~CascConfiguration()
+        {
 
-					case '\n':
-						fs.get();
-						break;
+        }
 
-					case ' ':
-						fs.get();
-						currentToken = TokenType::Value;
-						break;
+        /**
+         * Gets the value for a key.
+         *
+         * @param key	the key to use for the lookup.
+         * @return		the value.
+         */
+        const std::vector<std::string> &operator[] (const std::string& key) const
+        {
+            return values_.at(key);
+        }
 
-					default:
-						currentToken = TokenType::Key;
-						break;
-					}
-					break;
+        /**
+         * Clears old values and parses a configuration file.
+         *
+         * @param path	the path of the configuration file.
+         */
+        void parse(std::string path)
+        {
+            values_.clear();
 
-				case TokenType::Comment:
-					fs.getline(buffer, 256);
-					currentToken = TokenType::None;
-					break;
+            std::ifstream fs;
+            fs.open(path, std::ios_base::in);
 
-				case TokenType::Key:
-					fs.getline(buffer, 256, '=');
-					key = String::trim(buffer);
-					currentToken = TokenType::Operator;
-					break;
+            char ch{};
+            char buffer[256]{};
 
-				case TokenType::Operator:
-					ch = fs.get();
-					currentToken = TokenType::Value;
-					break;
+            std::string key;
+            std::string value;
 
-				case TokenType::Value:
-					fs >> value;
-					values_[key].push_back(value);
-					currentToken = TokenType::None;
-					break;
-				}
-			}
+            while (!fs.eof())
+            {
+                switch (currentToken)
+                {
+                case TokenType::None:
+                    ch = fs.peek();
 
-			fs.close();
-		}
+                    switch (ch)
+                    {
+                    case '#':
+                        currentToken = TokenType::Comment;
+                        break;
 
-	public:
-		CascConfiguration(std::string path)
-		{
-			parse(path);
-		}
+                    case '\n':
+                        fs.get();
+                        break;
 
-		const std::vector<std::string> &operator[] (const std::string& key) const
-		{
-			return values_.at(key);
-		}
-	};
+                    case ' ':
+                        fs.get();
+                        currentToken = TokenType::Value;
+                        break;
+
+                    default:
+                        currentToken = TokenType::Key;
+                        break;
+                    }
+                    break;
+
+                case TokenType::Comment:
+                    fs.getline(buffer, 256);
+                    currentToken = TokenType::None;
+                    break;
+
+                case TokenType::Key:
+                    fs.getline(buffer, 256, '=');
+                    key = trim(buffer);
+                    currentToken = TokenType::Operator;
+                    break;
+
+                case TokenType::Operator:
+                    ch = fs.get();
+                    currentToken = TokenType::Value;
+                    break;
+
+                case TokenType::Value:
+                    fs >> value;
+                    values_[key].push_back(value);
+                    currentToken = TokenType::None;
+                    break;
+                }
+            }
+
+            fs.close();
+        }
+    };
 }

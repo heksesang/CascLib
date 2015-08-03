@@ -160,18 +160,16 @@
     <ClInclude Include="CascIndex.hpp" />
     <ClInclude Include="CascIndexRecord.h" />
     <ClInclude Include="CascStream.hpp" />
-    <ClInclude Include="Endian.hpp" />
-    <ClInclude Include="FileSearch.hpp" />
-    <ClInclude Include="Hash.hpp" />
-    <ClInclude Include="Hex.hpp" />
-    <ClInclude Include="MemoryInfo.hpp" />
-    <ClInclude Include="Reference.hpp" />
+    <ClInclude Include="Shared\FileSearch.hpp" />
+    <ClInclude Include="Shared\Hex.hpp" />
+    <ClInclude Include="Shared\MemoryInfo.hpp" />
+    <ClInclude Include="Shared\Reference.hpp" />
     <ClInclude Include="Shared\BufferInfo.hpp" />
     <ClInclude Include="Shared\ChunkInfo.hpp" />
     <ClInclude Include="Shared\CompressionMode.hpp" />
     <ClInclude Include="Shmem.hpp" />
     <ClInclude Include="StreamOps.hpp" />
-    <ClInclude Include="StringUtils.hpp" />
+    <ClInclude Include="Shared\Utils.hpp" />
     <ClInclude Include="zlib.hpp" />
   </ItemGroup>
   <ItemGroup>
