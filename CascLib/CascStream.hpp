@@ -40,7 +40,7 @@ namespace Casc
         /**
         * Move constructor.
         */
-        CascStream(CascStream&&) = default;
+        CascStream(CascStream &&) = default;
 
         /**
          * Destructor.
@@ -56,7 +56,7 @@ namespace Casc
         /**
          * Move operator.
          */
-        CascStream& CascStream::operator= (CascStream &&) = default;
+        CascStream &CascStream::operator= (CascStream &&) = default;
 
         /**
          * Opens a file from the currently opened CASC file.

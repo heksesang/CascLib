@@ -23,7 +23,7 @@ namespace Casc
     class CascContainer
     {
     public:
-        CascStream openFileByKey(const std::string &key) const
+        std::unique_ptr<CascStream> openFileByKey(const std::string &key) const
         {
             auto bytes = Hex<9>(key).data();
 
@@ -40,6 +40,11 @@ namespace Casc
             }
 
             throw std::exception("File not found");
+        }
+
+        std::unique_ptr<CascStream> openFileByHash(const std::string &hash) const
+        {
+            return openFileByKey(encoding->findKey(hash));
         }
 
     private:
@@ -62,24 +67,20 @@ namespace Casc
         std::vector<CascIndex> indices_;
 
         // The encoding file.
-        CascStream encodingStream;
+        std::unique_ptr<CascEncoding> encoding;
 
-        // The encoding parser.
-        CascEncoding encoding;
-
-    public:
         /**
          * Opens a stream at a given location.
          *
          * @param loc	the location of the data to stream.
          * @return		a stream object.
          */
-        CascStream openStream(MemoryInfo &loc) const
+        std::unique_ptr<CascStream> openStream(MemoryInfo &loc) const
         {
             std::stringstream ss;
             ss << shmem_.path() << "/data." << std::setw(3) << std::setfill('0') << loc.file();
 
-            return CascStream(ss.str(), loc.offset());
+            return std::make_unique<CascStream>(ss.str(), loc.offset());
         }
 
     public:
@@ -104,12 +105,12 @@ namespace Casc
         /**
          * Move constructor.
          */
-        CascContainer(CascContainer&&) = default;
+        CascContainer(CascContainer &&) = default;
 
         /**
          * Move operator.
          */
-        CascContainer& CascContainer::operator= (CascContainer &&) = default;
+        CascContainer &CascContainer::operator= (CascContainer &&) = default;
 
         /**
          * Destructor.
@@ -150,8 +151,7 @@ namespace Casc
                 indices_.push_back(ss.str());
             }
 
-            encodingStream = openFileByKey(buildConfig_["encoding"].back());
-            encoding = CascEncoding(&encodingStream);
+            encoding = std::make_unique<CascEncoding>(openFileByKey(buildConfig_["encoding"].back()));
         }
 
         const std::string &path() const

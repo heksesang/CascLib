@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <string>
+#include "CascStream.hpp"
 #include "StreamOps.hpp"
 #include "Shared/Hex.hpp"
 //#include "Shared/Utils.hpp"
@@ -108,10 +109,7 @@ namespace Casc
         const unsigned int ChunkBodySize = 4096U;
 
         // The stream to the encoding file.
-        std::istream *stream;
-
-        // Do cleanup of the stream
-        bool doCleanup;
+        std::unique_ptr<std::istream> stream;
 
         /**
          * Reads data from a stream and puts it in a struct.
@@ -123,10 +121,10 @@ namespace Casc
          * @return      the data.
          */
         template <typename T>
-        const T &read(std::istream *input, T &value, bool big = false) const
+        const T &read(T &value, bool big = false) const
         {
             char b[sizeof(T)];
-            input->read(b, sizeof(T));
+            stream->read(b, sizeof(T));
 
             return value = big ? readBE<T>(b) : readLE<T>(b);
         }
@@ -177,46 +175,20 @@ namespace Casc
          * @param cleanup   delete the stream during cleanup.
          */
         CascEncoding()
-            : chunksOffsetA(0), chunksOffsetB(0), doCleanup(false)
+            : chunksOffsetA(0), chunksOffsetB(0)
         {
 
         }
-
-
-        /**
-        * Constructor.
-        *
-        * @param stream    r-ref to the stream.
-        */
-        CascEncoding(std::istream &&stream)
-            : CascEncoding()
-        {
-
-        }
-
 
         /**
          * Constructor.
-         * NOTE: Doesn't clean up stream after destruction.
          *
          * @param stream    pointer to the stream.
          */
-        CascEncoding(std::istream *stream)
+        CascEncoding(std::unique_ptr<std::istream> stream)
             : CascEncoding()
         {
-            parse(stream, false);
-        }
-
-        /**
-        * Constructor.
-        *
-        * @param stream    pointer to the stream.
-        * @param cleanup   delete the stream during cleanup.
-        */
-        CascEncoding(std::istream *stream, bool cleanup)
-            : CascEncoding()
-        {
-            parse(stream, cleanup);
+            parse(std::move(stream));
         }
 
         /**
@@ -233,20 +205,18 @@ namespace Casc
         /**
          * Move constructor.
          */
-        CascEncoding(CascEncoding&&) = default;
+        CascEncoding(CascEncoding &&) = default;
 
         /**
          * Move operator.
          */
-        CascEncoding& CascEncoding::operator= (CascEncoding &&) = default;
+        CascEncoding &CascEncoding::operator= (CascEncoding &&) = default;
 
         /**
          * Destructor.
          */
         virtual ~CascEncoding()
         {
-            if (this->doCleanup)
-                delete this->stream;
         }
 
         /**
@@ -256,10 +226,9 @@ namespace Casc
          */
         void parse(std::string path)
         {
-            std::ifstream *fs = new std::ifstream();
-            fs->open(path, std::ios_base::in | std::ios_base::binary);
-
-            parse(fs, true);
+            std::unique_ptr<std::istream> fs =
+                std::make_unique<std::ifstream>(path, std::ios_base::in | std::ios_base::binary);
+            parse(std::move(fs));
         }
 
         /**
@@ -267,54 +236,50 @@ namespace Casc
          *
          * @param stream    pointer to the stream.
          */
-        void parse(std::istream *stream, bool cleanup)
+        void parse(std::unique_ptr<std::istream> stream)
         {
-            if (doCleanup)
-                delete this->stream;
-
-            this->stream = stream;
-            this->doCleanup = cleanup;
+            this->stream = std::move(stream);
 
             char magic[2];
-            stream->read(magic, 2);
+            this->stream->read(magic, 2);
 
             if (magic[0] != 0x45 || magic[1] != 0x4E)
             {
                 throw std::exception((std::string("Invalid file magic")).c_str());
             }
 
-            stream->seekg(7, std::ios_base::cur);
+            this->stream->seekg(7, std::ios_base::cur);
 
             uint32_t tableSizeA;
             uint32_t tableSizeB;
 
-            read(stream, tableSizeA, true);
-            read(stream, tableSizeB, true);
+            read(tableSizeA, true);
+            read(tableSizeB, true);
 
             uint32_t stringTableSize;
 
-            stream->seekg(1, std::ios_base::cur);
+            this->stream->seekg(1, std::ios_base::cur);
 
-            read(stream, stringTableSize, true);
+            read(stringTableSize, true);
 
-            stream->seekg(stringTableSize, std::ios_base::cur);
+            this->stream->seekg(stringTableSize, std::ios_base::cur);
 
             for (unsigned int i = 0; i < tableSizeA; ++i)
             {
                 ChunkHead head;
-                stream->read(reinterpret_cast<char*>(&head), sizeof(ChunkHead));
+                this->stream->read(reinterpret_cast<char*>(&head), sizeof(ChunkHead));
 
                 chunkHeadsA.push_back(head);
             }
 
             chunksOffsetA = HeaderSize + stringTableSize + tableSizeA * sizeof(ChunkHead);
 
-            stream->seekg(tableSizeA * ChunkBodySize, std::ios_base::cur);
+            this->stream->seekg(tableSizeA * ChunkBodySize, std::ios_base::cur);
 
             for (unsigned int i = 0; i < tableSizeB; ++i)
             {
                 ChunkHead head;
-                stream->read(reinterpret_cast<char*>(&head), sizeof(ChunkHead));
+                this->stream->read(reinterpret_cast<char*>(&head), sizeof(ChunkHead));
 
                 chunkHeadsB.push_back(head);
             }

@@ -435,12 +435,12 @@ namespace Casc
         /**
          * Move constructor.
          */
-        BaseCascBuffer(BaseCascBuffer&&) = default;
+        BaseCascBuffer(BaseCascBuffer &&) = default;
 
         /**
          * Move operator.
          */
-        BaseCascBuffer& BaseCascBuffer::operator= (BaseCascBuffer &&) = default;
+        BaseCascBuffer &BaseCascBuffer::operator= (BaseCascBuffer &&) = default;
 
         /**
          * Destructor.

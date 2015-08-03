@@ -30,38 +30,14 @@ namespace CascLibTest
 		TEST_METHOD(GetRootFile)
 		{
 			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
-			auto root = container->openFileByKey(container->buildConfig()["root"].front());
-			//auto root = container->findFile("16B35FCCABC6BE82DD");
-			
-
-			/*root.seekg(0, std::ios_base::end);
-			auto size = root.tellg();
-
-			auto data = std::make_unique<char[]>(size);
-
-			root.seekg(0, std::ios_base::beg);
-			root.read(data.get(), size);
-
-			std::ofstream fs;
-			fs.open("root", std::ios_base::out | std::ios_base::binary);
-
-			fs.write(data.get(), size);
-
-			fs.close();*/
+			auto root = container->openFileByHash(container->buildConfig()["root"].front());
 		}
 
 		TEST_METHOD(GetEncodingFile)
 		{
 			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
-
-			/*MemoryInfo loc;
-			loc.file_ = 28;
-			loc.offset_ = 368053824;
-			loc.size_ = 52535596;*/
-
-			//auto encoding = container->openStream(loc);
-            auto encoding = container->openFileByKey(container->buildConfig()["encoding"].back());
-			CascEncoding enc(&encoding);
+			CascEncoding enc(
+                container->openFileByKey(container->buildConfig()["encoding"].back()));
 
 			auto key = enc.findKey(container->buildConfig()["root"].front());
 		}
