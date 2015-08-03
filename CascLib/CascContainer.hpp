@@ -62,7 +62,10 @@ namespace Casc
         std::vector<CascIndex> indices_;
 
         // The encoding file.
-        std::unique_ptr<CascEncoding> encoding;
+        CascStream encodingStream;
+
+        // The encoding parser.
+        CascEncoding encoding;
 
     public:
         /**
@@ -147,10 +150,8 @@ namespace Casc
                 indices_.push_back(ss.str());
             }
 
-            //std::unique_ptr<CascEncoding>(openFileByKey(buildConfig_["encoding"].back());
-
-            //new CascStream(openFileByKey(buildConfig_["encoding"].back()));
-            encoding = std::make_unique<CascEncoding>(openFileByKey(buildConfig_["encoding"].back()));
+            encodingStream = openFileByKey(buildConfig_["encoding"].back());
+            encoding = CascEncoding(&encodingStream);
         }
 
         const std::string &path() const
