@@ -53,7 +53,7 @@ namespace Casc
                         if (hex.data() == chunk->hash)
                         {
                             std::array<uint8_t, 9> temp;
-                            std::memcpy(&temp[0], &chunk->hash[0], temp.size());
+                            std::memcpy(&temp[0], &chunk->key[0], temp.size());
 
                             return Hex<9>(temp).string();
                         }
@@ -88,7 +88,7 @@ namespace Casc
                         if (hex.data() == chunk->hash)
                         {
                             std::array<uint8_t, 9> temp;
-                            std::memcpy(&temp[0], &chunk->hash[0], temp.size());
+                            std::memcpy(&temp[0], &chunk->key[0], temp.size());
 
                             return Hex<9>(temp).string();
                         }

@@ -30,7 +30,7 @@ namespace CascLibTest
 		TEST_METHOD(GetRootFile)
 		{
 			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
-			auto root = container->openFileByHash(container->buildConfig()["root"].front());
+			auto root = container->openFileByHash(container->buildConfig()["root"].back());
 		}
 
 		TEST_METHOD(GetEncodingFile)
