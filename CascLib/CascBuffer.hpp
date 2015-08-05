@@ -44,10 +44,10 @@ namespace Casc
 
         // The offset where the data starts.
         // This is where the first header is found.
-        size_t offset = 0;
+        off_type offset = 0;
 
         // The size of the decompressed file.
-        size_t length = 0;
+        off_type length = 0;
 
         // The buffer containing the decompressed data for the current chunk.
         std::unique_ptr<char[]> out;
@@ -140,7 +140,7 @@ namespace Casc
             {
                 chunks.push_back({
                     0,
-                    0,
+                    size,
                     38,
                     size
                 });
@@ -156,9 +156,15 @@ namespace Casc
         */
         bool find(off_type offset, ChunkInfo &out)
         {
-            for (auto chunk : chunks)
+            for (auto &chunk : chunks)
             {
                 if (chunk.begin <= offset && chunk.end > offset)
+                {
+                    out = chunk;
+                    return true;
+                }
+                else if (chunk.begin <= offset && chunk.end >= offset &&
+                    chunks.back().begin == chunk.begin && chunks.back().end == chunk.end)
                 {
                     out = chunk;
                     return true;
@@ -293,6 +299,8 @@ namespace Casc
                     return pos_type(-1);
                 }
 
+                off_type chunkSize;
+
                 count = std::min<size_t>(static_cast<size_t>(chunk.end - offset), bufferSize);
 
                 // Read the compression mode.
@@ -301,8 +309,13 @@ namespace Casc
 
                 // Call the handler for the compression mode.
                 std::filebuf::seekpos(this->offset + chunk.offset + 1);
-                auto data = handlers[mode]->buffer(*this, offset - chunk.begin, chunk.size - 1, count);
+                auto data = handlers[mode]->buffer(*this, offset - chunk.begin, chunk.size - 1, count, chunkSize);
                 std::memcpy(out.get() + pos, data.get(), count);
+
+                if (chunks.size() == 1)
+                {
+                    this->length = chunks.back().end = chunkSize;
+                }
                 
                 offset += count;
                 pos += count;
@@ -403,7 +416,7 @@ namespace Casc
                 {
                     auto numRead = std::min<size_t>(
                         static_cast<size_t>(showmanyc()), static_cast<size_t>(count - copied));
-                    std::memcpy(s, gptr(), numRead);
+                    std::memcpy(s + copied, gptr(), numRead);
                     copied += numRead;
                     numRead == 0 ? seek(numRead) : seekbuf(numRead);
                 } while (copied < count && underflow() != traits_type::eof());

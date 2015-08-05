@@ -108,7 +108,7 @@ namespace Casc
         // The size of each chunk body (second block for each table).
         const unsigned int ChunkBodySize = 4096U;
 
-        // The stream to the encoding file.
+        // The encoding file stream.
         std::unique_ptr<std::istream> stream;
 
         /**
@@ -171,8 +171,6 @@ namespace Casc
     public:
         /**
          * Default constructor.
-         *
-         * @param cleanup   delete the stream during cleanup.
          */
         CascEncoding()
             : chunksOffsetA(0), chunksOffsetB(0)

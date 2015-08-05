@@ -30,9 +30,6 @@
     <ClInclude Include="CascContainer.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
-    <ClInclude Include="Shmem.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
     <ClInclude Include="StreamOps.hpp">
       <Filter>Header Files\Helpers</Filter>
     </ClInclude>
@@ -55,9 +52,6 @@
       <Filter>Header Files\Types</Filter>
     </ClInclude>
     <ClInclude Include="CascEncoding.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="CascIndexRecord.h">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
     <ClInclude Include="CascHandler.hpp">
@@ -86,6 +80,15 @@
     </ClInclude>
     <ClInclude Include="Shared\FileSearch.hpp">
       <Filter>Header Files\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="CascShmem.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="CascRoot.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CascIndexRecord.hpp">
+      <Filter>Header Files\Types</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

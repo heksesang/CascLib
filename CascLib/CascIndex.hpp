@@ -8,7 +8,7 @@
 #include "Shared/Hex.hpp"
 #include "Shared/MemoryInfo.hpp"
 #include "StreamOps.hpp"
-#include "CascIndexRecord.h"
+#include "CascIndexRecord.hpp"
 
 namespace Casc
 {

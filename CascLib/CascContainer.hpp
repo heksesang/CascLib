@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include "Shmem.hpp"
+#include "CascShmem.hpp"
 #include "CascBuildInfo.hpp"
 #include "CascConfiguration.hpp"
 #include "CascEncoding.hpp"
@@ -61,7 +61,7 @@ namespace Casc
         CascConfiguration cdnConfig_;
 
         // The SHMEM.
-        Shmem shmem_;
+        CascShmem shmem_;
 
         // The file indices.
         std::vector<CascIndex> indices_;
@@ -174,7 +174,7 @@ namespace Casc
             return cdnConfig_;
         }
 
-        const Shmem &shmem() const
+        const CascShmem &shmem() const
         {
             return shmem_;
         }

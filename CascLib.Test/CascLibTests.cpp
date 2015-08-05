@@ -12,7 +12,7 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #include "../CascLib/CascBuildInfo.hpp"
 #include "../CascLib/CascContainer.hpp"
 #include "../CascLib/CascEncoding.hpp"
-#include "../CascLib/Shmem.hpp"
+#include "../CascLib/CascShmem.hpp"
 
 using namespace Casc;
  
@@ -29,17 +29,51 @@ namespace CascLibTest
 
 		TEST_METHOD(GetRootFile)
 		{
-			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
-			auto root = container->openFileByHash(container->buildConfig()["root"].back());
+			auto container = std::make_unique<CascContainer>(R"(I:\Diablo III\)");
+			auto root = container->openFileByHash(container->buildConfig()["root"].front());
+            
+            root->seekg(0, std::ios_base::end);
+            auto size = root->tellg();
+
+            root->seekg(0, std::ios_base::beg);
+            auto arr = new char[size];
+
+            root->read(arr, size);
+
+            std::fstream fs;
+            fs.open("root.out", std::ios_base::out | std::ios_base::binary);
+
+            fs.write(arr, size);
+            fs.close();
+
+            delete[] arr;
 		}
 
 		TEST_METHOD(GetEncodingFile)
 		{
-			auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
-			CascEncoding enc(
+			auto container = std::make_unique<CascContainer>(R"(I:\Diablo III\)");
+			/*CascEncoding enc(
                 container->openFileByKey(container->buildConfig()["encoding"].back()));
 
-			auto key = enc.findKey(container->buildConfig()["root"].front());
+			auto key = enc.findKey(container->buildConfig()["root"].front());*/
+
+            auto enc = container->openFileByKey(container->buildConfig()["encoding"].back());
+
+            enc->seekg(0, std::ios_base::end);
+            auto size = enc->tellg();
+
+            enc->seekg(0, std::ios_base::beg);
+            auto arr = new char[size];
+
+            enc->read(arr, size);
+
+            std::fstream fs;
+            fs.open("enc.out", std::ios_base::out | std::ios_base::binary);
+
+            fs.write(arr, size);
+            fs.close();
+
+            delete[] arr;
 		}
 
 		TEST_METHOD(ReadConfiguration)
@@ -54,7 +88,7 @@ namespace CascLibTest
 
 		TEST_METHOD(ReadShmem)
 		{
-            Shmem shmem(R"(shmem)", R"(I:\World of Warcraft\)");
+            CascShmem shmem(R"(shmem)", R"(I:\World of Warcraft\)");
 		}
 
 	};

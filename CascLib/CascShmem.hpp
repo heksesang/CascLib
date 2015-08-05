@@ -10,7 +10,6 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-//using namespace std::tr2;
 using namespace std::experimental::filesystem;
 
 #include "Shared/Utils.hpp"
@@ -20,11 +19,13 @@ using namespace std::experimental::filesystem;
 
 namespace Casc
 {
+    using namespace Casc::Shared;
+
     /**
      * Contains information about which CASC files are available for writing,
      * and which is the current version of the index lists.
      */
-    class Shmem
+    class CascShmem
     {
         /**
         * Different SHMEM block types:
@@ -197,7 +198,7 @@ namespace Casc
         /**
          * Default constructor.
          */
-        Shmem()
+        CascShmem()
         {
         }
 
@@ -207,7 +208,7 @@ namespace Casc
          * @param path the path of the SHMEM file.
          * @param base the path of the base directory.
          */
-        Shmem(std::string path, std::string base)
+        CascShmem(std::string path, std::string base)
         {
             parse(path, base);
         }
@@ -215,7 +216,7 @@ namespace Casc
         /**
          * Destructor.
          */
-        virtual ~Shmem()
+        virtual ~CascShmem()
         {
         }
 

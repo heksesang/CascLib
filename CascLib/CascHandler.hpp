@@ -41,7 +41,7 @@ namespace Casc
          *
          * @return A pointer to the byte array.
          */
-        virtual std::unique_ptr<char[]> buffer(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize)
+        virtual std::unique_ptr<char[]> buffer(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize)
         {
             return nullptr;
         }
@@ -53,7 +53,7 @@ namespace Casc
     template <typename Traits = std::filebuf::traits_type>
     class DefaultHandler : public BaseCascHandler<typename Traits>
     {
-        std::unique_ptr<char[]> buffer(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize) override
+        std::unique_ptr<char[]> buffer(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize) override
         {
             char* out = new char[outSize];
 
@@ -75,28 +75,38 @@ namespace Casc
     template <typename Traits = std::filebuf::traits_type>
     class ZlibHandler : public BaseCascHandler<typename Traits>
     {
+        ZStreamBase::char_t* out = nullptr;
+        size_t avail_out = 0;
+
         CompressionMode compressionMode() override
         {
             return CompressionMode::Zlib;
         }
 
-        std::unique_ptr<char[]> buffer(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize) override
+        std::unique_ptr<char[]> buffer(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize) override
         {
-            ZStreamBase::char_t *out = nullptr;
-            size_t avail_out;
-            
-            auto in = std::make_unique<ZStreamBase::char_t[]>(inSize);
-            if (buf.sgetn(reinterpret_cast<char*>(in.get()), inSize) == inSize)
+            if (avail_out - offset < outSize)
             {
-                ZInflateStream(in.get(), inSize).readAll(&out, avail_out);
-
-                ZStreamBase::char_t *resizedOut = new ZStreamBase::char_t[outSize];
-                std::memcpy(resizedOut, out + offset, outSize);
-
-                return std::unique_ptr<char[]>(reinterpret_cast<char*>(resizedOut));
+                auto in = std::make_unique<ZStreamBase::char_t[]>(inSize);
+                if (buf.sgetn(reinterpret_cast<char*>(in.get()), inSize) == inSize)
+                {
+                    ZInflateStream(in.get(), inSize).readAll(&out, avail_out);
+                    chunkSize = avail_out;
+                }
             }
 
+            ZStreamBase::char_t *resizedOut = new ZStreamBase::char_t[outSize];
+            std::memcpy(resizedOut, out + offset, outSize);
+
+            return std::unique_ptr<char[]>(reinterpret_cast<char*>(resizedOut));
+
             return nullptr;
+        }
+
+    public:
+        virtual ~ZlibHandler()
+        {
+            delete[] out;
         }
     };
 
