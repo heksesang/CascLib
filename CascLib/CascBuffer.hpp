@@ -10,7 +10,7 @@
 #include <map>
 #include "zlib.hpp"
 #include "Shared/Utils.hpp"
-#include "CascHandler.hpp"
+#include "CascBlteHandler.hpp"
 #include "Shared/BufferInfo.hpp"
 #include "Shared/ChunkInfo.hpp"
 #include "Shared/CompressionMode.hpp"
@@ -23,14 +23,13 @@ namespace Casc
      * A buffer which can be used to read compressed data from CASC file.
      * When used with a stream, the stream will be able to transparently output decompressed data.
      */
-    template <typename Traits, size_t BufferSize>
+    template <size_t BufferSize>
     class BaseCascBuffer : public std::filebuf
     {
     public:
         // Typedefs
-        typedef BufferInfo<typename Traits> BufferInfo;
-        typedef ChunkInfo<typename Traits> ChunkInfo;
-        typedef typename Traits::off_type off_type;
+        typedef BufferInfo<traits_type> BufferInfo;
+        typedef ChunkInfo<traits_type> ChunkInfo;
 
     private:
         // True when the file is properly initialized.
@@ -62,7 +61,7 @@ namespace Casc
         std::vector<ChunkInfo> chunks;
 
         // Chunk handlers
-        std::map<char, std::unique_ptr<CascHandler>> handlers;
+        std::map<char, std::shared_ptr<CascBlteHandler>> handlers;
 
         /**
          * Read the header for the current file.
@@ -439,7 +438,7 @@ namespace Casc
         /**
          * Constructor with handler initialization.
          */
-        BaseCascBuffer(std::initializer_list<CascHandler*> handlers)
+        BaseCascBuffer(std::vector<std::shared_ptr<CascBlteHandler>> handlers)
             : CascBuffer()
         {
             registerHandlers(handlers);
@@ -463,17 +462,17 @@ namespace Casc
             this->close();
         }
 
-        void registerHandlers(std::initializer_list<CascHandler*> handlers)
+        void registerHandlers(std::vector<std::shared_ptr<CascBlteHandler>> handlers)
         {
-            for (CascHandler* handler : handlers)
-                this->handlers[handler->compressionMode()] = std::unique_ptr<CascHandler>(handler);
+            for (std::shared_ptr<CascBlteHandler> handler : handlers)
+                this->handlers[handler->compressionMode()] = std::shared_ptr<CascBlteHandler>(handler);
         }
 
         template <typename T>
         void registerHandler()
         {
-            CascHandler* handler = new T;
-            this->handlers[handler->compressionMode()] = std::unique_ptr<CascHandler>(handler);
+            CascBlteHandler* handler = new T;
+            this->handlers[handler->compressionMode()] = std::shared_ptr<CascBlteHandler>(handler);
         }
 
         /**
@@ -544,5 +543,5 @@ namespace Casc
         }
     };
 
-    typedef BaseCascBuffer<std::filebuf::traits_type, 4096U> CascBuffer;
+    typedef BaseCascBuffer<4096U> CascBuffer;
 }

@@ -8,10 +8,11 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #include <thread>
 #include <vector>
 
-#include "../CascLib/CascConfiguration.hpp"
 #include "../CascLib/CascBuildInfo.hpp"
+#include "../CascLib/CascConfiguration.hpp"
 #include "../CascLib/CascContainer.hpp"
 #include "../CascLib/CascEncoding.hpp"
+#include "../CascLib/CascRootHandler.hpp"
 #include "../CascLib/CascShmem.hpp"
 
 using namespace Casc;
@@ -24,34 +25,91 @@ namespace CascLibTest
 
         TEST_METHOD(LoadContainer)
         {
-            auto container = std::make_unique<CascContainer>(R"(I:\World of Warcraft\)");
+            auto container = std::make_unique<CascContainer>(
+                R"(I:\Diablo III\)",
+                std::vector<std::shared_ptr<CascBlteHandler>> {
+                    std::make_shared<ZlibHandler<>>()
+            });
         }
 
 		TEST_METHOD(GetRootFile)
 		{
-			auto container = std::make_unique<CascContainer>(R"(I:\Diablo III\)");
+            auto container = std::make_unique<CascContainer>(
+                R"(I:\Diablo III\)",
+                std::vector<std::shared_ptr<CascBlteHandler>> {
+                    std::make_shared<ZlibHandler<>>()
+            });
 			auto root = container->openFileByHash(container->buildConfig()["root"].front());
             
             root->seekg(0, std::ios_base::end);
             auto size = root->tellg();
 
+            std::fstream fs;
+            char* arr;
+
+            char magic[4];
+            int count;
+
             root->seekg(0, std::ios_base::beg);
-            auto arr = new char[size];
+            root->read(magic, 4);
+            root->read((char*)&count, 4);
+
+            for (int i = 0; i < count; ++i)
+            {
+                std::array<uint8_t, 16> hash;
+                std::string name;
+
+                root->read(reinterpret_cast<char*>(&hash[0]), 16);
+                std::getline(*root.get(), name, '\0');
+
+                Hex<16> hex(hash);
+
+                try
+                {
+                    auto dir = container->openFileByHash(hex.string());
+                    dir->seekg(0, std::ios_base::end);
+                    auto dirSize = dir->tellg();
+
+                    dir->seekg(0, std::ios_base::beg);
+                    arr = new char[dirSize];
+
+                    dir->read(arr, dirSize);
+
+                    fs.open(name, std::ios_base::out | std::ios_base::binary);
+
+                    fs.write(arr, dirSize);
+                    fs.close();
+
+                    delete[] arr;
+                }
+                catch (...)
+                {
+                    continue;
+                }
+            }
+
+            root->seekg(0, std::ios_base::beg);
+            arr = new char[size];
 
             root->read(arr, size);
 
-            std::fstream fs;
             fs.open("root.out", std::ios_base::out | std::ios_base::binary);
 
             fs.write(arr, size);
             fs.close();
 
             delete[] arr;
+
+
 		}
 
 		TEST_METHOD(GetEncodingFile)
 		{
-			auto container = std::make_unique<CascContainer>(R"(I:\Diablo III\)");
+            auto container = std::make_unique<CascContainer>(
+                R"(I:\Diablo III\)",
+                std::vector<std::shared_ptr<CascBlteHandler>> {
+                    std::make_shared<ZlibHandler<>>()
+            });
 			/*CascEncoding enc(
                 container->openFileByKey(container->buildConfig()["encoding"].back()));
 
@@ -88,7 +146,7 @@ namespace CascLibTest
 
 		TEST_METHOD(ReadShmem)
 		{
-            CascShmem shmem(R"(shmem)", R"(I:\World of Warcraft\)");
+            CascShmem shmem(R"(shmem)", R"(I:\Diablo III\)");
 		}
 
 	};

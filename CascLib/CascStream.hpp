@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include "CascBlteHandler.hpp"
 #include "CascBuffer.hpp"
 
 namespace Casc
@@ -10,19 +11,28 @@ namespace Casc
      * A stream that uses the CascBuffer as the underlying buffer.
      * The class provides methods to easily control the underlying buffer.
      */
-    class CascStream : public std::istream
+    class BaseCascStream : public std::istream
     {
         // The underlying buffer which allows direct data streaming.
         std::unique_ptr<CascBuffer> buffer;
+
+        // Chunk handlers
+        std::map<char, std::shared_ptr<CascBlteHandler>> handlers;
 
     public:
         /**
          * Default constructor.
          */
-        CascStream()
+        BaseCascStream()
             : buffer(reinterpret_cast<CascBuffer*>(rdbuf())), std::istream(new CascBuffer())
         {
-            buffer->registerHandler<ZlibHandler<>>();
+            registerHandler<DefaultHandler<>>();
+        }
+
+        BaseCascStream(std::vector<std::shared_ptr<CascBlteHandler>> handlers)
+            : BaseCascStream()
+        {
+            registerHandlers(handlers);
         }
 
         /**
@@ -30,9 +40,11 @@ namespace Casc
          *
          * @param filename	the filename of the CASC file.
          * @param offset	the offset where the file starts.
+         * @param handlers  the chunk handlers.
          */
-        CascStream(const std::string &filename, size_t offset)
-            : CascStream()
+        BaseCascStream(const std::string &filename, size_t offset,
+            std::vector<std::shared_ptr<CascBlteHandler>> handlers = {})
+            : BaseCascStream(handlers)
         {
             open(filename, offset);
         }
@@ -40,12 +52,12 @@ namespace Casc
         /**
         * Move constructor.
         */
-        CascStream(CascStream &&) = default;
+        BaseCascStream(BaseCascStream &&) = default;
 
         /**
          * Destructor.
          */
-        ~CascStream() override
+        virtual ~BaseCascStream() override
         {
             if (is_open())
             {
@@ -56,7 +68,7 @@ namespace Casc
         /**
          * Move operator.
          */
-        CascStream &CascStream::operator= (CascStream &&) = default;
+        BaseCascStream &BaseCascStream::operator= (BaseCascStream &&) = default;
 
         /**
          * Opens a file from the currently opened CASC file.
@@ -107,5 +119,23 @@ namespace Casc
         {
             return buffer->is_open();
         }
+
+        void registerHandlers(std::vector<std::shared_ptr<CascBlteHandler>> handlers)
+        {
+            for (std::shared_ptr<CascBlteHandler> handler : handlers)
+                this->handlers[handler->compressionMode()] = handler;
+
+            reinterpret_cast<CascBuffer*>(this->rdbuf())->registerHandlers(handlers);
+        }
+
+        template <typename T>
+        void registerHandler()
+        {
+            CascBlteHandler* handler = new T;
+            this->handlers[handler->compressionMode()] = std::shared_ptr<CascBlteHandler>(handler);
+            reinterpret_cast<CascBuffer*>(this->rdbuf())->registerHandlers({ this->handlers[handler->compressionMode()] });
+        }
     };
+
+    typedef BaseCascStream CascStream;
 }

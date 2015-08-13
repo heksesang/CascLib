@@ -54,9 +54,6 @@
     <ClInclude Include="CascEncoding.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
-    <ClInclude Include="CascHandler.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
     <ClInclude Include="Shared\ChunkInfo.hpp">
       <Filter>Header Files\Types\Shared</Filter>
     </ClInclude>
@@ -84,11 +81,17 @@
     <ClInclude Include="CascShmem.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
-    <ClInclude Include="CascRoot.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="CascIndexRecord.hpp">
       <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="CascBlteHandler.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="CascTraits.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CascRootHandler.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

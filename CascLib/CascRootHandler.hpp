@@ -17,7 +17,7 @@ namespace Casc
      * 
      * TODO: Finish implementation, need different handling per game.
      */
-    class CascRoot
+    class CascRootHandler
     {
     public:
         /**
@@ -26,18 +26,9 @@ namespace Casc
          * @param filename  the filename.
          * @return          the hash in hex format.
          */
-        std::string findHash(std::string filename)
-        {
-            std::pair<uint32_t, uint32_t> lookup;
-            lookup = Hash::lookup3(filename, lookup);
-
-            return hashes[lookup];
-        }
+        virtual std::string findHash(std::string filename) = 0;
 
     private:
-        // The header size of a root file.
-        const unsigned int HeaderSize = 12U;
-
         // The root file stream.
         std::unique_ptr<std::istream> stream;
 
@@ -70,28 +61,28 @@ namespace Casc
             }
         }
 
-#pragma pack(push, 1)
-        struct ChunkHead
-        {
-            std::array<uint8_t, 4> unk;
-        };
-
-        struct ChunkBody
-        {
-            std::array<uint8_t, 16> hash;
-            std::array<uint8_t, 4> lookupB;
-            std::array<uint8_t, 4> lookupA;
-        };
-#pragma pack(pop)
-
-        // Hash table with the file hashes mapped with lookup as key.
-        std::map<std::pair<uint32_t, uint32_t>, std::string> hashes;
+//#pragma pack(push, 1)
+//        struct ChunkHead
+//        {
+//            std::array<uint8_t, 4> unk;
+//        };
+//
+//        struct ChunkBody
+//        {
+//            std::array<uint8_t, 16> hash;
+//            std::array<uint8_t, 4> lookupB;
+//            std::array<uint8_t, 4> lookupA;
+//        };
+//#pragma pack(pop)
+//
+//        // Hash table with the file hashes mapped with lookup as key.
+//        std::map<std::pair<uint32_t, uint32_t>, std::string> hashes;
 
     public:
         /**
          * Default constructor.
          */
-        CascRoot()
+        CascRootHandler()
         {
 
         }
@@ -101,10 +92,10 @@ namespace Casc
          *
          * @param stream    pointer to the stream.
          */
-        CascRoot(std::unique_ptr<std::istream> stream)
-            : CascRoot()
+        CascRootHandler(std::shared_ptr<std::istream> stream)
+            : CascRootHandler()
         {
-            parse(std::move(stream));
+            parse(stream);
         }
 
         /**
@@ -112,8 +103,8 @@ namespace Casc
          *
          * @param path      path to the root file.
          */
-        CascRoot(std::string path)
-            : CascRoot()
+        CascRootHandler(std::string path)
+            : CascRootHandler()
         {
             parse(path);
         }
@@ -121,19 +112,24 @@ namespace Casc
         /**
          * Move constructor.
          */
-        CascRoot(CascRoot &&) = default;
+        CascRootHandler(CascRootHandler &&) = default;
 
         /**
         * Move operator.
         */
-        CascRoot &CascRoot::operator= (CascRoot &&) = default;
+        CascRootHandler &CascRootHandler::operator= (CascRootHandler &&) = default;
 
         /**
          * Destructor.
          */
-        virtual ~CascRoot()
+        virtual ~CascRootHandler()
         {
         }
+
+        /**
+         * The file magic of the root file.
+         */
+        virtual std::array<char, 4> fileMagic() const = 0;
 
         /**
          * Parse a root file.
@@ -152,22 +148,6 @@ namespace Casc
          *
          * @param stream    pointer to the stream.
          */
-        void parse(std::unique_ptr<std::istream> stream)
-        {
-            this->stream = std::move(stream);
-
-            uint32_t tableSize;
-
-            read(tableSize, true);
-
-            this->stream->seekg(8, std::ios_base::cur);
-
-            for (unsigned int i = 0; i < tableSize; ++i)
-            {
-                // Read hashes
-            }
-
-            checkForErrors();
-        }
+        virtual void parse(std::shared_ptr<std::istream> stream) = 0;
     };
 }

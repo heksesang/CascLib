@@ -6,24 +6,34 @@
 #include <string>
 #include <vector>
 #include "CascShmem.hpp"
+#include "CascBlteHandler.hpp"
 #include "CascBuildInfo.hpp"
 #include "CascConfiguration.hpp"
 #include "CascEncoding.hpp"
 #include "CascIndex.hpp"
 #include "CascStream.hpp"
+#include "CascTraits.hpp"
+#include "CascRootHandler.hpp"
 #include "Shared/FileSearch.hpp"
+#include "Shared/Utils.hpp"
 
 using namespace std::tr2;
 
 namespace Casc
 {
+    using namespace Casc::Shared;
+
     /**
      * A container for a CASC archive.
      */
-    class CascContainer
+    template <typename Traits>
+    class BaseCascContainer
     {
     public:
-        std::unique_ptr<CascStream> openFileByKey(const std::string &key) const
+        typedef Traits traits_type;
+
+    public:
+        std::shared_ptr<CascStream> openFileByKey(const std::string &key) const
         {
             auto bytes = Hex<9>(key).data();
 
@@ -42,9 +52,28 @@ namespace Casc
             throw std::exception("File not found");
         }
 
-        std::unique_ptr<CascStream> openFileByHash(const std::string &hash) const
+        std::shared_ptr<CascStream> openFileByHash(const std::string &hash) const
         {
             return openFileByKey(encoding->findKey(hash));
+        }
+
+        template <typename T>
+        void registerHandler()
+        {
+            CascBlteHandler* handler = new T;
+            this->blteHandlers[handler->compressionMode()] = std::shared_ptr<CascBlteHandler>(handler);
+        }
+
+        void registerHandlers(std::vector<std::shared_ptr<CascBlteHandler>> handlers)
+        {
+            for (std::shared_ptr<CascBlteHandler> handler : handlers)
+                this->blteHandlers[handler->compressionMode()] = handler;
+        }
+
+        void registerHandlers(std::vector<std::shared_ptr<CascRootHandler>> handlers)
+        {
+            for (std::shared_ptr<CascRootHandler> handler : handlers)
+                this->rootHandlers[handler->fileMagic()] = handler;
         }
 
     private:
@@ -69,25 +98,33 @@ namespace Casc
         // The encoding file.
         std::unique_ptr<CascEncoding> encoding;
 
+        // Chunk handlers
+        std::map<char, std::shared_ptr<CascBlteHandler>> blteHandlers;
+
+        // Chunk handlers
+        std::map<std::array<char, 4>, std::shared_ptr<CascRootHandler>> rootHandlers;
+
         /**
          * Opens a stream at a given location.
          *
          * @param loc	the location of the data to stream.
          * @return		a stream object.
          */
-        std::unique_ptr<CascStream> openStream(MemoryInfo &loc) const
+        std::shared_ptr<CascStream> openStream(MemoryInfo &loc) const
         {
             std::stringstream ss;
             ss << shmem_.path() << "/data." << std::setw(3) << std::setfill('0') << loc.file();
-
-            return std::make_unique<CascStream>(ss.str(), loc.offset());
+            
+            return std::make_shared<CascStream>(
+                ss.str(), loc.offset(),
+                mapToVector(this->blteHandlers));
         }
 
     public:
         /**
          * Default constructor.
          */
-        CascContainer()
+        BaseCascContainer()
         {
 
         }
@@ -97,25 +134,28 @@ namespace Casc
          *
          * @param path	the path of the archive folder.
          */
-        CascContainer(std::string path)
+        BaseCascContainer(std::string path,
+            std::vector<std::shared_ptr<CascBlteHandler>> blteHandlers = {},
+            std::vector<std::shared_ptr<CascRootHandler>> rootHandlers = {})
         {
+            registerHandlers(blteHandlers);
             load(path);
         }
 
         /**
          * Move constructor.
          */
-        CascContainer(CascContainer &&) = default;
+        BaseCascContainer(BaseCascContainer &&) = default;
 
         /**
          * Move operator.
          */
-        CascContainer &CascContainer::operator= (CascContainer &&) = default;
+        BaseCascContainer &BaseCascContainer::operator= (BaseCascContainer &&) = default;
 
         /**
          * Destructor.
          */
-        virtual ~CascContainer()
+        virtual ~BaseCascContainer()
         {
         }
 
@@ -179,4 +219,6 @@ namespace Casc
             return shmem_;
         }
     };
+
+    typedef BaseCascContainer<CascTraits> CascContainer;
 }

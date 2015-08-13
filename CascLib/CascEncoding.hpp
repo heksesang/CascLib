@@ -109,7 +109,7 @@ namespace Casc
         const unsigned int ChunkBodySize = 4096U;
 
         // The encoding file stream.
-        std::unique_ptr<std::istream> stream;
+        std::shared_ptr<std::istream> stream;
 
         /**
          * Reads data from a stream and puts it in a struct.
@@ -183,10 +183,10 @@ namespace Casc
          *
          * @param stream    pointer to the stream.
          */
-        CascEncoding(std::unique_ptr<std::istream> stream)
+        CascEncoding(std::shared_ptr<std::istream> stream)
             : CascEncoding()
         {
-            parse(std::move(stream));
+            parse(stream);
         }
 
         /**
@@ -234,9 +234,9 @@ namespace Casc
          *
          * @param stream    pointer to the stream.
          */
-        void parse(std::unique_ptr<std::istream> stream)
+        void parse(std::shared_ptr<std::istream> stream)
         {
-            this->stream = std::move(stream);
+            this->stream = stream;
 
             char magic[2];
             this->stream->read(magic, 2);

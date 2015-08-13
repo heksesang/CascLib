@@ -12,6 +12,17 @@ namespace Casc
 {
     namespace Shared
     {
+        template <typename M>
+        std::vector<typename M::mapped_type> mapToVector(const  M &m) {
+            std::vector<typename M::mapped_type> v;
+
+            for (typename M::const_iterator it = m.begin(); it != m.end(); ++it) {
+                v.push_back(it->second);
+            }
+
+            return std::move(v);
+        }
+
         inline std::string trim(const std::string &s)
         {
             auto wsfront = std::find_if_not(s.begin(), s.end(), std::isspace);

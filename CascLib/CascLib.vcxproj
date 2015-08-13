@@ -228,11 +228,12 @@
     <ClInclude Include="CascBuildInfo.hpp" />
     <ClInclude Include="CascContainer.hpp" />
     <ClInclude Include="CascEncoding.hpp" />
-    <ClInclude Include="CascHandler.hpp" />
+    <ClInclude Include="CascBlteHandler.hpp" />
     <ClInclude Include="CascIndex.hpp" />
     <ClInclude Include="CascIndexRecord.hpp" />
-    <ClInclude Include="CascRoot.hpp" />
+    <ClInclude Include="CascRootHandler.hpp" />
     <ClInclude Include="CascStream.hpp" />
+    <ClInclude Include="CascTraits.hpp" />
     <ClInclude Include="Shared\FileSearch.hpp" />
     <ClInclude Include="Shared\Hex.hpp" />
     <ClInclude Include="Shared\MemoryInfo.hpp" />
