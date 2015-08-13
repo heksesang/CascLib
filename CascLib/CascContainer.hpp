@@ -57,6 +57,17 @@ namespace Casc
             return openFileByKey(encoding->findKey(hash));
         }
 
+        std::shared_ptr<CascStream> openFileByName(const std::string &name) const
+        {
+            auto root = container->openFileByHash(this->buildConfig()["root"].front());
+
+            std::array<char, 4> magic;
+            root->read(&magic[0], 4);
+            root->seekg(0, std::ios_base::beg);
+
+            return openFileByKey(encoding->findKey(rootHandlers[magic]->findHash(name)));
+        }
+
         template <typename T>
         void registerHandler()
         {

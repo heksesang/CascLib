@@ -7,6 +7,7 @@
 #include <array>
 #include <fstream>
 #include "Shared/Utils.hpp"
+#include "CascTraits.hpp"
 
 namespace Casc
 {
@@ -28,7 +29,7 @@ namespace Casc
          */
         virtual std::string findHash(std::string filename) = 0;
 
-    private:
+    protected:
         // The root file stream.
         std::unique_ptr<std::istream> stream;
 
