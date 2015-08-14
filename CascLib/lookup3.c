@@ -989,15 +989,4 @@ void driver5()
 	printf("hash is %.8lx\n", c);   /* cd628161 */
 }
 
-
-int main()
-{
-	driver1();   /* test that the key is hashed: used for timings */
-	driver2();   /* test that whole key is hashed thoroughly */
-	driver3();   /* test that nothing but the key is hashed */
-	driver4();   /* test hashing multiple buffers (all buffers are null) */
-	driver5();   /* test the hash against known vectors */
-	return 1;
-}
-
 #endif  /* SELF_TEST */

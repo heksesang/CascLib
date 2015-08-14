@@ -87,10 +87,10 @@ namespace Casc
 
             for (char *ptr = data.get(), *end = data.get() + size; ptr < end;)
             {
-                /*CascIndexRecord *record = reinterpret_cast<CascIndexRecord*>(ptr);
+                CascIndexRecord *record = reinterpret_cast<CascIndexRecord*>(ptr);
                 ptr += sizeof(CascIndexRecord);
 
-                files[record->hash] = MemoryInfo(record->location, readBE<uint32_t>(record->offset), readLE<uint32_t>(record->length));*/
+                files[record->hash] = MemoryInfo(record->location, readBE<uint32_t>(record->offset), readLE<uint32_t>(record->length));
             }
 
             fs.seekg(0x1000 - ((8 + size) % 0x1000), std::ios_base::cur);

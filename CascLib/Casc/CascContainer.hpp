@@ -148,6 +148,7 @@ namespace Casc
             std::vector<std::shared_ptr<CascRootHandler>> rootHandlers = {})
         {
             registerHandlers(blteHandlers);
+            registerHandlers(rootHandlers);
             load(path);
         }
 
