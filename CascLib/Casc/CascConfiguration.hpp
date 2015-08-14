@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <map>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -133,7 +134,12 @@ namespace Casc
 
                 case TokenType::Value:
                     std::getline(fs, value);
-                    values_[key].push_back(value);
+                    std::istringstream ss(value);
+                    values_[key] = std::vector<std::string>
+                    {
+                        std::istream_iterator<std::string>{ss},
+                        std::istream_iterator<std::string>{}
+                    };
                     currentToken = TokenType::None;
                     break;
                 }
