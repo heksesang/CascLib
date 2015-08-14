@@ -45,7 +45,6 @@ namespace Casc
 #include "CascConfiguration.hpp"
 #include "CascContainer.hpp"
 #include "CascEncoding.hpp"
-#include "CascIndexRecord.hpp"
 #include "CascIndex.hpp"
 #include "CascRootHandler.hpp"
 #include "CascShmem.hpp"

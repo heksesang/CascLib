@@ -6,6 +6,7 @@
 #include <string>
 
 #include "Common.hpp"
+#include "CascIndexRecord.hpp"
 
 namespace Casc
 {

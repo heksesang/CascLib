@@ -3,8 +3,6 @@
 #include <array>
 #include <stdint.h>
 
-#include "Common.hpp"
-
 namespace Casc
 {
 #pragma pack(push, 1)
