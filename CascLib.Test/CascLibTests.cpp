@@ -8,12 +8,12 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #include <thread>
 #include <vector>
 
-#include "../CascLib/CascBuildInfo.hpp"
-#include "../CascLib/CascConfiguration.hpp"
-#include "../CascLib/CascContainer.hpp"
-#include "../CascLib/CascEncoding.hpp"
-#include "../CascLib/CascRootHandler.hpp"
-#include "../CascLib/CascShmem.hpp"
+#include "../CascLib/Casc/Common.hpp"
+
+namespace Casc
+{
+    int const endian_index = std::ios_base::xalloc();
+}
 
 using namespace Casc;
  

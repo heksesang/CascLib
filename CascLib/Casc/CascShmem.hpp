@@ -10,18 +10,13 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-using namespace std::experimental::filesystem;
 
 #include "Common.hpp"
 
-#include "Shared/Utils.hpp"
-#include "Shared/MemoryInfo.hpp"
-#include "Shared/Reference.hpp"
-#include "StreamOps.hpp"
-
 namespace Casc
 {
-    using namespace Casc::Shared;
+    using namespace std::experimental::filesystem;
+    using namespace Casc::Shared::DataTypes;
 
     /**
      * Contains information about which CASC files are available for writing,

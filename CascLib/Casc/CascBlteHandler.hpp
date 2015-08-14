@@ -2,11 +2,8 @@
 
 #include <fstream>
 
-#include "Common.hpp"
-
 #include "zlib.hpp"
-#include "Shared/BufferInfo.hpp"
-#include "Shared/CompressionMode.hpp"
+#include "Common.hpp"
 
 namespace Casc
 {

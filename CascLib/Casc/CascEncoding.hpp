@@ -12,7 +12,8 @@
 namespace Casc
 {
     using namespace Casc::Shared;
-    using namespace Casc::Shared::Endian;
+    using namespace Casc::Shared::Functions;
+    using namespace Casc::Shared::Functions::Endian;
 
     /**
      * Maps file content MD5 hash to file key.

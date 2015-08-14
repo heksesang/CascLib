@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CascLib", "CascLib\CascLib.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CascLib.Test", "CascLib.Test\CascLib.Test.vcxproj", "{2FFC49A4-865F-4A94-89DB-8ACCF9739585}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CascLib.Extract", "CascLib.Extract\CascLib.Extract.vcxproj", "{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -41,6 +43,18 @@ Global
 		{2FFC49A4-865F-4A94-89DB-8ACCF9739585}.Release|Win32.Build.0 = Release|Win32
 		{2FFC49A4-865F-4A94-89DB-8ACCF9739585}.Release|x64.ActiveCfg = Release|x64
 		{2FFC49A4-865F-4A94-89DB-8ACCF9739585}.Release|x64.Build.0 = Release|x64
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Debug|Win32.Build.0 = Debug|Win32
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Debug|x64.ActiveCfg = Debug|x64
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Debug|x64.Build.0 = Debug|x64
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Fast|Win32.ActiveCfg = Release|Win32
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Fast|Win32.Build.0 = Release|Win32
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Fast|x64.ActiveCfg = Release|x64
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Fast|x64.Build.0 = Release|x64
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Release|Win32.ActiveCfg = Release|Win32
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Release|Win32.Build.0 = Release|Win32
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Release|x64.ActiveCfg = Release|x64
+		{7596E7B5-9068-4F0F-8B2A-42C0BD4D3C57}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -7,11 +7,9 @@
 
 #include "Common.hpp"
 
-#include "../CascLib/Shared/Utils.hpp"
-
 namespace Casc
 {
-    using namespace Casc::Shared;
+    using namespace Casc::Shared::Functions;
 
     /**
      * Class for parsing CASC configuration files.
@@ -134,7 +132,7 @@ namespace Casc
                     break;
 
                 case TokenType::Value:
-                    fs >> value;
+                    std::getline(fs, value);
                     values_[key].push_back(value);
                     currentToken = TokenType::None;
                     break;

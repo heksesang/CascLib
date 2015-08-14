@@ -2,10 +2,11 @@
 
 #include <filesystem>
 #include <vector>
-using namespace std::experimental::filesystem;
 
 namespace Casc
 {
+    using namespace std::experimental::filesystem;
+
     class FileSearch
     {
         std::vector<std::string> results_;

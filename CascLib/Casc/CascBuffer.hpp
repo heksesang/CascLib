@@ -12,11 +12,6 @@
 #include "Common.hpp"
 
 #include "zlib.hpp"
-#include "Shared/Utils.hpp"
-#include "CascBlteHandler.hpp"
-#include "Shared/BufferInfo.hpp"
-#include "Shared/ChunkInfo.hpp"
-#include "Shared/CompressionMode.hpp"
 
 namespace Casc
 {
@@ -72,7 +67,7 @@ namespace Casc
          */
         void readHeader()
         {
-            using namespace Endian;
+            using namespace Functions::Endian;
             char header[0x1E];
             std::filebuf::xsgetn(header, 0x1E);
 

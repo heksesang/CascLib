@@ -3,12 +3,13 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-#include "../CascLib/Shared/MemoryInfo.hpp"
-#include "../CascLib/Shared/Utils.hpp"
+#include "../CascLib/Casc/Common.hpp"
 
 using namespace Casc::Shared;
-using namespace Casc::Shared::Endian;
-using namespace Casc::Shared::Hash;
+using namespace Casc::Shared::Functions;
+using namespace Casc::Shared::Functions::Endian;
+using namespace Casc::Shared::Functions::Hash;
+using namespace Casc::Shared::DataTypes;
 
 namespace CascLibTest
 {

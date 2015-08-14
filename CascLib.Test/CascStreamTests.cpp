@@ -3,7 +3,7 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-#include "../CascLib/CascStream.hpp"
+#include "../CascLib/Casc/Common.hpp"
 
 using namespace Casc;
 

@@ -223,28 +223,28 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="CascBuffer.hpp" />
-    <ClInclude Include="CascConfiguration.hpp" />
-    <ClInclude Include="CascBuildInfo.hpp" />
-    <ClInclude Include="CascContainer.hpp" />
-    <ClInclude Include="CascEncoding.hpp" />
-    <ClInclude Include="CascBlteHandler.hpp" />
-    <ClInclude Include="CascIndex.hpp" />
-    <ClInclude Include="CascIndexRecord.hpp" />
-    <ClInclude Include="CascRootHandler.hpp" />
-    <ClInclude Include="CascStream.hpp" />
-    <ClInclude Include="Common.hpp" />
-    <ClInclude Include="Shared\FileSearch.hpp" />
-    <ClInclude Include="Shared\Hex.hpp" />
-    <ClInclude Include="Shared\MemoryInfo.hpp" />
-    <ClInclude Include="Shared\Reference.hpp" />
-    <ClInclude Include="Shared\BufferInfo.hpp" />
-    <ClInclude Include="Shared\ChunkInfo.hpp" />
-    <ClInclude Include="Shared\CompressionMode.hpp" />
-    <ClInclude Include="CascShmem.hpp" />
-    <ClInclude Include="StreamOps.hpp" />
-    <ClInclude Include="Shared\Utils.hpp" />
-    <ClInclude Include="zlib.hpp" />
+    <ClInclude Include="Casc\CascBuffer.hpp" />
+    <ClInclude Include="Casc\CascConfiguration.hpp" />
+    <ClInclude Include="Casc\CascBuildInfo.hpp" />
+    <ClInclude Include="Casc\CascContainer.hpp" />
+    <ClInclude Include="Casc\CascEncoding.hpp" />
+    <ClInclude Include="Casc\CascBlteHandler.hpp" />
+    <ClInclude Include="Casc\CascIndex.hpp" />
+    <ClInclude Include="Casc\CascIndexRecord.hpp" />
+    <ClInclude Include="Casc\CascRootHandler.hpp" />
+    <ClInclude Include="Casc\CascStream.hpp" />
+    <ClInclude Include="Casc\Common.hpp" />
+    <ClInclude Include="Casc\Shared\FileSearch.hpp" />
+    <ClInclude Include="Casc\Shared\Hex.hpp" />
+    <ClInclude Include="Casc\DataTypes\MemoryInfo.hpp" />
+    <ClInclude Include="Casc\DataTypes\Reference.hpp" />
+    <ClInclude Include="Casc\Shared\BufferInfo.hpp" />
+    <ClInclude Include="Casc\Shared\ChunkInfo.hpp" />
+    <ClInclude Include="Casc\DataTypes\CompressionMode.hpp" />
+    <ClInclude Include="Casc\CascShmem.hpp" />
+    <ClInclude Include="Casc\StreamOps.hpp" />
+    <ClInclude Include="Casc\Shared\Functions.hpp" />
+    <ClInclude Include="Casc\zlib.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lookup3.c" />

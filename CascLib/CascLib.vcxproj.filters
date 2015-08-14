@@ -27,79 +27,79 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CascContainer.hpp">
-      <Filter>Header Files\Types</Filter>
+    <ClInclude Include="Casc\Shared\BufferInfo.hpp">
+      <Filter>Header Files\Types\Shared</Filter>
     </ClInclude>
-    <ClInclude Include="StreamOps.hpp">
+    <ClInclude Include="Casc\Shared\ChunkInfo.hpp">
+      <Filter>Header Files\Types\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Shared\FileSearch.hpp">
       <Filter>Header Files\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="CascIndex.hpp">
+    <ClInclude Include="Casc\Shared\Functions.hpp">
+      <Filter>Header Files\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Shared\Hex.hpp">
+      <Filter>Header Files\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\StreamOps.hpp">
+      <Filter>Header Files\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascBlteHandler.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
-    <ClInclude Include="zlib.hpp">
+    <ClInclude Include="Casc\CascBuffer.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascBuildInfo.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascConfiguration.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascContainer.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascEncoding.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascIndex.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascIndexRecord.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascRootHandler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascShmem.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascStream.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Common.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\DataTypes\MemoryInfo.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\DataTypes\Reference.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\DataTypes\CompressionMode.hpp">
+      <Filter>Header Files\Types\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\zlib.hpp">
       <Filter>Header Files\Functions</Filter>
     </ClInclude>
-    <ClInclude Include="CascBuffer.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="CascStream.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="CascBuildInfo.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="CascConfiguration.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="CascEncoding.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Shared\ChunkInfo.hpp">
-      <Filter>Header Files\Types\Shared</Filter>
-    </ClInclude>
-    <ClInclude Include="Shared\BufferInfo.hpp">
-      <Filter>Header Files\Types\Shared</Filter>
-    </ClInclude>
-    <ClInclude Include="Shared\CompressionMode.hpp">
-      <Filter>Header Files\Types\Shared</Filter>
-    </ClInclude>
-    <ClInclude Include="Shared\MemoryInfo.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Shared\Reference.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Shared\Utils.hpp">
-      <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="Shared\Hex.hpp">
-      <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="Shared\FileSearch.hpp">
-      <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="CascShmem.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="CascIndexRecord.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="CascBlteHandler.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="CascRootHandler.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Common.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\The CASC Filesystem_v1-2.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lookup3.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="..\The CASC Filesystem_v1-2.txt" />
   </ItemGroup>
 </Project>

@@ -17,7 +17,7 @@
 #include "CascStream.hpp"
 #include "CascRootHandler.hpp"
 #include "Shared/FileSearch.hpp"
-#include "Shared/Utils.hpp"
+#include "Shared/Functions.hpp"
 
 using namespace std::tr2;
 
