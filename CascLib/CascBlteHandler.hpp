@@ -1,6 +1,9 @@
 #pragma once
 
 #include <fstream>
+
+#include "Common.hpp"
+
 #include "zlib.hpp"
 #include "Shared/BufferInfo.hpp"
 #include "Shared/CompressionMode.hpp"
@@ -112,6 +115,4 @@ namespace Casc
             delete[] out;
         }
     };
-
-    typedef BaseCascBlteHandler<std::filebuf::traits_type> CascBlteHandler;
 }

@@ -87,10 +87,10 @@
     <ClInclude Include="CascBlteHandler.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
-    <ClInclude Include="CascTraits.hpp">
+    <ClInclude Include="CascRootHandler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CascRootHandler.hpp">
+    <ClInclude Include="Common.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

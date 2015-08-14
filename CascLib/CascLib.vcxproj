@@ -233,7 +233,7 @@
     <ClInclude Include="CascIndexRecord.hpp" />
     <ClInclude Include="CascRootHandler.hpp" />
     <ClInclude Include="CascStream.hpp" />
-    <ClInclude Include="CascTraits.hpp" />
+    <ClInclude Include="Common.hpp" />
     <ClInclude Include="Shared\FileSearch.hpp" />
     <ClInclude Include="Shared\Hex.hpp" />
     <ClInclude Include="Shared\MemoryInfo.hpp" />

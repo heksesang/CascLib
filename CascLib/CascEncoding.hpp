@@ -2,10 +2,12 @@
 
 #include <fstream>
 #include <string>
+
+#include "Common.hpp"
+
 #include "CascStream.hpp"
 #include "StreamOps.hpp"
 #include "Shared/Hex.hpp"
-//#include "Shared/Utils.hpp"
 
 namespace Casc
 {
@@ -132,7 +134,7 @@ namespace Casc
         /**
          * Throws if the fail or bad bit are set on the stream.
          */
-        void checkForErrors()
+        void checkForErrors() const
         {
             if (stream->fail())
             {

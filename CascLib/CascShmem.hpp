@@ -12,6 +12,8 @@
 #include <vector>
 using namespace std::experimental::filesystem;
 
+#include "Common.hpp"
+
 #include "Shared/Utils.hpp"
 #include "Shared/MemoryInfo.hpp"
 #include "Shared/Reference.hpp"

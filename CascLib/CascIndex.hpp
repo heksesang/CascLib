@@ -4,6 +4,9 @@
 #include <functional>
 #include <fstream>
 #include <string>
+
+#include "Common.hpp"
+
 #include "Shared/Utils.hpp"
 #include "Shared/Hex.hpp"
 #include "Shared/MemoryInfo.hpp"

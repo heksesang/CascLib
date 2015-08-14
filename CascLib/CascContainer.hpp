@@ -5,6 +5,9 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include "Common.hpp"
+
 #include "CascShmem.hpp"
 #include "CascBlteHandler.hpp"
 #include "CascBuildInfo.hpp"
@@ -12,7 +15,6 @@
 #include "CascEncoding.hpp"
 #include "CascIndex.hpp"
 #include "CascStream.hpp"
-#include "CascTraits.hpp"
 #include "CascRootHandler.hpp"
 #include "Shared/FileSearch.hpp"
 #include "Shared/Utils.hpp"
@@ -26,12 +28,8 @@ namespace Casc
     /**
      * A container for a CASC archive.
      */
-    template <typename Traits>
-    class BaseCascContainer
+    class CascContainer
     {
-    public:
-        typedef Traits traits_type;
-
     public:
         std::shared_ptr<CascStream> openFileByKey(const std::string &key) const
         {
@@ -59,13 +57,13 @@ namespace Casc
 
         std::shared_ptr<CascStream> openFileByName(const std::string &name) const
         {
-            auto root = container->openFileByHash(this->buildConfig()["root"].front());
+            auto root = openFileByHash(this->buildConfig()["root"].front());
 
             std::array<char, 4> magic;
             root->read(&magic[0], 4);
             root->seekg(0, std::ios_base::beg);
 
-            return openFileByKey(encoding->findKey(rootHandlers[magic]->findHash(name)));
+            return openFileByKey(encoding->findKey(rootHandlers.at(magic)->findHash(name)));
         }
 
         template <typename T>
@@ -135,7 +133,7 @@ namespace Casc
         /**
          * Default constructor.
          */
-        BaseCascContainer()
+        CascContainer()
         {
 
         }
@@ -145,7 +143,7 @@ namespace Casc
          *
          * @param path	the path of the archive folder.
          */
-        BaseCascContainer(std::string path,
+        CascContainer(std::string path,
             std::vector<std::shared_ptr<CascBlteHandler>> blteHandlers = {},
             std::vector<std::shared_ptr<CascRootHandler>> rootHandlers = {})
         {
@@ -156,17 +154,17 @@ namespace Casc
         /**
          * Move constructor.
          */
-        BaseCascContainer(BaseCascContainer &&) = default;
+        CascContainer(CascContainer &&) = default;
 
         /**
          * Move operator.
          */
-        BaseCascContainer &BaseCascContainer::operator= (BaseCascContainer &&) = default;
+        CascContainer &CascContainer::operator= (CascContainer &&) = default;
 
         /**
          * Destructor.
          */
-        virtual ~BaseCascContainer()
+        virtual ~CascContainer()
         {
         }
 
@@ -230,6 +228,4 @@ namespace Casc
             return shmem_;
         }
     };
-
-    typedef BaseCascContainer<CascTraits> CascContainer;
 }

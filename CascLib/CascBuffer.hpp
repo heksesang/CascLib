@@ -8,6 +8,9 @@
 #include <stdint.h>
 #include <vector>
 #include <map>
+
+#include "Common.hpp"
+
 #include "zlib.hpp"
 #include "Shared/Utils.hpp"
 #include "CascBlteHandler.hpp"
@@ -542,6 +545,4 @@ namespace Casc
             isInitialized = false;
         }
     };
-
-    typedef BaseCascBuffer<4096U> CascBuffer;
 }

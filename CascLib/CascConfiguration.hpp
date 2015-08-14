@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "Common.hpp"
+
 #include "../CascLib/Shared/Utils.hpp"
 
 namespace Casc

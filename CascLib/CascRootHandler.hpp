@@ -6,8 +6,11 @@
 #include <stdint.h>
 #include <array>
 #include <fstream>
+
+#include "Common.hpp"
+
 #include "Shared/Utils.hpp"
-#include "CascTraits.hpp"
+#include "CascContainer.hpp"
 
 namespace Casc
 {
@@ -27,11 +30,11 @@ namespace Casc
          * @param filename  the filename.
          * @return          the hash in hex format.
          */
-        virtual std::string findHash(std::string filename) = 0;
+        virtual std::string findHash(std::string filename) const = 0;
 
     protected:
-        // The root file stream.
-        std::unique_ptr<std::istream> stream;
+        // The container.
+        std::shared_ptr<CascContainer> container;
 
         /**
          * Reads data from a stream and puts it in a struct.
@@ -54,7 +57,7 @@ namespace Casc
         /**
          * Throws if the fail or bad bit are set on the stream.
          */
-        void checkForErrors()
+        void checkForErrors(std::unique_ptr<std::istream>&& stream) const
         {
             if (stream->fail())
             {
@@ -62,52 +65,14 @@ namespace Casc
             }
         }
 
-//#pragma pack(push, 1)
-//        struct ChunkHead
-//        {
-//            std::array<uint8_t, 4> unk;
-//        };
-//
-//        struct ChunkBody
-//        {
-//            std::array<uint8_t, 16> hash;
-//            std::array<uint8_t, 4> lookupB;
-//            std::array<uint8_t, 4> lookupA;
-//        };
-//#pragma pack(pop)
-//
-//        // Hash table with the file hashes mapped with lookup as key.
-//        std::map<std::pair<uint32_t, uint32_t>, std::string> hashes;
-
     public:
         /**
          * Default constructor.
          */
-        CascRootHandler()
+        CascRootHandler(std::shared_ptr<CascContainer> container)
+            : container(container)
         {
-
-        }
-
-        /**
-         * Constructor.
-         *
-         * @param stream    pointer to the stream.
-         */
-        CascRootHandler(std::shared_ptr<std::istream> stream)
-            : CascRootHandler()
-        {
-            parse(stream);
-        }
-
-        /**
-         * Constructor.
-         *
-         * @param path      path to the root file.
-         */
-        CascRootHandler(std::string path)
-            : CascRootHandler()
-        {
-            parse(path);
+            parse();
         }
 
         /**
@@ -135,20 +100,7 @@ namespace Casc
         /**
          * Parse a root file.
          *
-         * @param path      path to the root file.
          */
-        void parse(std::string path)
-        {
-            std::unique_ptr<std::istream> fs =
-                std::make_unique<std::ifstream>(path, std::ios_base::in | std::ios_base::binary);
-            parse(std::move(fs));
-        }
-
-        /**
-         * Parse a root file.
-         *
-         * @param stream    pointer to the stream.
-         */
-        virtual void parse(std::shared_ptr<std::istream> stream) = 0;
+        virtual void parse() = 0;
     };
 }
