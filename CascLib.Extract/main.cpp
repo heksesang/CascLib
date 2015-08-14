@@ -7,19 +7,40 @@ using namespace std::experimental::filesystem;
 
 int main(int argc, char* argv[])
 {
-    if (argc < 3)
+    if (argc < 4)
     {
-        std::cout << "Usage: casc <location> <hash> [<output_name>]" << std::endl;
+        std::cout << "Usage: casc <location> <mode> <value> [<output_name>]" << std::endl;
         return 0;
     }
 
     try
     {
-        Casc::CascContainer container(argv[1]);
+        Casc::CascContainer container(argv[1], {
+            std::make_shared<Casc::ZlibHandler<>>()
+        });
 
         try
         {
-            auto file = container.openFileByHash(argv[2]);
+            std::shared_ptr<Casc::CascStream> file;
+            
+            switch (*argv[2])
+            {
+            case '0':
+                file = container.openFileByKey(argv[3]);
+                break;
+
+            case '1':
+                file = container.openFileByHash(argv[3]);
+                break;
+
+            case '2':
+                file = container.openFileByName(argv[3]);
+                break;
+
+            default:
+                std::cout << "Invalid mode." << std::endl;
+                return -1;
+            }
 
             std::fstream fs;
 
@@ -27,11 +48,11 @@ int main(int argc, char* argv[])
             {
                 if (argc > 4)
                 {
-                    fs.open(argv[3], std::ios_base::out | std::ios_base::binary);
+                    fs.open(argv[4], std::ios_base::out | std::ios_base::binary);
                 }
                 else
                 {
-                    fs.open(argv[2], std::ios_base::out | std::ios_base::binary);
+                    fs.open(argv[3], std::ios_base::out | std::ios_base::binary);
                 }
             }
             catch (...)
