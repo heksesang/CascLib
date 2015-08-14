@@ -10,11 +10,6 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 #include "../CascLib/Casc/Common.hpp"
 
-namespace Casc
-{
-    int const endian_index = std::ios_base::xalloc();
-}
-
 using namespace Casc;
  
 namespace CascLibTest

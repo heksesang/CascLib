@@ -5,16 +5,16 @@
 
 namespace Casc
 {
-    extern int const endian_index;
+    static int const endian_index = std::ios_base::xalloc();
 
-    std::ifstream &le(std::ifstream &stream)
+    inline std::ifstream &le(std::ifstream &stream)
     {
         stream.iword(endian_index) = 0;
 
         return stream;
     }
 
-    std::ifstream &be(std::ifstream &stream)
+    inline std::ifstream &be(std::ifstream &stream)
     {
         stream.iword(endian_index) = 1;
 
@@ -22,7 +22,7 @@ namespace Casc
     }
 
     template <typename T>
-    std::ifstream &operator>>(std::ifstream  &input, T &value)
+    inline std::ifstream &operator>>(std::ifstream  &input, T &value)
     {
         using namespace Functions::Endian;
         char b[sizeof(T)];
@@ -43,7 +43,7 @@ namespace Casc
         return input;
     }
 
-    std::ifstream &operator>>(std::ifstream  &input, std::ifstream &func(std::ifstream &stream))
+    inline std::ifstream &operator>>(std::ifstream  &input, std::ifstream &func(std::ifstream &stream))
     {
         return func(input);
     }
