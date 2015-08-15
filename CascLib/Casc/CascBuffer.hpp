@@ -520,8 +520,6 @@ namespace Casc
                 throw std::exception("Couldn't open buffer.");
             }
 
-            std::filebuf::setbuf(nullptr, 0);
-
             open(offset);
         }
 
