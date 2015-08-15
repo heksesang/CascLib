@@ -29,6 +29,13 @@ namespace Casc
 
 #include "StreamOps.hpp"
 
+#include "Exceptions/CascException.hpp"
+#include "Exceptions/FileNotFoundException.hpp"
+#include "Exceptions/InvalidHashException.hpp"
+#include "Exceptions/InvalidMagicException.hpp"
+
+using namespace Casc::Exceptions;
+
 #include "Shared/BufferInfo.hpp"
 #include "Shared/ChunkInfo.hpp"
 #include "Shared/FileSearch.hpp"

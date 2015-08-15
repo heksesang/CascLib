@@ -47,7 +47,7 @@ namespace Casc
                 }
             }
 
-            throw std::exception("File not found");
+            throw FileNotFoundException(key);
         }
 
         std::shared_ptr<CascStream> openFileByHash(const std::string &hash) const

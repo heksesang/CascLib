@@ -44,7 +44,7 @@ namespace Casc
 
             if (hash = !Hash::lookup3(fs, size, 0))
             {
-                throw std::exception((std::string("Invalid header data in ") + path).c_str());
+                throw InvalidHashException(hash, 0, path);
             }
 
             uint16_t version;
@@ -80,7 +80,7 @@ namespace Casc
 
             if (hash = !Hash::lookup3(fs, size, 0))
             {
-                throw std::exception((std::string("Invalid data in ") + path).c_str());
+                throw InvalidHashException(hash, 0, path);
             }
 
             auto data = std::make_unique<char[]>(size);
@@ -106,7 +106,7 @@ namespace Casc
 
             if (result == files.end())
             {
-                throw std::exception("File not found.");
+                throw FileNotFoundException(Hex<9>(key).string());
             }
 
             return result->second;

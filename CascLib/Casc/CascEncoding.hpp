@@ -5,10 +5,6 @@
 
 #include "Common.hpp"
 
-#include "CascStream.hpp"
-#include "StreamOps.hpp"
-#include "Shared/Hex.hpp"
-
 namespace Casc
 {
     using namespace Casc::Shared;
@@ -101,7 +97,7 @@ namespace Casc
                 }
             }
 
-            throw std::exception("Key not found");
+            throw FileNotFoundException(hash);
         }
 
     private:
@@ -139,7 +135,7 @@ namespace Casc
         {
             if (stream->fail())
             {
-                throw std::exception("Stream is in an invalid state.");
+                throw CascException("Stream is in an invalid state.");
             }
         }
 
@@ -246,7 +242,7 @@ namespace Casc
 
             if (magic[0] != 0x45 || magic[1] != 0x4E)
             {
-                throw std::exception((std::string("Invalid file magic")).c_str());
+                throw CascException("Invalid file magic.");
             }
 
             this->stream->seekg(7, std::ios_base::cur);

@@ -61,7 +61,7 @@ namespace Casc
         {
             if (stream->fail())
             {
-                throw std::exception("Stream is in an invalid state.");
+                throw CascException("Stream is in an invalid state.");
             }
         }
 

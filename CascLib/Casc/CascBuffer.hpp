@@ -80,7 +80,7 @@ namespace Casc
             std::filebuf::xsgetn(header2, 0x08);
             if (readLE<uint32_t>(header2) != 0x45544C42)
             {
-                throw std::exception("Not a valid BLTE file.");
+                throw InvalidMagicException(readLE<uint32_t>(header2), 0x45544C42);
             }
 
             auto readBytes = readBE<uint32_t>(header2 + 0x04);
@@ -273,7 +273,7 @@ namespace Casc
         pos_type buffer(off_type offset)
         {
             if (isBuffering)
-                throw std::exception("Reentered buffer method while buffering.");
+                throw CascException("Reentered buffer method while buffering.");
 
             isBuffering = true;
 
@@ -484,7 +484,7 @@ namespace Casc
 
             if (!is_open())
             {
-                throw std::exception("Buffer is not open.");
+                throw CascException("Buffer is not open.");
             }
 
             chunks.clear();
@@ -517,7 +517,7 @@ namespace Casc
         {
             if (std::filebuf::open(filename, std::ios_base::in | std::ios_base::binary) == nullptr)
             {
-                throw std::exception("Couldn't open buffer.");
+                throw CascException("Couldn't open buffer.");
             }
 
             open(offset);
