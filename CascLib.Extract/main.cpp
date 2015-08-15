@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include "../CascLib/Casc/Common.hpp"
 
 using namespace std::experimental::filesystem;
@@ -9,7 +10,7 @@ int main(int argc, char* argv[])
 {
     if (argc < 4)
     {
-        std::cout << "Usage: casc <location> <mode> <value> [<output_name>]" << std::endl;
+        std::cout << "Usage: casc <location> <mode> <key> [<output_name>]" << std::endl;
         return 0;
     }
 
@@ -94,15 +95,23 @@ int main(int argc, char* argv[])
                 return -1;
             }
         }
-        catch (...)
+        catch (FileNotFoundException ex)
         {
-            std::cout << "Couldn't find a file with the given hash." << std::endl;
+            std::stringstream ss;
+            
+            ss << "Couldn't find a file with the given key (" << ex.key << ").";
+
+            std::cout << ss.str() << std::endl;
             return -1;
         }
     }
-    catch (...)
+    catch (CascException ex)
     {
-        std::cout << "Failed to open the CASC container." << std::endl;
+        std::stringstream ss;
+
+        ss << "Failed to open the CASC container (" << ex.what() << ").";
+
+        std::cout << ss.str() << std::endl;
         return -1;
     }
 

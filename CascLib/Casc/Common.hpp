@@ -32,7 +32,7 @@ namespace Casc
 #include "Exceptions/CascException.hpp"
 #include "Exceptions/FileNotFoundException.hpp"
 #include "Exceptions/InvalidHashException.hpp"
-#include "Exceptions/InvalidMagicException.hpp"
+#include "Exceptions/InvalidSignatureException.hpp"
 
 using namespace Casc::Exceptions;
 

@@ -80,7 +80,7 @@ namespace Casc
             std::filebuf::xsgetn(header2, 0x08);
             if (readLE<uint32_t>(header2) != 0x45544C42)
             {
-                throw InvalidMagicException(readLE<uint32_t>(header2), 0x45544C42);
+                throw InvalidSignatureException(readLE<uint32_t>(header2), 0x45544C42);
             }
 
             auto readBytes = readBE<uint32_t>(header2 + 0x04);

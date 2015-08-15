@@ -242,7 +242,7 @@ namespace Casc
 
             if (magic[0] != 0x45 || magic[1] != 0x4E)
             {
-                throw CascException("Invalid file magic.");
+                throw InvalidSignatureException(*reinterpret_cast<uint16_t*>(&magic), 0x454E);
             }
 
             this->stream->seekg(7, std::ios_base::cur);

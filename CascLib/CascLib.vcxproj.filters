@@ -93,9 +93,6 @@
     <ClInclude Include="Casc\zlib.hpp">
       <Filter>Header Files\Functions</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\Exceptions\InvalidMagicException.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\Exceptions\CascException.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -103,6 +100,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Casc\Exceptions\FileNotFoundException.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Exceptions\InvalidSignatureException.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

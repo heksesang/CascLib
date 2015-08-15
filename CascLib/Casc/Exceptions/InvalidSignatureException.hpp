@@ -7,10 +7,10 @@ namespace Casc
 {
     namespace Exceptions
     {
-        class InvalidMagicException : public CascException
+        class InvalidSignatureException : public CascException
         {
         public:
-            InvalidMagicException(uint32_t actual, uint32_t expected)
+            InvalidSignatureException(uint32_t actual, uint32_t expected)
                 : actual(actual), expected(expected)
             {
 
