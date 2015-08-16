@@ -24,6 +24,7 @@ namespace Casc
     struct CascIndexRecord;
     class CascRootHandler;
     class CascShmem;
+    template <bool Writeable>
     class CascStream;
 }
 

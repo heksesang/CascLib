@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <iostream>
 #include <memory>
 
@@ -14,7 +15,8 @@ namespace Casc
      * A stream that uses the CascBuffer as the underlying buffer.
      * The class provides methods to easily control the underlying buffer.
      */
-    class CascStream : public std::istream
+    template <bool Writeable>
+    class CascStream : public std::conditional<Writeable, std::iostream, std::istream>::type
     {
         // The underlying buffer which allows direct data streaming.
         std::unique_ptr<CascBuffer> buffer;

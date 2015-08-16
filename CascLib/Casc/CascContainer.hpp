@@ -31,7 +31,7 @@ namespace Casc
     class CascContainer
     {
     public:
-        std::shared_ptr<CascStream> openFileByKey(const std::string &key) const
+        std::shared_ptr<CascStream<false>> openFileByKey(const std::string &key) const
         {
             auto bytes = Hex<9>(key).data();
 
@@ -39,7 +39,7 @@ namespace Casc
             {
                 try
                 {
-                    return openStream(index.file(bytes));
+                    return openStream<false>(index.file(bytes));
                 }
                 catch (std::exception&) // TODO: Better exception handling
                 {
@@ -50,12 +50,12 @@ namespace Casc
             throw FileNotFoundException(key);
         }
 
-        std::shared_ptr<CascStream> openFileByHash(const std::string &hash) const
+        std::shared_ptr<CascStream<false>> openFileByHash(const std::string &hash) const
         {
             return openFileByKey(encoding->findKey(hash));
         }
 
-        std::shared_ptr<CascStream> openFileByName(const std::string &name) const
+        std::shared_ptr<CascStream<false>> openFileByName(const std::string &name) const
         {
             auto root = openFileByHash(this->buildConfig()["root"].front());
 
@@ -64,6 +64,11 @@ namespace Casc
             root->seekg(0, std::ios_base::beg);
 
             return openFileByKey(encoding->findKey(rootHandlers.at(magic)->findHash(name)));
+        }
+
+        std::shared_ptr<CascStream<true>> openWriteableFileByKey(const std::string &key)
+        {
+            return nullptr;
         }
 
         template <typename T>
@@ -119,12 +124,13 @@ namespace Casc
          * @param loc	the location of the data to stream.
          * @return		a stream object.
          */
-        std::shared_ptr<CascStream> openStream(MemoryInfo &loc) const
+        template <bool Writeable>
+        std::shared_ptr<CascStream<false>> openStream(MemoryInfo &loc) const
         {
             std::stringstream ss;
             ss << shmem_.path() << "/data." << std::setw(3) << std::setfill('0') << loc.file();
             
-            return std::make_shared<CascStream>(
+            return std::make_shared<CascStream<Writeable>>(
                 ss.str(), loc.offset(),
                 mapToVector(this->blteHandlers));
         }

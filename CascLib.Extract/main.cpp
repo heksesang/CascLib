@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
 
         try
         {
-            std::shared_ptr<Casc::CascStream> file;
+            std::shared_ptr<Casc::CascStream<false>> file;
             
             switch (*argv[2])
             {

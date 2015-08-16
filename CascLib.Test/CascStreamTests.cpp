@@ -15,7 +15,7 @@ namespace CascLibTest
 		
 		TEST_METHOD(ReadFileSize)
 		{
-			CascStream fs;
+			CascStream<false> fs;
 			fs.open(R"(data)", 3656);
 
 			fs.seekg(0, std::ios_base::end);
@@ -30,7 +30,7 @@ namespace CascLibTest
 
 		TEST_METHOD(ReadFile)
 		{
-			CascStream fs;
+			CascStream<false> fs;
 			fs.open(R"(data)", 3656);
 
 			std::vector<char> data;
@@ -52,7 +52,7 @@ namespace CascLibTest
 
 		TEST_METHOD(SeekFile)
 		{
-			CascStream fs;
+			CascStream<false> fs;
 			fs.open(R"(data)", 3656);
 
 			char data[4];
