@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
                 std::cout << "Invalid mode." << std::endl;
                 return -1;
             }
-
+            
             std::fstream fs;
 
             try
@@ -76,11 +76,11 @@ int main(int argc, char* argv[])
             try
             {
                 std::unique_ptr<char[]> arr = std::make_unique<char[]>(size);
-                file->read(&arr[0], size);
+                file->read(arr.get(), size);
 
                 try
                 {
-                    fs.write(&arr[0], size);
+                    fs.write(arr.get(), size);
                     fs.close();
                 }
                 catch (...)

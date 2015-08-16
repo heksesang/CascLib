@@ -296,7 +296,7 @@ namespace Casc
                     return pos_type(-1);
                 }
 
-                off_type chunkSize;
+                off_type chunkSize = 0;
 
                 count = std::min<size_t>(static_cast<size_t>(chunk.end - offset), bufferSize);
 
@@ -309,7 +309,7 @@ namespace Casc
                 auto data = handlers[mode]->buffer(*this, offset - chunk.begin, chunk.size - 1, count, chunkSize);
                 std::memcpy(out.get() + pos, data.get(), count);
 
-                if (chunks.size() == 1)
+                if (chunks.size() == 1 && chunkSize != 0)
                 {
                     this->length = chunks.back().end = chunkSize;
                 }
