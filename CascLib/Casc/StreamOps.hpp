@@ -24,7 +24,7 @@ namespace Casc
     template <typename T>
     inline std::ifstream &operator>>(std::ifstream  &input, T &value)
     {
-        using namespace Functions::Endian;
+        using namespace Shared::Functions::Endian;
         char b[sizeof(T)];
         input.read(b, sizeof(T));
 

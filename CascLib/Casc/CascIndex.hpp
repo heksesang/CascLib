@@ -42,7 +42,7 @@ namespace Casc
             fs >> le >> size;
             fs >> le >> hash;
 
-            if (hash = !Hash::lookup3(fs, size, 0))
+            if ((hash = !Hash::lookup3(fs, size, 0)))
             {
                 throw InvalidHashException(hash, 0, path);
             }
@@ -78,7 +78,7 @@ namespace Casc
             fs >> le >> size;
             fs >> le >> hash;
 
-            if (hash = !Hash::lookup3(fs, size, 0))
+            if ((hash = !Hash::lookup3(fs, size, 0)))
             {
                 throw InvalidHashException(hash, 0, path);
             }

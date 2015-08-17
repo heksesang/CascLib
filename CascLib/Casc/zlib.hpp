@@ -132,7 +132,7 @@ class ZDeflateStream : public ZStreamBase
 	int compression_level_;
 
 public:
-	ZDeflateStream::ZDeflateStream(int compression_level/*=Z_DEFAULT_COMPRESSION*/) :
+	ZDeflateStream(int compression_level/*=Z_DEFAULT_COMPRESSION*/) :
 		compression_level_(compression_level)
 	{
 		int ret = deflateInit(&z_stream_, compression_level_);
@@ -141,12 +141,12 @@ public:
 			throw ZError("Can not initialize deflate stream");
 	}
 
-	ZDeflateStream::~ZDeflateStream()
+	~ZDeflateStream()
 	{
 		deflateEnd(&z_stream_);
 	}
 
-	void ZDeflateStream::read(char_t* buf, size_t buf_size)
+	void read(char_t* buf, size_t buf_size)
 	{
 		z_stream_.avail_out = buf_size;
 		z_stream_.next_out = reinterpret_cast< Bytef* >(buf);
@@ -164,7 +164,7 @@ class ZInflateStream : public ZStreamBase
 	size_t avail_in_;
 
 public:
-	ZInflateStream::ZInflateStream(char_t* in, size_t avail_in)
+	ZInflateStream(char_t* in, size_t avail_in)
 	{
 		z_stream_.zalloc = Z_NULL;
 		z_stream_.zfree = Z_NULL;
@@ -178,12 +178,12 @@ public:
 			throw ZError("Can not initialize inflate stream");
 	}
 
-	ZInflateStream::~ZInflateStream()
+	~ZInflateStream()
 	{
 		inflateEnd(&z_stream_);
 	}
 
-	void ZInflateStream::read(char_t* buf, size_t buf_size)
+	void read(char_t* buf, size_t buf_size)
 	{
 		z_stream_.avail_out = buf_size;
 		z_stream_.next_out = reinterpret_cast< Bytef* >(buf);

@@ -34,6 +34,7 @@ namespace Casc
 #include "Exceptions/FileNotFoundException.hpp"
 #include "Exceptions/InvalidHashException.hpp"
 #include "Exceptions/InvalidSignatureException.hpp"
+#include "Exceptions/GenericException.hpp"
 
 using namespace Casc::Exceptions;
 

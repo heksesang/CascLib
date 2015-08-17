@@ -7,6 +7,7 @@
 #include <array>
 #include <fstream>
 #include <vector>
+#include <utility>
 
 namespace Casc
 {
@@ -27,19 +28,14 @@ namespace Casc
 
             inline std::string trim(const std::string &s)
             {
-                auto wsfront = std::find_if_not(s.begin(), s.end(), std::isspace);
-                auto wsback = std::find_if_not(s.rbegin(), s.rend(), std::isspace).base();
+                int (*pred)(int c) = std::isspace;
+                auto wsfront = std::find_if_not(s.begin(), s.end(), pred);
+                auto wsback = std::find_if_not(s.rbegin(), s.rend(), pred).base();
                 return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
             }
 
             namespace Endian
             {
-                template <typename T>
-                inline T readLE(char* arr)
-                {
-                    return readLE<T>(reinterpret_cast<unsigned char*>(arr));
-                }
-
                 template <typename T>
                 inline T readLE(unsigned char* arr)
                 {
@@ -54,15 +50,15 @@ namespace Casc
                 }
 
                 template <typename T>
-                inline T readLE(T value)
+                inline T readLE(char* arr)
                 {
-                    return readLE<T>(reinterpret_cast<unsigned char*>(&value));
+                    return readLE<T>(reinterpret_cast<unsigned char*>(arr));
                 }
 
                 template <typename T>
-                inline T readBE(char* arr)
+                inline T readLE(T value)
                 {
-                    return readBE<T>(reinterpret_cast<unsigned char*>(arr));
+                    return readLE<T>(reinterpret_cast<unsigned char*>(&value));
                 }
 
                 template <typename T>
@@ -76,6 +72,12 @@ namespace Casc
                     }
 
                     return output;
+                }
+
+                template <typename T>
+                inline T readBE(char* arr)
+                {
+                    return readBE<T>(reinterpret_cast<unsigned char*>(arr));
                 }
 
                 template <typename T>

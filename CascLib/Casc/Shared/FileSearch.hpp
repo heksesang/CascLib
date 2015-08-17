@@ -1,11 +1,19 @@
 #pragma once
 
+#ifdef _MSC_VER
 #include <experimental/filesystem>
+#else
+#include <boost/filesystem.hpp>
+#endif
 #include <vector>
 
 namespace Casc
 {
-    using namespace std::experimental::filesystem;
+#ifdef _MSC_VER
+    namespace fs = std::experimental::filesystem::v1;
+#else
+    namespace fs = boost::filesystem;
+#endif
 
     class FileSearch
     {
@@ -40,11 +48,11 @@ namespace Casc
             if (clear)
                 results_.clear();
 
-            for (v1::directory_iterator iter(path), end; iter != end; ++iter)
+            for (fs::directory_iterator iter(path), end; iter != end; ++iter)
             {
                 auto current = iter->path();
 
-                if (v1::is_directory(current))
+                if (fs::is_directory(current))
                 {
                     search(filename, current.string(), clear);
                 }

@@ -46,10 +46,10 @@ namespace Casc
          * @return      the data.
          */
         template <typename T>
-        const T &read(T &value, bool big = false) const
+        const T &read(std::ifstream &stream, T &value, bool big = false) const
         {
             char b[sizeof(T)];
-            stream->read(b, sizeof(T));
+            stream.read(b, sizeof(T));
 
             return value = big ? readBE<T>(b) : readLE<T>(b);
         }
@@ -61,7 +61,7 @@ namespace Casc
         {
             if (stream->fail())
             {
-                throw CascException("Stream is in an invalid state.");
+                throw GenericException("Stream is in an invalid state.");
             }
         }
 
@@ -72,7 +72,7 @@ namespace Casc
         CascRootHandler(std::shared_ptr<CascContainer> container)
             : container(container)
         {
-            parse();
+            
         }
 
         /**
@@ -83,7 +83,7 @@ namespace Casc
         /**
         * Move operator.
         */
-        CascRootHandler &CascRootHandler::operator= (CascRootHandler &&) = default;
+        CascRootHandler &operator= (CascRootHandler &&) = default;
 
         /**
          * Destructor.
@@ -96,11 +96,5 @@ namespace Casc
          * The file magic of the root file.
          */
         virtual std::array<char, 4> fileMagic() const = 0;
-
-        /**
-         * Parse a root file.
-         *
-         */
-        virtual void parse() = 0;
     };
 }

@@ -1,46 +1,44 @@
-#include <experimental/filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include "../CascLib/Casc/Common.hpp"
 
-using namespace std::experimental::filesystem;
+const char* usageText = "Usage: casc <location> <mode> <key> [<output_name>]";
 
 int main(int argc, char* argv[])
 {
     if (argc < 4)
     {
-        std::cout << "Usage: casc <location> <mode> <key> [<output_name>]" << std::endl;
+        std::cout << usageText << std::endl;
         return 0;
     }
 
     try
     {
         Casc::CascContainer container(argv[1], {
-            std::make_shared<Casc::ZlibHandler<>>()
+            std::make_shared<Casc::ZlibHandler>()
         });
 
         try
         {
             std::shared_ptr<Casc::CascStream<false>> file;
             
-            switch (*argv[2])
+            if (strcmp(argv[2], "key") == 0)
             {
-            case '0':
                 file = container.openFileByKey(argv[3]);
-                break;
-
-            case '1':
+            }
+            else if (strcmp(argv[2], "hash") == 0)
+            {
                 file = container.openFileByHash(argv[3]);
-                break;
-
-            case '2':
+            }
+            else if (strcmp(argv[2], "filename") == 0)
+            {
                 file = container.openFileByName(argv[3]);
-                break;
-
-            default:
-                std::cout << "Invalid mode." << std::endl;
-                return -1;
+            }
+            else
+            {
+                std::cout << usageText << std::endl;
+                return 0;
             }
             
             std::fstream fs;

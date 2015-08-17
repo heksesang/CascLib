@@ -29,9 +29,9 @@ namespace Casc
          * Default constructor.
          */
         CascStream()
-            : buffer(reinterpret_cast<CascBuffer*>(rdbuf())), std::istream(new CascBuffer())
+            : buffer(reinterpret_cast<CascBuffer*>(this->rdbuf())), std::istream(new CascBuffer())
         {
-            registerHandler<DefaultHandler<>>();
+            registerHandler<DefaultHandler>();
         }
 
         CascStream(std::vector<std::shared_ptr<CascBlteHandler>> handlers)
@@ -73,7 +73,7 @@ namespace Casc
         /**
          * Move operator.
          */
-        CascStream &CascStream::operator= (CascStream &&) = default;
+        CascStream &operator= (CascStream &&) = default;
 
         /**
          * Opens a file from the currently opened CASC file.

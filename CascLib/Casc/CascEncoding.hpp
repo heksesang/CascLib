@@ -135,7 +135,7 @@ namespace Casc
         {
             if (stream->fail())
             {
-                throw CascException("Stream is in an invalid state.");
+                throw GenericException("Stream is in an invalid state.");
             }
         }
 
@@ -207,7 +207,7 @@ namespace Casc
         /**
          * Move operator.
          */
-        CascEncoding &CascEncoding::operator= (CascEncoding &&) = default;
+        CascEncoding &operator= (CascEncoding &&) = default;
 
         /**
          * Destructor.

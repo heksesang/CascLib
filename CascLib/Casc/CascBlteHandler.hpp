@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <memory>
 
 #include "zlib.hpp"
 #include "Common.hpp"
@@ -20,7 +21,7 @@ namespace Casc
     {
     public:
         // Typedefs
-        typedef BufferInfo<typename Traits> BufferInfo;
+        typedef BufferInfo<Traits> BufferInfo;
         typedef typename Traits::off_type off_type;
 
     public:
@@ -45,10 +46,8 @@ namespace Casc
     /**
     * Default handler. This reads data directly from the stream.
     */
-    template <typename Traits = std::filebuf::traits_type>
-    class DefaultHandler : public BaseCascBlteHandler<typename Traits>
+    class DefaultHandler : public CascBlteHandler
     {
-
         CompressionMode compressionMode() const override
         {
             return CompressionMode::None;
@@ -73,8 +72,7 @@ namespace Casc
     /**
     * Zlib handler. This decompresses a zlib compressed chunk and extracts the data.
     */
-    template <typename Traits = std::filebuf::traits_type>
-    class ZlibHandler : public BaseCascBlteHandler<typename Traits>
+    class ZlibHandler : public CascBlteHandler
     {
         ZStreamBase::char_t* out = nullptr;
         size_t avail_out = 0;

@@ -1,6 +1,10 @@
 #pragma once
 
+#ifdef _MSC_VER
 #include <experimental/filesystem>
+#else
+#include <boost/filesystem.hpp>
+#endif
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -18,8 +22,6 @@
 #include "CascRootHandler.hpp"
 #include "Shared/FileSearch.hpp"
 #include "Shared/Functions.hpp"
-
-using namespace std::tr2;
 
 namespace Casc
 {
@@ -125,7 +127,7 @@ namespace Casc
          * @return		a stream object.
          */
         template <bool Writeable>
-        std::shared_ptr<CascStream<false>> openStream(MemoryInfo &loc) const
+        std::shared_ptr<CascStream<false>> openStream(MemoryInfo loc) const
         {
             std::stringstream ss;
             ss << shmem_.path() << "/data." << std::setw(3) << std::setfill('0') << loc.file();
@@ -166,7 +168,7 @@ namespace Casc
         /**
          * Move operator.
          */
-        CascContainer &CascContainer::operator= (CascContainer &&) = default;
+        CascContainer &operator= (CascContainer &&) = default;
 
         /**
          * Destructor.

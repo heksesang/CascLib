@@ -203,6 +203,9 @@ namespace Casc
                 setg(eback(), egptr() - offset, egptr());
                 currentBuffer.offset = currentBuffer.end - offset;
                 break;
+
+            default:
+                throw GenericException("Unsupported seek dir.");
             }
 
             return pos();
@@ -273,7 +276,7 @@ namespace Casc
         pos_type buffer(off_type offset)
         {
             if (isBuffering)
-                throw CascException("Reentered buffer method while buffering.");
+                throw GenericException("Reentered buffer method while buffering.");
 
             isBuffering = true;
 
@@ -430,14 +433,14 @@ namespace Casc
             : out(std::make_unique<char[]>(BufferSize)),
               temp(std::make_unique<char[]>(BufferSize))
         {
-            registerHandler<DefaultHandler<>>();
+            registerHandler<DefaultHandler>();
         }
 
         /**
          * Constructor with handler initialization.
          */
         BaseCascBuffer(std::vector<std::shared_ptr<CascBlteHandler>> handlers)
-            : CascBuffer()
+            : BaseCascBuffer()
         {
             registerHandlers(handlers);
         }
@@ -450,7 +453,7 @@ namespace Casc
         /**
          * Move operator.
          */
-        BaseCascBuffer &BaseCascBuffer::operator= (BaseCascBuffer &&) = default;
+        BaseCascBuffer &operator= (BaseCascBuffer &&) = default;
 
         /**
          * Destructor.
@@ -484,7 +487,7 @@ namespace Casc
 
             if (!is_open())
             {
-                throw CascException("Buffer is not open.");
+                throw GenericException("Buffer is not open.");
             }
 
             chunks.clear();
@@ -517,7 +520,7 @@ namespace Casc
         {
             if (std::filebuf::open(filename, std::ios_base::in | std::ios_base::binary) == nullptr)
             {
-                throw CascException("Couldn't open buffer.");
+                throw GenericException("Couldn't open buffer.");
             }
 
             open(offset);

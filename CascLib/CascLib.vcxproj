@@ -238,6 +238,7 @@
     <ClInclude Include="Casc\Exceptions\FileNotFoundException.hpp" />
     <ClInclude Include="Casc\Exceptions\InvalidHashException.hpp" />
     <ClInclude Include="Casc\Exceptions\InvalidSignatureException.hpp" />
+    <ClInclude Include="Casc\Exceptions\GenericException.hpp" />
     <ClInclude Include="Casc\Shared\FileSearch.hpp" />
     <ClInclude Include="Casc\Shared\Hex.hpp" />
     <ClInclude Include="Casc\DataTypes\MemoryInfo.hpp" />

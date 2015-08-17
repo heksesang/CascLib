@@ -23,7 +23,7 @@ namespace CascLibTest
             auto container = std::make_unique<CascContainer>(
                 R"(I:\Diablo III\)",
                 std::vector<std::shared_ptr<CascBlteHandler>> {
-                    std::make_shared<ZlibHandler<>>()
+                    std::make_shared<ZlibHandler>()
             });
         }
 
@@ -32,7 +32,7 @@ namespace CascLibTest
             auto container = std::make_unique<CascContainer>(
                 R"(I:\Diablo III\)",
                 std::vector<std::shared_ptr<CascBlteHandler>> {
-                    std::make_shared<ZlibHandler<>>()
+                    std::make_shared<ZlibHandler>()
             });
 			auto root = container->openFileByHash(container->buildConfig()["root"].front());
             
@@ -103,7 +103,7 @@ namespace CascLibTest
             auto container = std::make_unique<CascContainer>(
                 R"(I:\Diablo III\)",
                 std::vector<std::shared_ptr<CascBlteHandler>> {
-                    std::make_shared<ZlibHandler<>>()
+                    std::make_shared<ZlibHandler>()
             });
 			/*CascEncoding enc(
                 container->openFileByKey(container->buildConfig()["encoding"].back()));

@@ -1,7 +1,11 @@
 #pragma once
 
 #include <array>
+#ifdef _MSC_VER
 #include <experimental/filesystem>
+#else
+#include <boost/filesystem.hpp>
+#endif
 #include <fstream>
 #include <iomanip>
 #include <limits>
@@ -15,7 +19,11 @@
 
 namespace Casc
 {
-    using namespace std::experimental::filesystem;
+#ifdef _MSC_VER
+    namespace fs = std::experimental::filesystem::v1;
+#else
+    namespace fs = boost::filesystem;
+#endif
     using namespace Casc::Shared::DataTypes;
 
     /**
@@ -63,8 +71,8 @@ namespace Casc
             std::array<Ref, 1090> first;
             std::array<Ref, 1090> second;
 
-            file.read(reinterpret_cast<char*>(&first[0]), 1090 * (sizeof(uint8_t) + sizeof(uint32_t)));
-            file.read(reinterpret_cast<char*>(&second[0]), 1090 * (sizeof(uint8_t) + sizeof(uint32_t)));
+            file.read(reinterpret_cast<char*>(&first[0]), 1090 * sizeof(Ref));
+            file.read(reinterpret_cast<char*>(&second[0]), 1090 * sizeof(Ref));
 
             for (unsigned int i = 0; i < writeableMemoryCount; ++i)
             {
@@ -102,16 +110,16 @@ namespace Casc
 
             path.resize(path.find_first_of('\0'));
             
-            if (v1::path(path).is_relative())
+            if (fs::path(path).is_relative())
             {
-                path = v1::path(base_).append(path).string();
+                path = fs::path(base_).append(path.begin(), path.end()).string();
             }
 
             path_ = path;
 
-            for (v1::directory_iterator iter(path), end; iter != end; ++iter)
+            for (fs::directory_iterator iter(path), end; iter != end; ++iter)
             {
-                if (!v1::is_directory(iter->path()))
+                if (!fs::is_directory(iter->path()))
                 {
                     auto ext = iter->path().extension();
                     auto fn = iter->path().filename();

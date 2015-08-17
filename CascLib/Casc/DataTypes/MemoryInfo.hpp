@@ -2,6 +2,7 @@
 
 #include <bitset>
 #include <stdint.h>
+#include <limits>
 
 namespace Casc
 {
@@ -44,8 +45,8 @@ namespace Casc
                 MemoryInfo(uint8_t file, uint32_t offset, uint32_t length)
                     : size_(length)
                 {
-                    std::bitset<sizeof(uint8_t) * CHAR_BIT> fileBits(file);
-                    std::bitset<sizeof(uint32_t) * CHAR_BIT> offsetBits(offset);
+                    std::bitset<sizeof(uint8_t) * 8> fileBits(file);
+                    std::bitset<sizeof(uint32_t) * 8> offsetBits(offset);
 
                     fileBits <<= 2;
 
