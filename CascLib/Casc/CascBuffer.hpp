@@ -363,13 +363,18 @@ namespace Casc
 
         int_type underflow() override
         {
-            if (seek(0) == pos_type(-1))
+            if (isInitialized && !isBuffering)
             {
-                setg(nullptr, nullptr, nullptr);
-                return traits_type::eof();
+                if (seek(0) == pos_type(-1))
+                {
+                    setg(nullptr, nullptr, nullptr);
+                    return traits_type::eof();
+                }
+
+                return traits_type::to_int_type(out.get()[0]);
             }
 
-            return traits_type::to_int_type(out.get()[0]);
+            return std::filebuf::underflow();
         }
 
         int_type uflow() override
