@@ -8,6 +8,7 @@ namespace Casc
     {
         class GenericException : public CascException
         {
+            using CascException::CascException;
         };
     }
 }
