@@ -3,7 +3,12 @@
 #include <sstream>
 #include "../CascLib/Casc/Common.hpp"
 
-const char* usageText = "Usage: casc <location> <mode> <key> [<output_name>]";
+const char* usageText =
+"Usage: casc <location> <mode> <key> [<output_name>]\n\n"
+"<location>     - path to the game directory\n"
+"<mode>         - valid values: key, hash, filename\n"
+"<key>          - the key, hash or filename (depending on the mode) for the file\n"
+"<output_name>  - output name of the file";
 
 int main(int argc, char* argv[])
 {
@@ -112,6 +117,6 @@ int main(int argc, char* argv[])
         std::cout << ss.str() << std::endl;
         return -1;
     }
-
+    
     return 0;
 }

@@ -6,9 +6,8 @@ namespace Casc
 {
     namespace Exceptions
     {
-        class GenericException : public CascException, public std::runtime_error
+        class GenericException : public CascException
         {
-            using std::runtime_error::runtime_error;
         };
     }
 }

@@ -187,16 +187,22 @@ namespace Casc
             path_ = path;
             buildInfo_.parse(path + ".build.info");
 
+            std::cout << "Searching for configuration files and shmem... " << std::endl;
+
             FileSearch fs({
                 buildInfo_.build(0).at("Build Key"),
                 buildInfo_.build(0).at("CDN Key"),
                 "shmem"
             }, path_);
 
+            std::cout << "Parsing build config..." << std::endl;
             buildConfig_.parse(fs.results().at(0));
+            std::cout << "Parsing CDN config..." << std::endl;
             cdnConfig_.parse(fs.results().at(1));
+            std::cout << "Parsing shmem..." << std::endl;
             shmem_.parse(fs.results().at(2), path);
 
+            std::cout << "Reading indices..." << std::endl;
             for (size_t i = 0; i < shmem_.versions().size(); ++i)
             {
                 std::stringstream ss;
@@ -209,7 +215,10 @@ namespace Casc
                 indices_.push_back(ss.str());
             }
 
+            std::cout << "Loading encoding file..." << std::endl;
             encoding = std::make_unique<CascEncoding>(openFileByKey(buildConfig_["encoding"].back()));
+
+            std::cout << "Finished loading container." << std::endl;
         }
 
         const std::string &path() const

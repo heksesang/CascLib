@@ -12,7 +12,7 @@ namespace Casc
         {
         public:
             InvalidHashException(uint32_t expected, uint32_t actual, std::string path)
-                : actual(actual), expected(expected), path(path)
+                : actual(actual), expected(expected), path(path), CascException("The hash of the file did not match the expected value.")
             {
 
             }

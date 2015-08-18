@@ -115,7 +115,8 @@ namespace Casc
                 path = fs::path(base_).append(path.begin(), path.end()).string();
             }
 
-            path_ = path;
+            // To make sure it works with shares mounted on linux.
+            path = path_ = fs::path(path_).parent_path().string();
 
             for (fs::directory_iterator iter(path), end; iter != end; ++iter)
             {
@@ -214,6 +215,7 @@ namespace Casc
          * @param base the path of the base directory.
          */
         CascShmem(std::string path, std::string base)
+            : path_(path)
         {
             parse(path, base);
         }
@@ -233,6 +235,7 @@ namespace Casc
          */
         void parse(std::string path, std::string base)
         {
+            path_ = path;
             base_ = base;
             readFile(path);
         }

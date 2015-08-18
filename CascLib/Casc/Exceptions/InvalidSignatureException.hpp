@@ -11,7 +11,7 @@ namespace Casc
         {
         public:
             InvalidSignatureException(uint32_t actual, uint32_t expected)
-                : actual(actual), expected(expected)
+                : actual(actual), expected(expected), CascException("The file signature is invalid.")
             {
 
             }

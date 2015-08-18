@@ -12,7 +12,7 @@ namespace Casc
         {
         public:
             FileNotFoundException(std::string key)
-                : key(key)
+                : key(key), CascException("Couldn't find a file with the given key.")
             {
 
             }
