@@ -1,4 +1,4 @@
-**CascLib**
+## CascLib
 
 CascLib is C++ library that allows you to access files from a CASC library from any Blizzard game.
 It aims for a modern C++14 design, being mostly header-only, and leveraging standard C++ features like streams.
