@@ -7,9 +7,10 @@ namespace Casc
         /**
         * Description of a chunk.
         */
-        template <typename Traits>
         struct ChunkInfo
         {
+            typedef std::filebuf::traits_type Traits;
+
             // The offset of the first byte in the decompressed data.
             typename Traits::off_type begin;
 

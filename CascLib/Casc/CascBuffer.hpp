@@ -24,11 +24,6 @@ namespace Casc
     template <size_t BufferSize>
     class BaseCascBuffer : public std::filebuf
     {
-    public:
-        // Typedefs
-        typedef BufferInfo<traits_type> BufferInfo;
-        typedef ChunkInfo<traits_type> ChunkInfo;
-
     private:
         // True when the file is properly initialized.
         // The file is properly initialized once all the headers have been read.

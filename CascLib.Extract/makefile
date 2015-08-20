@@ -1,4 +1,4 @@
-all: casc lookup3.o clean
+all: casc clean
 
 lookup3.o: ../CascLib/lookup3.c
 	clang-3.6 -c ../CascLib/lookup3.c -o lookup3.o

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "ChunkInfo.hpp"
-
 namespace Casc
 {
     namespace Shared
@@ -9,9 +7,10 @@ namespace Casc
         /**
         * Description of a buffer state.
         */
-        template <typename Traits>
         struct BufferInfo
         {
+            typedef std::filebuf::traits_type Traits;
+
             // The offset of the first byte in the buffer.
             typename Traits::off_type begin;
 

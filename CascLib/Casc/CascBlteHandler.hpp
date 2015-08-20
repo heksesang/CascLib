@@ -21,7 +21,6 @@ namespace Casc
     {
     public:
         // Typedefs
-        typedef BufferInfo<Traits> BufferInfo;
         typedef typename Traits::off_type off_type;
 
     public:
