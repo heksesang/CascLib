@@ -26,11 +26,15 @@ namespace Casc
         // The version of this index.
         int version_;
 
+        // The path of the index file.
+        std::string path;
+
     public:
         /**
          * Constructor
          */
         CascIndex(std::string path)
+            : path(path)
         {
             using namespace Endian;
             std::ifstream fs;

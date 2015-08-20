@@ -35,8 +35,5 @@
     <ClCompile Include="CascHelperTests.cpp">
       <Filter>Source Files\Tests</Filter>
     </ClCompile>
-    <ClCompile Include="CascStreamTests.cpp">
-      <Filter>Source Files\Tests</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

@@ -4,37 +4,42 @@
 
 namespace Casc
 {
-    /* Container */
-    class CascContainer;
-
-    /* BLTE handler */
-    template <typename Traits>
-    class BaseCascBlteHandler;
-    typedef BaseCascBlteHandler<std::filebuf::traits_type> CascBlteHandler;
-    
-    /* Buffer */
-    template <size_t BufferSize>
-    class BaseCascBuffer;
-    typedef BaseCascBuffer<4096U> CascBuffer;
-    
     class CascBuildInfo;
     class CascConfiguration;
     class CascEncoding;
     class CascIndex;
     struct CascIndexRecord;
+    class CascLayoutDescriptor;
     class CascRootHandler;
     class CascShmem;
+
+    /* BLTE handler */
+    template <typename Traits>
+    class BaseCascBlteHandler;
+    typedef BaseCascBlteHandler<std::filebuf::traits_type> CascBlteHandler;
+
+    /* Buffer */
+    template <size_t BufferSize>
+    class BaseCascBuffer;
+    typedef BaseCascBuffer<4096U> CascBuffer;
+
+    /* Stream */
     template <bool Writeable>
     class CascStream;
+
+
+    /* Container */
+    class CascContainer;
 }
 
 #include "StreamOps.hpp"
 
 #include "Exceptions/CascException.hpp"
 #include "Exceptions/FileNotFoundException.hpp"
+#include "Exceptions/GenericException.hpp"
 #include "Exceptions/InvalidHashException.hpp"
 #include "Exceptions/InvalidSignatureException.hpp"
-#include "Exceptions/GenericException.hpp"
+#include "Exceptions/NoFreeSpaceException.hpp"
 
 using namespace Casc::Exceptions;
 
@@ -55,6 +60,7 @@ using namespace Casc::Exceptions;
 #include "CascContainer.hpp"
 #include "CascEncoding.hpp"
 #include "CascIndex.hpp"
+#include "CascLayoutDescriptor.hpp"
 #include "CascRootHandler.hpp"
 #include "CascShmem.hpp"
 #include "CascStream.hpp"

@@ -131,18 +131,37 @@ namespace CascLibTest
 
 		TEST_METHOD(ReadConfiguration)
 		{
-			CascConfiguration configuration("config");
+			CascConfiguration configuration(R"(I:\Diablo III\Data\config\0d\a0\0da08d69484c74c91e50aab485f5b4ba)");
 		}
 
 		TEST_METHOD(ReadBuildInfo)
 		{
-			CascBuildInfo buildInfo(".build.info"); 
+			CascBuildInfo buildInfo(R"(I:\Diablo III\.build.info)"); 
 		}
 
 		TEST_METHOD(ReadShmem)
 		{
             CascShmem shmem(R"(shmem)", R"(I:\Diablo III\)");
 		}
+
+        TEST_METHOD(WriteFile)
+        {
+            auto container = std::make_unique<CascContainer>(
+                R"(I:\Diablo III\)",
+                std::vector<std::shared_ptr<CascBlteHandler>> {
+                    std::make_shared<ZlibHandler>()
+            });
+
+            auto enc = container->openFileByKey(container->buildConfig()["encoding"].back());
+
+            enc->seekg(0, std::ios_base::end);
+            auto size = enc->tellg();
+
+            enc->seekg(0, std::ios_base::beg);
+
+            container->write(*enc.get(), CascLayoutDescriptor({
+                CascLayoutDescriptor::ChunkDescriptor(CompressionMode::None, 0, size) }));
+        }
 
 	};
 }

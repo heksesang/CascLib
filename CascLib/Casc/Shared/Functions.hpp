@@ -137,7 +137,7 @@ namespace Casc
 
                 inline uint32_t lookup3(const std::string &data, const uint32_t &init)
                 {
-                    return hashlittle(data.data() + 1, data.size(), init);
+                    return hashlittle(data.c_str(), data.size() + 1, init);
                 }
 
                 inline uint32_t lookup3(const std::vector<char> &data, const uint32_t &init)

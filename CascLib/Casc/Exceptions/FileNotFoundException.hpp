@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-#include <stdint.h>
 #include "CascException.hpp"
 
 namespace Casc

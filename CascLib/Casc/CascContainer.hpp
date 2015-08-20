@@ -6,6 +6,7 @@
 #include <boost/filesystem.hpp>
 #endif
 #include <iomanip>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -20,8 +21,7 @@
 #include "CascIndex.hpp"
 #include "CascStream.hpp"
 #include "CascRootHandler.hpp"
-#include "Shared/FileSearch.hpp"
-#include "Shared/Functions.hpp"
+#include "CascLayoutDescriptor.hpp"
 
 namespace Casc
 {
@@ -35,21 +35,7 @@ namespace Casc
     public:
         std::shared_ptr<CascStream<false>> openFileByKey(const std::string &key) const
         {
-            auto bytes = Hex<9>(key).data();
-
-            for (auto index : indices_)
-            {
-                try
-                {
-                    return openStream<false>(index.file(bytes));
-                }
-                catch (std::exception&) // TODO: Better exception handling
-                {
-                    continue;
-                }
-            }
-
-            throw FileNotFoundException(key);
+            return openStream<false>(findFileLocation(key));
         }
 
         std::shared_ptr<CascStream<false>> openFileByHash(const std::string &hash) const
@@ -68,9 +54,35 @@ namespace Casc
             return openFileByKey(encoding->findKey(rootHandlers.at(magic)->findHash(name)));
         }
 
-        std::shared_ptr<CascStream<true>> openWriteableFileByKey(const std::string &key)
+        // TODO: Finish this.
+        MemoryInfo write(std::istream &stream, CascLayoutDescriptor& descriptor)
         {
-            return nullptr;
+            std::vector<std::vector<char>> chunks;
+
+            for (auto &chunk : descriptor.chunks())
+            {
+                stream.seekg(chunk.begin(), std::ios_base::beg);
+                chunks.push_back(blteHandlers[chunk.mode()]->write(stream, chunk.count()));
+            }
+
+            uint32_t size = std::accumulate(chunks.begin(), chunks.end(), 0,
+                [](uint32_t value, std::vector<char> &chunk) { return value + chunk.size() + 1; });
+
+            auto loc = shmem_.reserveSpace(size);
+
+            auto out = openStream<true>(loc);
+
+            //*out.get() << BlteSignature;
+
+            out->close();
+            
+            int i = 0;
+            for (auto &chunk : chunks)
+            {
+                ++i;
+            }
+
+            return MemoryInfo();
         }
 
         template <typename T>
@@ -93,6 +105,8 @@ namespace Casc
         }
 
     private:
+        const int BlteSignature = 0x45544C42;
+
         // The path of the archive folder.
         std::string path_;
 
@@ -121,13 +135,37 @@ namespace Casc
         std::map<std::array<char, 4>, std::shared_ptr<CascRootHandler>> rootHandlers;
 
         /**
+         * Finds the location of a file.
+         *
+         * @param key   the key of the file.
+         */
+        MemoryInfo findFileLocation(const std::string &key) const
+        {
+            auto bytes = Hex<9>(key).data();
+
+            for (auto index : indices_)
+            {
+                try
+                {
+                    return index.file(bytes);
+                }
+                catch (FileNotFoundException&) // TODO: Better exception handling
+                {
+                    continue;
+                }
+            }
+
+            throw FileNotFoundException(key);
+        }
+
+        /**
          * Opens a stream at a given location.
          *
          * @param loc	the location of the data to stream.
          * @return		a stream object.
          */
         template <bool Writeable>
-        std::shared_ptr<CascStream<false>> openStream(MemoryInfo loc) const
+        std::shared_ptr<CascStream<Writeable>> openStream(MemoryInfo loc) const
         {
             std::stringstream ss;
             ss << shmem_.path() << "/data." << std::setw(3) << std::setfill('0') << loc.file();
@@ -143,7 +181,7 @@ namespace Casc
          */
         CascContainer()
         {
-
+            registerHandler<DefaultHandler>();
         }
 
         /**
@@ -154,6 +192,7 @@ namespace Casc
         CascContainer(std::string path,
             std::vector<std::shared_ptr<CascBlteHandler>> blteHandlers = {},
             std::vector<std::shared_ptr<CascRootHandler>> rootHandlers = {})
+            : CascContainer()
         {
             registerHandlers(blteHandlers);
             registerHandlers(rootHandlers);

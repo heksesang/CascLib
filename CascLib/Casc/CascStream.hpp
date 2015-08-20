@@ -6,9 +6,6 @@
 
 #include "Common.hpp"
 
-#include "CascBlteHandler.hpp"
-#include "CascBuffer.hpp"
-
 namespace Casc
 {
     /**
@@ -16,10 +13,20 @@ namespace Casc
      * The class provides methods to easily control the underlying buffer.
      */
     template <bool Writeable>
-    class CascStream : public std::conditional<Writeable, std::iostream, std::istream>::type
+    class CascStream : public std::conditional<Writeable, std::ostream, std::istream>::type
     {
-        // The underlying buffer which allows direct data streaming.
-        std::unique_ptr<CascBuffer> buffer;
+        typedef std::filebuf write_buf_type;
+        typedef CascBuffer read_buf_type;
+        //typedef std::common_type<write_buf_type, read_buf_type>::type base_buf_type;
+        typedef std::filebuf base_buf_type; //<-- Works, should be same as above line?
+
+        typedef typename std::conditional<Writeable,
+            std::ostream, std::istream>::type base_type;
+        typedef typename std::conditional<Writeable,
+            write_buf_type, read_buf_type>::type buf_type;
+
+        // The underlying buffer.
+        base_buf_type* buffer;
 
         // Chunk handlers
         std::map<char, std::shared_ptr<CascBlteHandler>> handlers;
@@ -29,7 +36,8 @@ namespace Casc
          * Default constructor.
          */
         CascStream()
-            : buffer(reinterpret_cast<CascBuffer*>(this->rdbuf())), std::istream(new CascBuffer())
+            : buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
+              base_type(new buf_type())
         {
             registerHandler<DefaultHandler>();
         }
@@ -62,7 +70,7 @@ namespace Casc
         /**
          * Destructor.
          */
-        virtual ~CascStream() override
+        virtual ~CascStream() noexcept override
         {
             if (is_open())
             {
@@ -82,7 +90,16 @@ namespace Casc
          */
         void open(size_t offset)
         {
-            buffer->open(offset);
+            if (Writeable)
+            {
+                auto buf = reinterpret_cast<write_buf_type*>(buffer);
+                buf->pubseekoff(offset, std::ios_base::beg);
+            }
+            else
+            {
+                auto buf = reinterpret_cast<read_buf_type*>(buffer);
+                buf->open(offset);
+            }
         }
 
         /**
@@ -93,7 +110,17 @@ namespace Casc
          */
         void open(const char *filename, size_t offset)
         {
-            buffer->open(filename, offset);
+            if (Writeable)
+            {
+                auto buf = reinterpret_cast<write_buf_type*>(buffer);
+                buf->open(filename, std::ios_base::out);
+                buf->pubseekoff(offset, std::ios_base::beg);
+            }
+            else
+            {
+                auto buf = reinterpret_cast<read_buf_type*>(buffer);
+                buf->open(filename, offset);
+            }
         }
 
         /**
@@ -127,18 +154,25 @@ namespace Casc
 
         void registerHandlers(std::vector<std::shared_ptr<CascBlteHandler>> handlers)
         {
-            for (std::shared_ptr<CascBlteHandler> handler : handlers)
-                this->handlers[handler->compressionMode()] = handler;
+            if (!Writeable)
+            {
+                for (std::shared_ptr<CascBlteHandler> handler : handlers)
+                    this->handlers[handler->compressionMode()] = handler;
 
-            reinterpret_cast<CascBuffer*>(this->rdbuf())->registerHandlers(handlers);
+                reinterpret_cast<read_buf_type*>(this->rdbuf())->registerHandlers(handlers);
+            }
         }
 
         template <typename T>
         void registerHandler()
         {
-            CascBlteHandler* handler = new T;
-            this->handlers[handler->compressionMode()] = std::shared_ptr<CascBlteHandler>(handler);
-            reinterpret_cast<CascBuffer*>(this->rdbuf())->registerHandlers({ this->handlers[handler->compressionMode()] });
+            if (!Writeable)
+            {
+                CascBlteHandler* handler = new T;
+                this->handlers[handler->compressionMode()] = std::shared_ptr<CascBlteHandler>(handler);
+
+                reinterpret_cast<read_buf_type*>(this->rdbuf())->registerHandlers({ this->handlers[handler->compressionMode()] });
+            }
         }
     };
 }

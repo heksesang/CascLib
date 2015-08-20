@@ -25,6 +25,8 @@ namespace Casc
         typedef typename Traits::off_type off_type;
 
     public:
+        virtual ~BaseCascBlteHandler() { }
+
         /**
          * The compression mode this handler should be registered for.
          */
@@ -41,6 +43,8 @@ namespace Casc
          * @return A pointer to the byte array.
          */
         virtual std::unique_ptr<char[]> buffer(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize) = 0;
+
+        virtual std::vector<char> write(std::istream &stream, size_t inSize) = 0;
     };
 
     /**
@@ -67,6 +71,14 @@ namespace Casc
 
             return nullptr;
         }
+
+        std::vector<char> write(std::istream &stream, size_t inSize) override
+        {
+            std::vector<char> v(inSize);
+            stream.read(&v[0], inSize);
+
+            return std::move(v);
+        }
     };
 
     /**
@@ -74,6 +86,8 @@ namespace Casc
     */
     class ZlibHandler : public CascBlteHandler
     {
+        const int CompressionLevel = Z_DEFAULT_COMPRESSION;
+
         ZStreamBase::char_t* out = nullptr;
         size_t avail_out = 0;
 
@@ -104,8 +118,24 @@ namespace Casc
             return std::unique_ptr<char[]>(reinterpret_cast<char*>(resizedOut));
         }
 
+        std::vector<char> write(std::istream &stream, size_t inSize) override
+        {
+            std::vector<char> v(inSize);
+            stream.read(&v[0], inSize);
+
+            ZDeflateStream zstream(this->CompressionLevel);
+            zstream.write(reinterpret_cast<ZStreamBase::char_t*>(&v[0]), inSize);
+
+            char* buf;
+            size_t bufSize;
+
+            zstream.readAll(reinterpret_cast<ZStreamBase::char_t**>(&buf), bufSize);
+
+            return std::vector<char>(buf, buf + bufSize);
+        }
+
     public:
-        virtual ~ZlibHandler()
+        virtual ~ZlibHandler() override
         {
             delete[] out;
         }

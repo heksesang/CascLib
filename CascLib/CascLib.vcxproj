@@ -223,6 +223,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Casc\CascLayoutDescriptor.hpp" />
     <ClInclude Include="Casc\CascBuffer.hpp" />
     <ClInclude Include="Casc\CascConfiguration.hpp" />
     <ClInclude Include="Casc\CascBuildInfo.hpp" />
@@ -239,6 +240,7 @@
     <ClInclude Include="Casc\Exceptions\InvalidHashException.hpp" />
     <ClInclude Include="Casc\Exceptions\InvalidSignatureException.hpp" />
     <ClInclude Include="Casc\Exceptions\GenericException.hpp" />
+    <ClInclude Include="Casc\Exceptions\NoFreeSpaceException.hpp" />
     <ClInclude Include="Casc\Shared\FileSearch.hpp" />
     <ClInclude Include="Casc\Shared\Hex.hpp" />
     <ClInclude Include="Casc\DataTypes\MemoryInfo.hpp" />

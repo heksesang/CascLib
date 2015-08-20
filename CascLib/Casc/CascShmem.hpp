@@ -32,6 +32,38 @@ namespace Casc
      */
     class CascShmem
     {
+    public:
+        MemoryInfo reserveSpace(uint32_t size)
+        {
+            uint32_t available = 0;
+
+            for (auto& location : freeSpace_)
+            {
+                if (location.size() > available)
+                {
+                    available = location.size();
+                }
+
+                if (location.size() >= size)
+                {
+                    location = MemoryInfo(
+                        location.file(),
+                        location.offset() + size,
+                        location.size() - size,
+                        false);
+
+                    return MemoryInfo(
+                        location.file(),
+                        location.offset() - size,
+                        size,
+                        false);
+                }
+            }
+
+            throw NoFreeSpaceException(size, available);
+        }
+
+    private:
         /**
         * Different SHMEM block types:
         * Header
@@ -50,10 +82,10 @@ namespace Casc
         std::string path_;
 
         // The list of versions for IDX files. Contains 16 values for WoD beta.
-        std::map<unsigned int, unsigned int> versions_;
+        std::map<uint32_t, uint32_t> versions_;
 
         // The list of free spaces of memory in the data files. 
-        std::vector<MemoryInfo> memory_;
+        std::vector<MemoryInfo> freeSpace_;
 
         /**
          * Reads a chunk of type ShmemType::WriteableMemory.
@@ -76,7 +108,7 @@ namespace Casc
 
             for (unsigned int i = 0; i < writeableMemoryCount; ++i)
             {
-                memory_.push_back(MemoryInfo(
+                freeSpace_.push_back(MemoryInfo(
                     second[i].hi,
                     readBE(second[i].lo),
                     readBE(first[i].lo)));
@@ -184,8 +216,7 @@ namespace Casc
             file.open(path, std::ios_base::in | std::ios_base::binary);
 
             uint32_t type = 0;
-            file >> type;
-            type = readLE(type);
+            file >> le >> type;
 
             switch (type)
             {
@@ -255,7 +286,7 @@ namespace Casc
          *
          * @return the list of version numbers.
          */
-        const std::map<unsigned int, unsigned int> &versions() const
+        const std::map<uint32_t, uint32_t> &versions() const
         {
             return versions_;
         }
@@ -265,9 +296,9 @@ namespace Casc
          *
          * @return the list of free memory blocks.
          */
-        const std::vector<MemoryInfo> &memoryInfo() const
+        const std::vector<MemoryInfo> &freeSpace() const
         {
-            return memory_;
+            return freeSpace_;
         }
     };
 }

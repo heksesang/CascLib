@@ -108,6 +108,12 @@
     <ClInclude Include="Casc\Exceptions\GenericException.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Casc\CascLayoutDescriptor.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Exceptions\NoFreeSpaceException.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\The CASC Filesystem_v1-2.txt" />

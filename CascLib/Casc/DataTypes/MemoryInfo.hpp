@@ -14,7 +14,6 @@ namespace Casc
             /// block of memory in the data files.
             class MemoryInfo
             {
-            public:
                 /// The file number.
                 /// Max value of this field is 2^10 (10 bit).
                 int file_ = 0;
@@ -42,22 +41,30 @@ namespace Casc
                 /// @param file the file number.
                 /// @param offset the offset into the file.
                 /// @param amount the number of bytes.
-                MemoryInfo(uint8_t file, uint32_t offset, uint32_t length)
+                MemoryInfo(uint8_t file, uint32_t offset, uint32_t length, bool Shifted = true)
                     : size_(length)
                 {
-                    std::bitset<sizeof(uint8_t) * 8> fileBits(file);
-                    std::bitset<sizeof(uint32_t) * 8> offsetBits(offset);
+                    if (Shifted)
+                    {
+                        std::bitset<sizeof(uint8_t) * 8> fileBits(file);
+                        std::bitset<sizeof(uint32_t) * 8> offsetBits(offset);
 
-                    fileBits <<= 2;
+                        fileBits <<= 2;
 
-                    fileBits[0] = offsetBits[30];
-                    fileBits[1] = offsetBits[31];
+                        fileBits[0] = offsetBits[30];
+                        fileBits[1] = offsetBits[31];
 
-                    offsetBits[30] = false;
-                    offsetBits[31] = false;
+                        offsetBits[30] = false;
+                        offsetBits[31] = false;
 
-                    this->file_ = fileBits.to_ulong();
-                    this->offset_ = offsetBits.to_ulong();
+                        this->file_ = fileBits.to_ulong();
+                        this->offset_ = offsetBits.to_ulong();
+                    }
+                    else
+                    {
+                        this->file_ = file;
+                        this->offset_ = offset;
+                    }
                 }
 
                 /// Gets the file number containing the block.
