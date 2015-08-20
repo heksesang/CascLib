@@ -36,8 +36,11 @@ namespace Casc
     {
         typedef std::filebuf write_buf_type;
         typedef CascBuffer read_buf_type;
-        //typedef std::common_type<write_buf_type, read_buf_type>::type base_buf_type;
-        typedef std::filebuf base_buf_type; //<-- Works, should be same as above line?
+#ifdef _MSC_VER
+        typedef std::common_type<write_buf_type, read_buf_type>::type base_buf_type;
+#else
+        typedef std::filebuf base_buf_type;
+#endif
 
         typedef typename std::conditional<Writeable,
             std::ostream, std::istream>::type base_type;
