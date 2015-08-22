@@ -28,6 +28,7 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include <locale>
 #include <map>
 #include <sstream>
 #include <stdint.h>
@@ -83,6 +84,8 @@ namespace Casc
         }
 
     private:
+        typedef std::wstring_convert<std::codecvt<wchar_t, char, std::mbstate_t>> conv_type;
+
         /**
         * Different SHMEM block types:
         * Header
@@ -250,6 +253,11 @@ namespace Casc
             file.close();
         }
 
+        void writeFile(std::string path)
+        {
+
+        }
+
     public:
         /**
          * Default constructor.
@@ -275,6 +283,8 @@ namespace Casc
          */
         virtual ~CascShmem()
         {
+            conv_type conv;
+            writeFile(this->path_.append(conv.to_bytes({ fs::path::preferred_separator })).append("shmem"));
         }
 
         /**

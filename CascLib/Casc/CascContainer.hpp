@@ -25,6 +25,7 @@
 #include <boost/filesystem.hpp>
 #endif
 #include <iomanip>
+#include <locale>
 #include <numeric>
 #include <sstream>
 #include <string>
@@ -54,6 +55,7 @@ namespace Casc
     {
     private:
         typedef std::pair<CascChunkDescriptor, std::vector<char>> descriptor_type;
+        typedef std::wstring_convert<std::codecvt<wchar_t, char, std::mbstate_t>> conv_type;
 
         template <typename T, size_t Size>
         size_t copyToVector(const std::array<T, Size> &&src, std::vector<T> &dest, size_t offset) const
@@ -282,7 +284,9 @@ namespace Casc
         std::shared_ptr<CascStream<Writeable>> openStream(MemoryInfo loc) const
         {
             std::stringstream ss;
-            ss << shmem_.path() << "/data." << std::setw(3) << std::setfill('0') << loc.file();
+            conv_type conv;
+
+            ss << shmem_.path() << conv.to_bytes(std::wstring{ fs::path::preferred_separator }) << "data." << std::setw(3) << std::setfill('0') << loc.file();
             
             return std::make_shared<CascStream<Writeable>>(
                 ss.str(), loc.offset(),
@@ -353,8 +357,9 @@ namespace Casc
             for (size_t i = 0; i < shmem_.versions().size(); ++i)
             {
                 std::stringstream ss;
+                conv_type conv;
 
-                ss << shmem_.path() << "/";
+                ss << shmem_.path() << conv.to_bytes({ fs::path::preferred_separator });
                 ss << std::setw(2) << std::setfill('0') << std::hex << i;
                 ss << std::setw(8) << std::setfill('0') << std::hex << shmem_.versions().at(i);
                 ss << ".idx";
