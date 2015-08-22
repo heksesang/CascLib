@@ -27,7 +27,7 @@ It is a replacement for the older MPQ format used by Blizzard in previous game t
 
 ### Requirements
 
-* GCC 4.9, Clang 3.6 or Visual Studio 2015.
+* GCC 5, Clang 3.6 or Visual Studio 2015.
 * Zlib
 * Boost Filesystem (not required for Visual Studio 2015).
 
