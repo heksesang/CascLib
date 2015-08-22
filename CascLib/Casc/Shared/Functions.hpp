@@ -27,6 +27,7 @@
 #include <fstream>
 #include <vector>
 #include <utility>
+#include "../lookup3.hpp"
 
 namespace Casc
 {
@@ -132,18 +133,18 @@ namespace Casc
                 }
             }
 
-            namespace Extern
+            /*namespace Extern
             {
                 extern "C"
                 {
                     void hashlittle2(const void *key, size_t length, uint32_t *pc, uint32_t *pb);
                     uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
                 }
-            }
+            }*/
 
             namespace Hash
             {
-                using namespace Casc::Shared::Functions::Extern;
+                //using namespace Casc::Shared::Functions::Extern;
 
                 inline std::pair<uint32_t, uint32_t> lookup3(const std::string &data, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
                 {

@@ -117,13 +117,11 @@
     <ClInclude Include="Casc\md5.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Casc\lookup3.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\The CASC Filesystem_v1-2.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="lookup3.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

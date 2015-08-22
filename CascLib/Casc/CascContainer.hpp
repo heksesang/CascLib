@@ -97,26 +97,12 @@ namespace Casc
             
             auto headerSize = 8 + 8 + 24 * chunks.size();
 
-            /*if (chunks.size() == 1)
-            {
-                headerSize = 4;
-            }
-            else
-            {
-                headerSize = 8 + 8 + 24 * chunks.size();
-            }*/
-
             size_t pos = 0;
 
             std::vector<char> header(headerSize, '\0');
 
             *reinterpret_cast<uint32_t*>(&header[pos]) = BlteSignature;
             pos += sizeof(uint32_t);
-
-            /*if (chunks.size() == 1)
-            {
-                return std::move(header);
-            }*/
 
             pos = copyToVector(writeBE<uint32_t>(headerSize), header, pos);
 

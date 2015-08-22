@@ -34,9 +34,7 @@ It is a replacement for the older MPQ format used by Blizzard in previous game t
 ### How to use
 
 1. Include Casc/Common.hpp in your project.
-2. Include and link to zlib and boost filesystem.
-3. Link to lookup3.c either by compiling and linking separately,
-   or including the lookup3.c file as part of your project.
+2. Include and link to zlib and boost filesystem (if not compiling with Visual Studio 2015).
 
 ``` c++
     #include "Casc/Common.hpp"

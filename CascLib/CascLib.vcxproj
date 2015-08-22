@@ -241,6 +241,7 @@
     <ClInclude Include="Casc\Exceptions\InvalidSignatureException.hpp" />
     <ClInclude Include="Casc\Exceptions\GenericException.hpp" />
     <ClInclude Include="Casc\Exceptions\NoFreeSpaceException.hpp" />
+    <ClInclude Include="Casc\lookup3.hpp" />
     <ClInclude Include="Casc\md5.hpp" />
     <ClInclude Include="Casc\Shared\FileSearch.hpp" />
     <ClInclude Include="Casc\Shared\Hex.hpp" />
@@ -253,9 +254,6 @@
     <ClInclude Include="Casc\StreamOps.hpp" />
     <ClInclude Include="Casc\Shared\Functions.hpp" />
     <ClInclude Include="Casc\zlib.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="lookup3.c" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\The CASC Filesystem_v1-2.txt" />
