@@ -160,7 +160,7 @@ namespace CascLibTest
             enc->seekg(0, std::ios_base::beg);
 
             container->write(*enc.get(), CascLayoutDescriptor({
-                CascLayoutDescriptor::ChunkDescriptor(CompressionMode::None, 0, size) }));
+                CascChunkDescriptor(CompressionMode::None, 0, size) }));
         }
 
 	};

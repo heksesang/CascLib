@@ -241,6 +241,7 @@
     <ClInclude Include="Casc\Exceptions\InvalidSignatureException.hpp" />
     <ClInclude Include="Casc\Exceptions\GenericException.hpp" />
     <ClInclude Include="Casc\Exceptions\NoFreeSpaceException.hpp" />
+    <ClInclude Include="Casc\md5.hpp" />
     <ClInclude Include="Casc\Shared\FileSearch.hpp" />
     <ClInclude Include="Casc\Shared\Hex.hpp" />
     <ClInclude Include="Casc\DataTypes\MemoryInfo.hpp" />

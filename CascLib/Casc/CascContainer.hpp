@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "Common.hpp"
+#include "md5.hpp"
 
 #include "CascShmem.hpp"
 #include "CascBlteHandler.hpp"
@@ -51,6 +52,133 @@ namespace Casc
      */
     class CascContainer
     {
+    private:
+        typedef std::pair<CascChunkDescriptor, std::vector<char>> descriptor_type;
+
+        template <typename T, size_t Size>
+        size_t copyToVector(const std::array<T, Size> &&src, std::vector<T> &dest, size_t offset) const
+        {
+            std::copy(src.begin(), src.end(), dest.begin() + offset);
+            return offset + Size;
+        }
+
+        template <typename T, size_t Size>
+        size_t copyToVector(const std::array<T, Size> &src, std::vector<T> &dest, size_t offset) const
+        {
+            std::copy(src.begin(), src.end(), dest.begin() + offset);
+            return offset + Size;
+        }
+
+        std::vector<char> createDataHeader(const std::vector<char> &blteHeader, const std::vector<descriptor_type> &chunks) const
+        {
+            auto dataHeaderSize = 30;
+            auto blteHeaderSize = blteHeader.size();
+            auto dataSize = dataHeaderSize + blteHeader.size() +
+                std::accumulate(chunks.begin(), chunks.end(), 0,
+                    [](uint32_t value, descriptor_type descriptor) { return value + descriptor.second.size(); });
+
+            std::vector<char> header(dataHeaderSize, '\0');
+
+            auto hash = Hex<16, char>(md5(blteHeader)).data();
+            copyToVector(hash, header, 0);
+
+            std::array<char, sizeof(uint32_t)> size;
+            std::copy(reinterpret_cast<char*>(&dataSize),
+                reinterpret_cast<char*>(&dataSize) + sizeof(uint32_t), size.begin());
+            copyToVector(size, header, 16);
+
+            return std::move(header);
+        }
+
+        std::vector<char> createBlteHeader(const std::vector<descriptor_type> &chunks) const
+        {
+            auto dataSize = std::accumulate(chunks.begin(), chunks.end(), 0,
+                [](uint32_t value, descriptor_type descriptor) { return value + descriptor.second.size(); });
+            
+            auto headerSize = 8 + 8 + 24 * chunks.size();
+
+            /*if (chunks.size() == 1)
+            {
+                headerSize = 4;
+            }
+            else
+            {
+                headerSize = 8 + 8 + 24 * chunks.size();
+            }*/
+
+            size_t pos = 0;
+
+            std::vector<char> header(headerSize, '\0');
+
+            *reinterpret_cast<uint32_t*>(&header[pos]) = BlteSignature;
+            pos += sizeof(uint32_t);
+
+            /*if (chunks.size() == 1)
+            {
+                return std::move(header);
+            }*/
+
+            pos = copyToVector(writeBE<uint32_t>(headerSize), header, pos);
+
+            pos = copyToVector(writeBE<uint16_t>(0xF00), header, pos);
+
+            pos = copyToVector(writeBE<uint16_t>(chunks.size()), header, pos);
+
+            for (auto &chunk : chunks)
+            {
+                pos = copyToVector(writeBE<uint32_t>(chunk.second.size()), header, pos);
+                pos = copyToVector(writeBE<uint32_t>(chunk.first.count()), header, pos);
+                
+                auto hash = Hex<16, char>(md5(chunk.second)).data();
+
+                pos = copyToVector(hash, header, pos);
+            }
+
+            return std::move(header);
+        }
+
+        std::vector<descriptor_type> createChunkData(std::istream &stream, const CascLayoutDescriptor &descriptor) const
+        {
+            std::vector<descriptor_type> chunks;
+
+            for (auto &chunk : descriptor.chunks())
+            {
+                stream.seekg(chunk.begin(), std::ios_base::beg);
+                chunks.emplace_back(chunk,
+                    blteHandlers.at(chunk.mode())->write(stream, chunk.count()));
+            }
+
+            return std::move(chunks);
+        }
+
+        std::vector<char> createData(std::istream &stream, const CascLayoutDescriptor &descriptor) const
+        {
+            auto chunks = createChunkData(stream, descriptor);
+            auto blteHeader = createBlteHeader(chunks);
+            auto dataHeader = createDataHeader(blteHeader, chunks);
+
+            auto dataSize = dataHeader.size() + blteHeader.size() +
+                std::accumulate(chunks.begin(), chunks.end(), 0,
+                    [](uint32_t value, descriptor_type descriptor) { return value + descriptor.second.size(); });
+
+            std::vector<char> data(dataSize, '\0');
+            auto iter = data.begin();
+            
+            std::copy(dataHeader.begin(), dataHeader.end(), iter);
+            iter += dataHeader.size();
+
+            std::copy(blteHeader.begin(), blteHeader.end(), iter);
+            iter += blteHeader.size();
+
+            for (auto &chunk : chunks)
+            {
+                std::copy(chunk.second.begin(), chunk.second.end(), iter);
+                iter += chunk.second.size();
+            }
+
+            return std::move(data);
+        }
+
     public:
         std::shared_ptr<CascStream<false>> openFileByKey(const std::string &key) const
         {
@@ -73,35 +201,16 @@ namespace Casc
             return openFileByKey(encoding->findKey(rootHandlers.at(magic)->findHash(name)));
         }
 
-        // TODO: Finish this.
-        MemoryInfo write(std::istream &stream, CascLayoutDescriptor& descriptor)
+        MemoryInfo write(std::istream &stream, CascLayoutDescriptor &descriptor)
         {
-            std::vector<std::vector<char>> chunks;
-
-            for (auto &chunk : descriptor.chunks())
-            {
-                stream.seekg(chunk.begin(), std::ios_base::beg);
-                chunks.push_back(blteHandlers[chunk.mode()]->write(stream, chunk.count()));
-            }
-
-            uint32_t size = std::accumulate(chunks.begin(), chunks.end(), 0,
-                [](uint32_t value, std::vector<char> &chunk) { return value + chunk.size() + 1; });
-
-            auto loc = shmem_.reserveSpace(size);
-
+            auto arr = createData(stream, descriptor);
+            auto loc = shmem_.reserveSpace(arr.size());
             auto out = openStream<true>(loc);
 
-            //*out.get() << BlteSignature;
-
+            out->write(arr.data(), arr.size());
             out->close();
-            
-            int i = 0;
-            for (auto &chunk : chunks)
-            {
-                ++i;
-            }
 
-            return MemoryInfo();
+            return loc;
         }
 
         template <typename T>

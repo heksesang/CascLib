@@ -56,6 +56,19 @@ namespace Casc
             namespace Endian
             {
                 template <typename T>
+                inline std::array<char, sizeof(T)> writeLE(T value)
+                {
+                    std::array<char, sizeof(T)> output;
+
+                    for (int i = 0; i < sizeof(T); ++i)
+                    {
+                        output[i] = (value >> i * 8) & 0xFF;
+                    }
+
+                    return output;
+                }
+
+                template <typename T>
                 inline T readLE(unsigned char* arr)
                 {
                     T output{};
@@ -78,6 +91,19 @@ namespace Casc
                 inline T readLE(T value)
                 {
                     return readLE<T>(reinterpret_cast<unsigned char*>(&value));
+                }
+
+                template <typename T>
+                inline std::array<char, sizeof(T)> writeBE(T value)
+                {
+                    std::array<char, sizeof(T)> output;
+
+                    for (int i = 0; i < sizeof(T); ++i)
+                    {
+                        output[(sizeof(T) - 1) - i] = (value >>  i * 8) & 0xFF;
+                    }
+
+                    return output;
                 }
 
                 template <typename T>

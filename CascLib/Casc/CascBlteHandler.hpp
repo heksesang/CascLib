@@ -60,9 +60,9 @@ namespace Casc
          *
          * @return A pointer to the byte array.
          */
-        virtual std::unique_ptr<char[]> buffer(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize) = 0;
+        virtual std::unique_ptr<char[]> read(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize) = 0;
 
-        virtual std::vector<char> write(std::istream &stream, size_t inSize) = 0;
+        virtual std::vector<char> write(std::istream &stream, size_t inSize) const = 0;
     };
 
     /**
@@ -75,7 +75,7 @@ namespace Casc
             return CompressionMode::None;
         }
 
-        std::unique_ptr<char[]> buffer(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize) override
+        std::unique_ptr<char[]> read(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize) override
         {
             char* out = new char[outSize];
 
@@ -90,10 +90,11 @@ namespace Casc
             return nullptr;
         }
 
-        std::vector<char> write(std::istream &stream, size_t inSize) override
+        std::vector<char> write(std::istream &stream, size_t inSize) const override
         {
-            std::vector<char> v(inSize);
-            stream.read(&v[0], inSize);
+            std::vector<char> v(inSize + 1, '\0');
+            v[0] = compressionMode();
+            stream.read(&v[1], inSize);
 
             return std::move(v);
         }
@@ -114,7 +115,7 @@ namespace Casc
             return CompressionMode::Zlib;
         }
 
-        std::unique_ptr<char[]> buffer(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize) override
+        std::unique_ptr<char[]> read(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize) override
         {
             if (offset == 0 || avail_out - offset < outSize)
             {
@@ -136,10 +137,11 @@ namespace Casc
             return std::unique_ptr<char[]>(reinterpret_cast<char*>(resizedOut));
         }
 
-        std::vector<char> write(std::istream &stream, size_t inSize) override
+        std::vector<char> write(std::istream &stream, size_t inSize) const override
         {
-            std::vector<char> v(inSize);
-            stream.read(&v[0], inSize);
+            std::vector<char> v(inSize + 1, '\0');
+            v[0] = compressionMode();
+            stream.read(&v[1], inSize);
 
             ZDeflateStream zstream(this->CompressionLevel);
             zstream.write(reinterpret_cast<ZStreamBase::char_t*>(&v[0]), inSize);

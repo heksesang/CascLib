@@ -115,7 +115,10 @@ namespace Casc
             if (Writeable)
             {
                 auto buf = reinterpret_cast<write_buf_type*>(buffer);
-                buf->pubseekoff(offset, std::ios_base::beg);
+                if (buf->pubseekoff(offset, std::ios_base::beg, std::ios_base::out) != (std::streampos)offset)
+                {
+                    throw Casc::Exceptions::GenericException("Failed to open CASC archive for writing at given position.");
+                }
             }
             else
             {
@@ -135,8 +138,11 @@ namespace Casc
             if (Writeable)
             {
                 auto buf = reinterpret_cast<write_buf_type*>(buffer);
-                buf->open(filename, std::ios_base::out);
-                buf->pubseekoff(offset, std::ios_base::beg);
+                buf->open(filename, std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+                if (buf->pubseekoff(offset, std::ios_base::beg, std::ios_base::out) != (std::streampos)offset)
+                {
+                    throw Casc::Exceptions::GenericException("Failed to open CASC archive for writing at given position.");
+                }
             }
             else
             {

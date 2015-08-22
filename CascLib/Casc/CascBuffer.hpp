@@ -323,7 +323,7 @@ namespace Casc
 
                 // Call the handler for the compression mode.
                 std::filebuf::seekpos(this->offset + chunk.offset + 1);
-                auto data = handlers[mode]->buffer(*this, offset - chunk.begin, chunk.size - 1, count, chunkSize);
+                auto data = handlers[mode]->read(*this, offset - chunk.begin, chunk.size - 1, count, chunkSize);
                 std::memcpy(out.get() + pos, data.get(), count);
 
                 if (chunks.size() == 1 && chunkSize != 0)

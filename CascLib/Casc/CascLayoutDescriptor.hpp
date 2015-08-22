@@ -26,44 +26,43 @@ namespace Casc
 {
     using namespace Casc::Shared;
 
+    class CascChunkDescriptor
+    {
+    private:
+        CompressionMode mode_;
+        size_t begin_;
+        size_t count_;
+
+    public:
+        CascChunkDescriptor(CompressionMode mode, size_t begin, size_t count)
+            : mode_(mode), begin_(begin), count_(count)
+        {
+
+        }
+
+        decltype(auto) mode() const
+        {
+            return mode_;
+        }
+
+        decltype(auto) begin() const
+        {
+            return begin_;
+        }
+
+        decltype(auto) count() const
+        {
+            return count_;
+        }
+    };
+
     class CascLayoutDescriptor
     {
-    public:
-        class ChunkDescriptor
-        {
-        private:
-            CompressionMode mode_;
-            size_t begin_;
-            size_t count_;
-
-        public:
-            ChunkDescriptor(CompressionMode mode, size_t begin, size_t count)
-                : mode_(mode), begin_(begin), count_(count)
-            {
-
-            }
-
-            decltype(auto) mode() const
-            {
-                return mode_;
-            }
-
-            decltype(auto) begin() const
-            {
-                return begin_;
-            }
-
-            decltype(auto) count() const
-            {
-                return count_;
-            }
-        };
-
     private:
-        std::vector<ChunkDescriptor> chunks_;
+        std::vector<CascChunkDescriptor> chunks_;
 
     public:
-        CascLayoutDescriptor(std::vector<ChunkDescriptor> descriptors = {})
+        CascLayoutDescriptor(std::vector<CascChunkDescriptor> descriptors = {})
             : chunks_(descriptors)
         {
 

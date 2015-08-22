@@ -24,10 +24,10 @@
 
 namespace Casc
 {
-    template <int Size>
+    template <int Size, typename ElementType = uint8_t>
     class Hex
     {
-        std::array<uint8_t, Size> arr;
+        std::array<ElementType, Size> arr;
         std::string str;
 
     public:
@@ -48,7 +48,7 @@ namespace Casc
             this->str = str;
         }
 
-        Hex(const std::array<uint8_t, Size> &arr)
+        Hex(const std::array<ElementType, Size> &arr)
         {
             std::stringstream ss;
 
@@ -65,7 +65,7 @@ namespace Casc
             this->arr = arr;
         }
 
-        const std::array<uint8_t, Size> &data()
+        const std::array<ElementType, Size> &data()
         {
             return arr;
         }
