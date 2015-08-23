@@ -33,7 +33,21 @@ namespace Casc
         return stream;
     }
 
+    inline std::ofstream &le(std::ofstream &stream)
+    {
+        stream.iword(endian_index) = 0;
+
+        return stream;
+    }
+
     inline std::ifstream &be(std::ifstream &stream)
+    {
+        stream.iword(endian_index) = 1;
+
+        return stream;
+    }
+
+    inline std::ofstream &be(std::ofstream &stream)
     {
         stream.iword(endian_index) = 1;
 
@@ -62,7 +76,40 @@ namespace Casc
         return input;
     }
 
+    template <typename T>
+    inline std::ofstream &operator<<(std::ofstream  &input, T &value)
+    {
+        using namespace Shared::Functions::Endian;
+
+        if (input.iword(endian_index) == 0)
+        {
+            input.write(writeLE<T>(value).data(), sizeof(T));
+        }
+
+        if (input.iword(endian_index) == 1)
+        {
+            input.write(writeBE<T>(value).data(), sizeof(T));
+        }
+
+        return input;
+    }
+
     inline std::ifstream &operator>>(std::ifstream  &input, std::ifstream &func(std::ifstream &stream))
+    {
+        return func(input);
+    }
+
+    inline std::ofstream &operator>>(std::ofstream  &input, std::ofstream &func(std::ofstream &stream))
+    {
+        return func(input);
+    }
+
+    inline std::ifstream &operator<<(std::ifstream  &input, std::ifstream &func(std::ifstream &stream))
+    {
+        return func(input);
+    }
+
+    inline std::ofstream &operator<<(std::ofstream  &input, std::ofstream &func(std::ofstream &stream))
     {
         return func(input);
     }

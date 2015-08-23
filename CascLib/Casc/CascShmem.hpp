@@ -84,7 +84,10 @@ namespace Casc
         }
 
     private:
-        typedef std::wstring_convert<std::codecvt<wchar_t, char, std::mbstate_t>> conv_type;
+        typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
+
+        static const int EntriesPerBlock = 1090U;
+        static const int BlockSize = EntriesPerBlock * sizeof(Ref);
 
         /**
         * Different SHMEM block types:
@@ -94,13 +97,16 @@ namespace Casc
         enum ShmemType
         {
             Header = 4,
-            WriteableMemory = 1
+            FreeSpace = 1
         };
 
         // The base directory of the archive.
-        std::string base_;
+        std::string basePath_;
 
         // The directory where the data files are stored.
+        std::string dataPath_;
+
+        // The path of the shemem file.
         std::string path_;
 
         // The list of versions for IDX files. Contains 16 values for WoD beta.
@@ -114,7 +120,7 @@ namespace Casc
          * 
          * @param file the file stream to read the data from.
          */
-        void readWriteableMemory(std::ifstream &file)
+        void readFreeSpace(std::ifstream &file)
         {
             using namespace Endian;
             uint32_t writeableMemoryCount;
@@ -122,11 +128,11 @@ namespace Casc
 
             file.seekg(24, std::ios_base::cur);
 
-            std::array<Ref, 1090> first;
-            std::array<Ref, 1090> second;
+            std::array<Ref, EntriesPerBlock> first;
+            std::array<Ref, EntriesPerBlock> second;
 
-            file.read(reinterpret_cast<char*>(&first[0]), 1090 * sizeof(Ref));
-            file.read(reinterpret_cast<char*>(&second[0]), 1090 * sizeof(Ref));
+            file.read(reinterpret_cast<char*>(&first[0]), BlockSize);
+            file.read(reinterpret_cast<char*>(&second[0]), BlockSize);
 
             for (unsigned int i = 0; i < writeableMemoryCount; ++i)
             {
@@ -166,11 +172,11 @@ namespace Casc
             
             if (fs::path(path).is_relative())
             {
-                path = fs::path(base_).append(path.begin(), path.end()).string();
+                path = fs::path(basePath_).append(path.begin(), path.end()).string();
             }
 
             // To make sure it works with shares mounted on linux.
-            path = path_ = fs::path(path_).parent_path().string();
+            path = dataPath_ = fs::path(path_).parent_path().string();
 
             for (fs::directory_iterator iter(path), end; iter != end; ++iter)
             {
@@ -219,8 +225,8 @@ namespace Casc
                 case ShmemType::Header:
                     break;
 
-                case ShmemType::WriteableMemory:
-                    readWriteableMemory(file);
+                case ShmemType::FreeSpace:
+                    readFreeSpace(file);
                     break;
                 }
             }
@@ -246,16 +252,89 @@ namespace Casc
                 readHeader(file);
                 break;
 
-            case ShmemType::WriteableMemory:
+            case ShmemType::FreeSpace:
                 break;
             }
 
             file.close();
         }
 
-        void writeFile(std::string path)
+        size_t calcBlockCount(size_t count) const
         {
+            return (count % 1090) == 0 ? count / 1090 : 1 + count / 1090;
+        }
 
+        void writeFreeSpace(std::ofstream &str) const
+        {
+            uint32_t freeSpaceCount = freeSpace_.size();
+            uint32_t blockSize = 0x2AB8;
+
+            str << le << (uint32_t)ShmemType::FreeSpace;
+            str << le << blockSize;
+
+            for (auto i = 0; i < 1090; i++)
+            {
+                if (i < freeSpaceCount)
+                {
+                    auto bytes = freeSpace_.at(i).bytes<MemoryInfo::BytesType::Count>();
+                    str.write(bytes.data(), bytes.size());
+                }
+                else
+                {
+                    str.write(std::array<char, 5>{ '\0', '\0', '\0', '\0', '\0' }.data(), 5);
+                }
+            }
+
+            for (auto i = 0; i < 1090; i++)
+            {
+                if (i < freeSpaceCount)
+                {
+                    auto bytes = freeSpace_.at(i).bytes<MemoryInfo::BytesType::Offset>();
+                    str.write(bytes.data(), bytes.size());
+                }
+                else
+                {
+                    str.write(std::array<char, 5>{ '\0', '\0', '\0', '\0', '\0' }.data(), 5);
+                }
+            }
+        }
+
+        void writeHeader(std::ofstream &str) const
+        {
+            uint32_t versionCount = versions_.size();
+            uint32_t blockCount = calcBlockCount(freeSpace_.size());
+
+            uint32_t headerSize = 264 + versionCount * sizeof(uint32_t) +
+                blockCount * (sizeof(uint32_t) * 2);
+
+            str << le << (uint32_t)ShmemType::Header;
+            str << le << (uint32_t)headerSize;
+            
+            str.seekp(0x100);
+
+            for (auto i = 0; i < blockCount; ++i)
+            {
+                uint32_t size = 0x20 + BlockSize * 2;
+                uint32_t offset = headerSize + i * BlockSize;
+
+                str << le << size;
+                str << le << offset;
+            }
+
+            for (auto i = 0; i < versionCount; ++i)
+            {
+                str << le << versions_.at(i);
+            }
+        }
+
+    public:
+        void writeFile() const
+        {
+            std::ofstream file;
+            file.open(path_, std::ios_base::out | std::ios_base::binary);
+
+            writeHeader(file);
+            writeFreeSpace(file);
         }
 
     public:
@@ -283,8 +362,6 @@ namespace Casc
          */
         virtual ~CascShmem()
         {
-            conv_type conv;
-            writeFile(this->path_.append(conv.to_bytes({ fs::path::preferred_separator })).append("shmem"));
         }
 
         /**
@@ -296,7 +373,7 @@ namespace Casc
         void parse(std::string path, std::string base)
         {
             path_ = path;
-            base_ = base;
+            basePath_ = base;
             readFile(path);
         }
 
@@ -307,7 +384,7 @@ namespace Casc
          */
         const std::string &path() const
         {
-            return path_;
+            return dataPath_;
         }
 
         /**

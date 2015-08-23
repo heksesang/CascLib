@@ -46,6 +46,12 @@ namespace Casc
                 size_t size_ = 0;
 
             public:
+                enum BytesType
+                {
+                    Count,
+                    Offset
+                };
+
                 /// Default constructor.
                 MemoryInfo()
                 {
@@ -105,6 +111,15 @@ namespace Casc
                 size_t size() const
                 {
                     return size_;
+                }
+
+                /// Gets a byte representation for serializing.
+                /// @return the byte representatio.
+                template <BytesType Type>
+                std::array<char, 5> bytes() const
+                {
+                    // TODO: Implement this.
+                    return{};
                 }
             };
         }

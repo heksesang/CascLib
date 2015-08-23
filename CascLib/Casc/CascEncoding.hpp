@@ -121,10 +121,10 @@ namespace Casc
 
     private:
         // The header size of an encoding file.
-        const unsigned int HeaderSize = 22U;
+        static const unsigned int HeaderSize = 22U;
 
         // The size of each chunk body (second block for each table).
-        const unsigned int ChunkBodySize = 4096U;
+        static const unsigned int ChunkBodySize = 4096U;
 
         // The encoding file stream.
         std::shared_ptr<std::istream> stream;

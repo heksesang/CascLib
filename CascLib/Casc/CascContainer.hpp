@@ -55,8 +55,8 @@ namespace Casc
     {
     private:
         typedef std::pair<CascChunkDescriptor, std::vector<char>> descriptor_type;
-        typedef std::wstring_convert<std::codecvt<wchar_t, char, std::mbstate_t>> conv_type;
-
+        typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
+        
         template <typename T, size_t Size>
         size_t copyToVector(const std::array<T, Size> &&src, std::vector<T> &dest, size_t offset) const
         {
@@ -73,21 +73,17 @@ namespace Casc
 
         std::vector<char> createDataHeader(const std::vector<char> &blteHeader, const std::vector<descriptor_type> &chunks) const
         {
-            auto dataHeaderSize = 30;
             auto blteHeaderSize = blteHeader.size();
-            auto dataSize = dataHeaderSize + blteHeader.size() +
+            auto dataSize = DataHeaderSize + blteHeader.size() +
                 std::accumulate(chunks.begin(), chunks.end(), 0,
                     [](uint32_t value, descriptor_type descriptor) { return value + descriptor.second.size(); });
 
-            std::vector<char> header(dataHeaderSize, '\0');
+            std::vector<char> header(DataHeaderSize, '\0');
 
             auto hash = Hex<16, char>(md5(blteHeader)).data();
-            copyToVector(hash, header, 0);
 
-            std::array<char, sizeof(uint32_t)> size;
-            std::copy(reinterpret_cast<char*>(&dataSize),
-                reinterpret_cast<char*>(&dataSize) + sizeof(uint32_t), size.begin());
-            copyToVector(size, header, 16);
+            copyToVector(hash, header, 0);
+            copyToVector(writeLE<uint32_t>(dataSize), header, 16);
 
             return std::move(header);
         }
@@ -198,6 +194,8 @@ namespace Casc
             out->write(arr.data(), arr.size());
             out->close();
 
+            shmem_.writeFile();
+
             return loc;
         }
 
@@ -221,7 +219,8 @@ namespace Casc
         }
 
     private:
-        const int BlteSignature = 0x45544C42;
+        static const int BlteSignature = 0x45544C42;
+        static const int DataHeaderSize = 30U;
 
         // The path of the archive folder.
         std::string path_;
@@ -357,9 +356,9 @@ namespace Casc
             for (size_t i = 0; i < shmem_.versions().size(); ++i)
             {
                 std::stringstream ss;
-                conv_type conv;
+                //conv_type conv;ss << shmem_.path() << conv.to_bytes({ fs::path::preferred_separator });
 
-                ss << shmem_.path() << conv.to_bytes({ fs::path::preferred_separator });
+                
                 ss << std::setw(2) << std::setfill('0') << std::hex << i;
                 ss << std::setw(8) << std::setfill('0') << std::hex << shmem_.versions().at(i);
                 ss << ".idx";

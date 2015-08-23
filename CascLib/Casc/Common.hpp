@@ -21,6 +21,19 @@
 
 #include <fstream>
 
+#include <locale>
+#include <utility>
+#include <iostream>
+#include <codecvt>
+
+template<class Facet>
+struct deletable_facet : Facet
+{
+    template<class ...Args>
+    deletable_facet(Args&& ...args) : Facet(std::forward<Args>(args)...) {}
+    ~deletable_facet() {}
+};
+
 namespace Casc
 {
     class CascBuildInfo;
