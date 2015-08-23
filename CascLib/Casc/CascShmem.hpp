@@ -267,12 +267,13 @@ namespace Casc
         void writeFreeSpace(std::ofstream &str) const
         {
             uint32_t freeSpaceCount = freeSpace_.size();
-            uint32_t blockSize = 0x2AB8;
 
             str << le << (uint32_t)ShmemType::FreeSpace;
-            str << le << blockSize;
+            str << le << freeSpaceCount;
 
-            for (auto i = 0; i < 1090; i++)
+            str.seekp(0x18, std::ios_base::cur);
+
+            for (auto i = 0U; i < EntriesPerBlock; i++)
             {
                 if (i < freeSpaceCount)
                 {
@@ -285,7 +286,7 @@ namespace Casc
                 }
             }
 
-            for (auto i = 0; i < 1090; i++)
+            for (auto i = 0U; i < EntriesPerBlock; i++)
             {
                 if (i < freeSpaceCount)
                 {
@@ -310,18 +311,26 @@ namespace Casc
             str << le << (uint32_t)ShmemType::Header;
             str << le << (uint32_t)headerSize;
             
-            str.seekp(0x100);
+            std::array<char, 0x100> buf{};
 
-            for (auto i = 0; i < blockCount; ++i)
+            std::string prefix("Global\\");
+            std::string dataPath(dataPath_);
+            std::replace(dataPath.begin(), dataPath.end(), '\\', '/');
+            std::copy(prefix.begin(), prefix.end(), buf.begin());
+            std::copy(dataPath.begin(), dataPath.end(), buf.begin() + prefix.size());
+
+            str.write(buf.data(), 0x100);
+
+            for (auto i = 0U; i < blockCount; ++i)
             {
-                uint32_t size = 0x20 + BlockSize * 2;
-                uint32_t offset = headerSize + i * BlockSize;
+                uint32_t size = 0x24 + BlockSize * 2;
+                uint32_t offset = headerSize + size * i;
 
                 str << le << size;
                 str << le << offset;
             }
 
-            for (auto i = 0; i < versionCount; ++i)
+            for (auto i = 0U; i < versionCount; ++i)
             {
                 str << le << versions_.at(i);
             }

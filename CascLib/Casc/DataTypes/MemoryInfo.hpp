@@ -29,13 +29,15 @@ namespace Casc
     {
         namespace DataTypes
         {
+            using namespace Casc::Shared::Functions::Endian;
+
             /// Data structure that contains information about a
             /// block of memory in the data files.
             class MemoryInfo
             {
                 /// The file number.
                 /// Max value of this field is 2^10 (10 bit).
-                int file_ = 0;
+                size_t file_ = 0;
 
                 /// The offset into the file. This is where the memory block starts.
                 /// Max value of this field is 2^30 (30 bit).
@@ -118,8 +120,38 @@ namespace Casc
                 template <BytesType Type>
                 std::array<char, 5> bytes() const
                 {
-                    // TODO: Implement this.
-                    return{};
+                    std::array<char, 5> bytes{};
+                    std::array<char, 1> first{};
+                    std::array<char, 4> second{};
+
+                    switch (Type)
+                    {
+                    case BytesType::Count:
+                        second = writeBE<uint32_t>(size_);
+                        break;
+
+                    case BytesType::Offset:
+                        std::bitset<sizeof(uint32_t) * 8> offsetBits(offset_);
+                        std::bitset<sizeof(uint8_t) * 8> fileBits(file_);
+
+                        offsetBits[30] = fileBits[0];
+                        offsetBits[31] = fileBits[1];
+
+                        fileBits[0] = false;
+                        fileBits[1] = false;
+
+                        fileBits >>= 2;
+
+                        second = writeBE(static_cast<uint32_t>(offsetBits.to_ulong()));
+                        first = writeBE(static_cast<uint8_t>(fileBits.to_ulong()));
+
+                        break;
+                    }
+
+                    std::copy(first.begin(), first.end(), bytes.begin());
+                    std::copy(second.begin(), second.end(), bytes.begin() + 1);
+
+                    return std::move(bytes);
                 }
             };
         }

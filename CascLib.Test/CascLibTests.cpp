@@ -66,7 +66,7 @@ namespace CascLibTest
                     auto dirSize = dir->tellg();
 
                     dir->seekg(0, std::ios_base::beg);
-                    arr = new char[dirSize];
+                    arr = new char[(size_t)dirSize];
 
                     dir->read(arr, dirSize);
 
@@ -84,7 +84,7 @@ namespace CascLibTest
             }
 
             root->seekg(0, std::ios_base::beg);
-            arr = new char[size];
+            arr = new char[(size_t)size];
 
             root->read(arr, size);
 
@@ -116,7 +116,7 @@ namespace CascLibTest
             auto size = enc->tellg();
 
             enc->seekg(0, std::ios_base::beg);
-            auto arr = new char[size];
+            auto arr = new char[(size_t)size];
 
             enc->read(arr, size);
 
@@ -160,7 +160,7 @@ namespace CascLibTest
             enc->seekg(0, std::ios_base::beg);
 
             container->write(*enc.get(), CascLayoutDescriptor({
-                CascChunkDescriptor(CompressionMode::None, 0, size) }));
+                CascChunkDescriptor(CompressionMode::None, 0, (size_t)size) }));
         }
 
 	};

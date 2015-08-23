@@ -78,8 +78,8 @@ int main(int argc, char* argv[])
             
             try
             {
-                std::unique_ptr<char[]> arr = std::make_unique<char[]>(size);
-                file->read(arr.get(), size);
+                std::unique_ptr<char[]> arr = std::make_unique<char[]>((size_t)size);
+                file->read(arr.get(), (size_t)size);
 
                 try
                 {

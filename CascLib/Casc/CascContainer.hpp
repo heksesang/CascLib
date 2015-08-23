@@ -106,12 +106,12 @@ namespace Casc
 
             pos = copyToVector(writeBE<uint16_t>(0xF00), header, pos);
 
-            pos = copyToVector(writeBE<uint16_t>(chunks.size()), header, pos);
+            pos = copyToVector(writeBE<uint16_t>((uint16_t)chunks.size()), header, pos);
 
             for (auto &chunk : chunks)
             {
-                pos = copyToVector(writeBE<uint32_t>(chunk.second.size()), header, pos);
-                pos = copyToVector(writeBE<uint32_t>(chunk.first.count()), header, pos);
+                pos = copyToVector(writeBE<uint32_t>((uint16_t)chunk.second.size()), header, pos);
+                pos = copyToVector(writeBE<uint32_t>((uint16_t)chunk.first.count()), header, pos);
                 
                 auto hash = Hex<16, char>(md5(chunk.second)).data();
 
@@ -356,9 +356,9 @@ namespace Casc
             for (size_t i = 0; i < shmem_.versions().size(); ++i)
             {
                 std::stringstream ss;
-                //conv_type conv;ss << shmem_.path() << conv.to_bytes({ fs::path::preferred_separator });
+                conv_type conv;
 
-                
+                ss << shmem_.path() << conv.to_bytes({ fs::path::preferred_separator });
                 ss << std::setw(2) << std::setfill('0') << std::hex << i;
                 ss << std::setw(8) << std::setfill('0') << std::hex << shmem_.versions().at(i);
                 ss << ".idx";

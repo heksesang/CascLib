@@ -77,7 +77,7 @@ namespace Casc
     }
 
     template <typename T>
-    inline std::ofstream &operator<<(std::ofstream  &input, T &value)
+    inline std::ofstream &operator<<(std::ofstream  &input, const T &value)
     {
         using namespace Shared::Functions::Endian;
 
