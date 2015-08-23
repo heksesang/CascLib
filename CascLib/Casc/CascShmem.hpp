@@ -298,6 +298,15 @@ namespace Casc
                     str.write(std::array<char, 5>{ '\0', '\0', '\0', '\0', '\0' }.data(), 5);
                 }
             }
+
+            auto pos = str.tellp() % 16;
+
+            std::array<char, 16> padding{};
+            
+            if (pos < 16)
+            {
+                str.write(padding.data() + pos, 16 - pos);
+            }
         }
 
         void writeHeader(std::ofstream &str) const
@@ -325,6 +334,11 @@ namespace Casc
             {
                 uint32_t size = 0x24 + BlockSize * 2;
                 uint32_t offset = headerSize + size * i;
+
+                if ((offset % 16) != 0)
+                {
+                    offset += 16 - (offset % 16);
+                }
 
                 str << le << size;
                 str << le << offset;
