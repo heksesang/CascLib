@@ -50,8 +50,13 @@
 
 #pragma once
 
-#include <string.h>
+#include <array>
+#include <fstream>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <string.h>
+#include <vector>
 
 // Constants for MD5Transform routine.
 #define S11 7
@@ -90,6 +95,25 @@ public:
     {
         init();
         update(input.data(), input.size());
+        finalize();
+    }
+    MD5(std::ifstream &stream, size_type length)
+    {
+        init();
+
+        auto pos = stream.tellg();
+
+        char buf[4096];
+        for (auto i = 0U; i < length; i += 4096U)
+        {
+            auto count = std::min(length - i, 4096U);
+
+            stream.read(buf, count);
+            update(buf, count);
+        }
+
+        stream.seekg(pos);
+
         finalize();
     }
     void update(const unsigned char *input, size_type length)

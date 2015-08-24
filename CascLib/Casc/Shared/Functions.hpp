@@ -133,19 +133,8 @@ namespace Casc
                 }
             }
 
-            /*namespace Extern
-            {
-                extern "C"
-                {
-                    void hashlittle2(const void *key, size_t length, uint32_t *pc, uint32_t *pb);
-                    uint32_t hashlittle(const void *key, size_t length, uint32_t initval);
-                }
-            }*/
-
             namespace Hash
             {
-                //using namespace Casc::Shared::Functions::Extern;
-
                 inline std::pair<uint32_t, uint32_t> lookup3(const std::string &data, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
                 {
                     auto pc = init.first;
@@ -166,24 +155,36 @@ namespace Casc
                     return std::make_pair(pc, pb);
                 }
 
+                template <typename ElementType, size_t Size>
+                inline std::pair<uint32_t, uint32_t> lookup3(const std::array<ElementType, Size> &data, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
+                {
+                    auto pc = init.first;
+                    auto pb = init.second;
+
+                    hashlittle2(reinterpret_cast<const void*>(data.data()), data.size() * sizeof(ElementType), &pc, &pb);
+
+                    return std::make_pair(pc, pb);
+                }
+
                 inline std::pair<uint32_t, uint32_t> lookup3(std::ifstream &stream, uint32_t length, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
                 {
                     auto pc = init.first;
                     auto pb = init.second;
-                    std::array<char, 12> buffer;
+                    std::vector<char> buffer(length);
 
-                    for (unsigned int i = 0; i < length; i += 12)
-                    {
-                        stream.read(buffer.data(), buffer.size());
-                        hashlittle2(buffer.data(), (size_t)stream.gcount(), &pc, &pb);
-                    }
+                    auto pos = stream.tellg();
+
+                    stream.read(buffer.data(), length);
+                    hashlittle2(buffer.data(), length, &pc, &pb);
+
+                    stream.seekg(pos);
 
                     return std::make_pair(pc, pb);
                 }
 
                 inline uint32_t lookup3(const std::string &data, const uint32_t &init)
                 {
-                    return hashlittle(data.c_str(), data.size() + 1, init);
+                    return hashlittle(data.data(), data.size(), init);
                 }
 
                 inline uint32_t lookup3(const std::vector<char> &data, const uint32_t &init)
@@ -191,18 +192,21 @@ namespace Casc
                     return hashlittle(data.data(), data.size(), init);
                 }
 
+                template <typename ElementType, size_t Size>
+                inline uint32_t lookup3(const std::array<ElementType, Size> &data, const uint32_t &init)
+                {
+                    return hashlittle(reinterpret_cast<const void*>(data.data()), data.size() * sizeof(ElementType), init);
+                }
+
                 inline uint32_t lookup3(std::ifstream &stream, uint32_t length, const uint32_t &init)
                 {
                     auto hash = init;
-                    std::array<char, 12> buffer;
+                    std::vector<char> buffer(length);
 
                     auto pos = stream.tellg();
 
-                    for (unsigned int i = 0; i < length; i += 12)
-                    {
-                        stream.read(buffer.data(), buffer.size());
-                        hash = hashlittle(buffer.data(), (size_t)stream.gcount(), hash);
-                    }
+                    stream.read(buffer.data(), length);
+                    hash = hashlittle(buffer.data(), length, hash);
 
                     stream.seekg(pos);
 

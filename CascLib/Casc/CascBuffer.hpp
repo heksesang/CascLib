@@ -44,6 +44,8 @@ namespace Casc
     class BaseCascBuffer : public std::filebuf
     {
     private:
+        const int BlteSignature = 0x45544C42;
+
         // True when the file is properly initialized.
         // The file is properly initialized once all the headers have been read.
         bool isInitialized = false;
@@ -82,22 +84,33 @@ namespace Casc
         void readHeader()
         {
             using namespace Functions::Endian;
+            using namespace Functions::Hash;
+
+            // Read first header.
             char header[0x1E];
             std::filebuf::xsgetn(header, 0x1E);
 
             std::array<uint8_t, 16> checksum;
             std::copy(header, header + 16, checksum.begin());
+            std::reverse(checksum.begin(), checksum.end());
             auto size = readLE<uint32_t>(header + 0x10);
 
+            // Checking the hash of the header.
+            MD5 headerHasher;
+
+            // Read BLTE header.
             char header2[0x08];
 
             std::filebuf::xsgetn(header2, 0x08);
-            if (readLE<uint32_t>(header2) != 0x45544C42)
+            if (readLE<uint32_t>(header2) != BlteSignature)
             {
                 throw InvalidSignatureException(readLE<uint32_t>(header2), 0x45544C42);
             }
 
             auto readBytes = readBE<uint32_t>(header2 + 0x04);
+
+            // Add the first 8 bytes of the header.
+            headerHasher.update(header2, 8);
 
             uint32_t bufferSize = 0;
 
@@ -105,9 +118,14 @@ namespace Casc
             {
                 readBytes -= 0x08;
 
+                // Read rest of header.
                 auto bytes = std::make_unique<char[]>(readBytes);
                 std::filebuf::xsgetn(bytes.get(), readBytes);
 
+                // Update hasher with the rest of the header bytes.
+                headerHasher.update(bytes.get(), readBytes);
+
+                // Parse the header
                 auto pos = bytes.get();
 
                 auto flags = readBE<uint16_t>(pos);
@@ -144,6 +162,24 @@ namespace Casc
                         chunk.offset = last.offset + last.size;
                     }
 
+                    auto buf = std::make_unique<char[]>(chunk.size);
+                    auto pos = std::filebuf::seekoff(0, std::ios_base::cur, std::ios_base::in);
+                    std::filebuf::seekoff(this->offset + chunk.offset, std::ios_base::beg, std::ios_base::in);
+                    std::filebuf::xsgetn(buf.get(), chunk.size);
+
+                    // Check the hash of the chunk.
+                    MD5 chunkHasher;
+                    chunkHasher.update(buf.get(), chunk.size);
+                    chunkHasher.finalize();
+
+                    if (chunkHasher.hexdigest() != Hex<16>(checksum).string())
+                    {
+                        throw InvalidHashException(
+                            lookup3(Hex<16>(checksum).string(), 0),
+                            lookup3(chunkHasher.hexdigest(), 0),
+                            "");
+                    }
+
                     chunks.push_back(chunk);
                 }
             }
@@ -155,6 +191,17 @@ namespace Casc
                     38,
                     size
                 });
+            }
+
+            // Finish the hash check of the header.
+            headerHasher.finalize();
+            
+            if (headerHasher.hexdigest() != Hex<16>(checksum).string())
+            {
+                throw InvalidHashException(
+                    lookup3(Hex<16>(checksum).string(), 0),
+                    lookup3(headerHasher.hexdigest(), 0),
+                    "");
             }
         }
 

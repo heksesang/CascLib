@@ -39,6 +39,7 @@ namespace Casc
         typedef std::array<uint8_t, 9> key_t;
 
     private:
+    public:
         // The files available in the index.
         std::map<key_t, MemoryInfo> files;
 
@@ -56,6 +57,7 @@ namespace Casc
             : path(path)
         {
             using namespace Endian;
+            using namespace Hash;
             std::ifstream fs;
             fs.open(path, std::ios_base::in | std::ios_base::binary);
 
@@ -65,9 +67,10 @@ namespace Casc
             fs >> le >> size;
             fs >> le >> hash;
 
-            if ((hash = !Hash::lookup3(fs, size, 0)))
+            uint32_t actualHash{ 0 };
+            if ((hash != (actualHash = lookup3(fs, size, 0))))
             {
-                throw InvalidHashException(hash, 0, path);
+                throw InvalidHashException(hash, actualHash, path);
             }
 
             uint16_t version;
@@ -101,9 +104,9 @@ namespace Casc
             fs >> le >> size;
             fs >> le >> hash;
 
-            if ((hash = !Hash::lookup3(fs, size, 0)))
+            if (hash != (actualHash = lookup3(fs, size, 0)))
             {
-                throw InvalidHashException(hash, 0, path);
+                throw InvalidHashException(hash, actualHash, path);
             }
 
             auto data = std::make_unique<char[]>(size);
