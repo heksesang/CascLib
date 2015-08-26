@@ -94,6 +94,12 @@ namespace Casc
                     return readLE<T>(reinterpret_cast<unsigned char*>(&value));
                 }
 
+                template <typename T, typename ElementType, size_t Size>
+                inline T readLE(std::array<ElementType, Size> arr)
+                {
+                    return readLE<T>(arr.data());
+                }
+
                 template <typename T>
                 inline std::array<char, sizeof(T)> writeBE(T value)
                 {
@@ -130,6 +136,12 @@ namespace Casc
                 inline T readBE(T value)
                 {
                     return readBE<T>(reinterpret_cast<unsigned char*>(&value));
+                }
+
+                template <typename T, typename ElementType, size_t Size>
+                inline T readBE(std::array<ElementType, Size> arr)
+                {
+                    return readBE<T>(arr.data());
                 }
             }
 

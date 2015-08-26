@@ -30,6 +30,7 @@
 
 #include "Common.hpp"
 
+#include "md5.hpp"
 #include "zlib.hpp"
 
 namespace Casc

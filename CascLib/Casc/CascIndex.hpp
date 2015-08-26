@@ -35,16 +35,22 @@ namespace Casc
     class CascIndex
     {
     public:
-        // Typedefs
-        typedef std::array<uint8_t, 9> key_t;
+        static uint32_t bucket(std::array<uint8_t, 9> key)
+        {
+            uint8_t const xorred = key[0] ^ key[1] ^ key[2] ^ key[3] ^ key[4] ^ key[5] ^ key[6] ^ key[7] ^ key[8];
+            return xorred & 0xF ^ (xorred >> 4);
+        }
 
     private:
     public:
         // The files available in the index.
-        std::map<key_t, MemoryInfo> files;
+        std::unordered_map<std::array<uint8_t, 9>, MemoryInfo> files;
 
         // The version of this index.
-        int version_;
+        int version;
+
+        // The file number.
+        int file;
 
         // The path of the index file.
         std::string path;
@@ -67,10 +73,10 @@ namespace Casc
             fs >> le >> size;
             fs >> le >> hash;
 
-            uint32_t actualHash{ 0 };
-            if ((hash != (actualHash = lookup3(fs, size, 0))))
+            uint32_t headerHash{ 0 };
+            if ((hash != (headerHash = lookup3(fs, size, 0))))
             {
-                throw InvalidHashException(hash, actualHash, path);
+                throw InvalidHashException(hash, headerHash, path);
             }
 
             uint16_t version;
@@ -88,7 +94,8 @@ namespace Casc
             fs >> hashFieldSize;
             fs >> offsetBitCount;
 
-            version_ = version;
+            this->version = version;
+            this->file = file;
 
             for (unsigned int i = 0; i < (size - 8); i += 8)
             {
@@ -104,20 +111,22 @@ namespace Casc
             fs >> le >> size;
             fs >> le >> hash;
 
-            if (hash != (actualHash = lookup3(fs, size, 0)))
+            std::pair<uint32_t, uint32_t> dataHash{ 0, 0 };
+            for (auto i = 0U; i < (size / 18); ++i)
             {
-                throw InvalidHashException(hash, actualHash, path);
+                std::array<char, 18> bytes{};
+                fs.read(bytes.data(), 18);
+
+                CascIndexRecord *record = reinterpret_cast<CascIndexRecord*>(bytes.data());
+                files[record->hash] = MemoryInfo(record->location,
+                    readBE<uint32_t>(record->offset), readLE<uint32_t>(record->length));
+
+                dataHash = lookup3(bytes, dataHash);
             }
 
-            auto data = std::make_unique<char[]>(size);
-            fs.read(data.get(), size);
-
-            for (char *ptr = data.get(), *end = data.get() + size; ptr < end;)
+            if (hash != dataHash.first)
             {
-                CascIndexRecord *record = reinterpret_cast<CascIndexRecord*>(ptr);
-                ptr += sizeof(CascIndexRecord);
-
-                files[record->hash] = MemoryInfo(record->location, readBE<uint32_t>(record->offset), readLE<uint32_t>(record->length));
+                throw InvalidHashException(hash, dataHash.first, path);
             }
 
             fs.seekg(0x1000 - ((8 + size) % 0x1000), std::ios_base::cur);
@@ -126,7 +135,7 @@ namespace Casc
         /**
          * Gets the location and size of a file.
          */
-        MemoryInfo file(key_t key) const
+        MemoryInfo find(std::array<uint8_t, 9> key) const
         {
             auto result = files.find(key);
 
@@ -138,12 +147,16 @@ namespace Casc
             return result->second;
         }
 
-        /**
-         *  Gets the version of the index.
-         */
-        int version() const
+        bool insert(std::array<uint8_t, 9> key, MemoryInfo &loc)
         {
-            return version_;
+            if (bucket(key) == file)
+            {
+                files[key] = loc;
+
+                return true;
+            }
+
+            return false;
         }
     };
 }

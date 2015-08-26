@@ -105,12 +105,12 @@ namespace CascLibTest
                 std::vector<std::shared_ptr<CascBlteHandler>> {
                     std::make_shared<ZlibHandler>()
             });
-			/*CascEncoding enc(
+			CascEncoding enc(
                 container->openFileByKey(container->buildConfig()["encoding"].back()));
 
-			auto key = enc.findKey(container->buildConfig()["root"].front());*/
+			auto key = enc.findKey(container->buildConfig()["root"].front());
 
-            auto enc = container->openFileByKey(container->buildConfig()["encoding"].back());
+            /*auto enc = container->openFileByKey(container->buildConfig()["encoding"].back());
 
             enc->seekg(0, std::ios_base::end);
             auto size = enc->tellg();
@@ -126,7 +126,7 @@ namespace CascLibTest
             fs.write(arr, size);
             fs.close();
 
-            delete[] arr;
+            delete[] arr;*/
 		}
 
 		TEST_METHOD(ReadConfiguration)

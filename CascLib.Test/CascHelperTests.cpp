@@ -33,6 +33,14 @@ namespace CascLibTest
 			Assert::AreEqual(3204448191u, readBE(le));
 		}
 
+        TEST_METHOD(HashBytes)
+        {
+            std::array<char, 16> data{ 0x07, 0x00, 0x00, 0x00, 0x04, 0x05, 0x09, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00 };
+            auto hash = lookup3(data, 0);
+
+            Assert::AreEqual(1116121890U, hash);
+        }
+
 		TEST_METHOD(HashFilename)
 		{
 			auto hash = lookup3("SPELLS\\BONE_CYCLONE_STATE.M2", 0);

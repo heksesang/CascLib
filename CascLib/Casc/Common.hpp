@@ -81,6 +81,19 @@ using namespace Casc::Exceptions;
 #include "Shared/Functions.hpp"
 #include "Shared/Hex.hpp"
 
+namespace std
+{
+    template <>
+    class std::hash<std::array<uint8_t, 9>>
+    {
+    public:
+        size_t operator()(const std::array<uint8_t, 9> &key) const
+        {
+            return Casc::Shared::Functions::Hash::lookup3(key, 0);
+        }
+    };
+}
+
 #include "DataTypes/CompressionMode.hpp"
 #include "DataTypes/MemoryInfo.hpp"
 #include "DataTypes/Reference.hpp"

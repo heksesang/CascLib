@@ -35,6 +35,7 @@ namespace Casc
             /// block of memory in the data files.
             class MemoryInfo
             {
+            public:
                 /// The file number.
                 /// Max value of this field is 2^10 (10 bit).
                 size_t file_ = 0;

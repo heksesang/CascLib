@@ -111,6 +111,6 @@ namespace Casc
         /**
          * The file magic of the root file.
          */
-        virtual std::array<char, 4> fileMagic() const = 0;
+        virtual uint32_t fileMagic() const = 0;
     };
 }

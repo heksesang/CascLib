@@ -29,6 +29,7 @@
 #include <numeric>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "Common.hpp"
@@ -182,7 +183,7 @@ namespace Casc
             root->read(&magic[0], 4);
             root->seekg(0, std::ios_base::beg);
 
-            return openFileByKey(encoding->findKey(rootHandlers.at(magic)->findHash(name)));
+            return openFileByKey(encoding->findKey(rootHandlers.at(readLE<uint32_t>(magic))->findHash(name)));
         }
 
         MemoryInfo write(std::istream &stream, CascLayoutDescriptor &descriptor)
@@ -247,7 +248,7 @@ namespace Casc
         std::map<char, std::shared_ptr<CascBlteHandler>> blteHandlers;
 
         // Chunk handlers
-        std::map<std::array<char, 4>, std::shared_ptr<CascRootHandler>> rootHandlers;
+        std::map<uint32_t, std::shared_ptr<CascRootHandler>> rootHandlers;
 
         /**
          * Finds the location of a file.
@@ -262,7 +263,7 @@ namespace Casc
             {
                 try
                 {
-                    return index.file(bytes);
+                    return index.find(bytes);
                 }
                 catch (FileNotFoundException&) // TODO: Better exception handling
                 {
