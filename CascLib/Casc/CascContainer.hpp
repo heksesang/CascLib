@@ -185,13 +185,24 @@ namespace Casc
         CascReference write(std::istream &stream, CascLayoutDescriptor &descriptor)
         {
             auto arr = createData(stream, descriptor);
+            
             auto loc = shmem_.reserveSpace(arr.size());
+            shmem_.writeFile();
+            
             auto out = openStream<true>(loc);
-
             out->write(arr.data(), arr.size());
             out->close();
 
-            shmem_.writeFile();
+            std::array<char, 16> key;
+            std::reverse_copy(arr.begin(), arr.begin() + 16, key.begin());
+
+            auto bucket = CascIndex::bucket(key.begin(), key.begin() + 9);
+            indices_[bucket].insert(key.begin(), key.begin() + 9, loc);
+
+            std::ofstream indexFs;
+            indexFs.open(indices_[bucket].path(), std::ios_base::out | std::ios_base::binary);
+            indices_[bucket].write(indexFs);
+            indexFs.close();
 
             return loc;
         }

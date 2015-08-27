@@ -49,7 +49,7 @@ namespace Casc
 
             this->key_ = key;
 
-            auto offsetSize = (segmentBits / 8U) + 1;
+            auto offsetSize = (segmentBits + 7U) / 8U;
             auto fileSize = locationSize - offsetSize;
 
             if (fileSize > sizeof(size_t) || offsetSize > sizeof(size_t))
@@ -99,7 +99,64 @@ namespace Casc
         std::vector<char> serialize(size_t keySize, size_t locationSize,
             size_t lengthSize, size_t segmentBits) const
         {
-            return{};
+            using namespace Casc::Shared::Functions::Endian;
+
+            std::vector<char> v(keySize + locationSize + lengthSize);
+
+            if (keySize > 0)
+                std::copy(key_.begin(), key_.begin() + keySize, v.begin()); 
+
+            if (locationSize > 0)
+            {
+                auto totalBits = locationSize * 8U;
+
+                if (totalBits < segmentBits)
+                {
+                    throw GenericException("Too few bits.");
+                }
+
+                auto fileBits = totalBits - segmentBits;
+                auto offsetBits = segmentBits;
+
+                std::vector<char> location(locationSize);
+
+                auto offsetSize = (offsetBits + 7U) / 8U;
+                auto fileSize = locationSize - offsetSize;
+
+                if (offset_ >= (size_t)std::pow(2, offsetBits) || file_ >= (size_t)std::pow(2, fileBits))
+                {
+                    throw GenericException("Too few bits.");
+                }
+
+                auto extraBits = 0U;
+
+                for (auto i = 0U; i < (fileBits - fileSize * 8U); ++i)
+                {
+                    extraBits = extraBits | (file_ & (size_t)std::pow(2U, i));
+                }
+
+                extraBits <<= offsetBits;
+
+                auto file = file_ >> (fileBits - fileSize * 8U);
+                auto fileBytes = write<EndianType::Big>(file);
+                std::copy(fileBytes.rbegin(), fileBytes.rbegin() + fileSize,
+                    v.begin() + keySize);
+
+                auto offset = offset_ | extraBits;
+                auto offsetBytes = write<EndianType::Big>(offset);
+                std::copy(offsetBytes.begin(), offsetBytes.begin() + offsetSize,
+                    v.begin() + keySize + fileSize);
+
+            }
+
+            if (lengthSize > 0)
+            {
+                auto length = write<EndianType::Little>(size_);
+                std::copy(length.begin(), length.end() + lengthSize,
+                    v.begin() + keySize + locationSize);
+            }
+
+            return v;
         }
     };
 }

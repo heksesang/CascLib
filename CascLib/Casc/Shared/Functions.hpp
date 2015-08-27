@@ -179,6 +179,20 @@ namespace Casc
                     return std::make_pair(pc, pb);
                 }
 
+                template <typename InputIt>
+                inline std::pair<uint32_t, uint32_t> lookup3(InputIt first, InputIt last, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
+                {
+                    auto pc = init.first;
+                    auto pb = init.second;
+
+                    hashlittle2(
+                        &*first,
+                        sizeof(typename std::iterator_traits<InputIt>::value_type) * (last - first),
+                        &pc, &pb);
+
+                    return std::make_pair(pc, pb);
+                }
+
                 inline std::pair<uint32_t, uint32_t> lookup3(std::ifstream &stream, uint32_t length, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
                 {
                     auto pc = init.first;
@@ -201,6 +215,15 @@ namespace Casc
                     return hashlittle(
                         &*std::begin(container),
                         sizeof(typename Container::value_type) * (std::end(container) - std::begin(container)),
+                        init);
+                }
+
+                template <typename InputIt>
+                inline uint32_t lookup3(InputIt first, InputIt last, const uint32_t &init)
+                {
+                    return hashlittle(
+                        &*first,
+                        sizeof(typename std::iterator_traits<InputIt>::value_type) * (last - first),
                         init);
                 }
 

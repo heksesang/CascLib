@@ -52,9 +52,8 @@ namespace Casc
         }
 
     private:
-    public:
         // The files available in the index.
-        std::unordered_map<std::vector<char>, CascReference> files;
+        std::map<std::vector<char>, CascReference> files;
 
         // The version of this index.
         int version;
@@ -63,14 +62,14 @@ namespace Casc
         int file;
 
         // The path of the index file.
-        std::string path;
+        std::string path_;
 
     public:
         /**
          * Constructor
          */
-        CascIndex(std::string path)
-            : path(path)
+        CascIndex(const std::string &path)
+            : path_(path)
         {
             using namespace Endian;
             using namespace Hash;
@@ -177,6 +176,91 @@ namespace Casc
             }
 
             return false;
+        }
+
+        /**
+         * Write the index to file.
+         */
+        void write(std::ofstream &stream)
+        {
+            using namespace Hash;
+
+            std::vector<char> v(24);
+
+            auto version = Endian::write<EndianType::Little, uint16_t>(7U);
+            auto file = Endian::write<EndianType::Little, uint16_t>(this->file);
+            auto lengthSize = Endian::write<EndianType::Little, uint8_t>(4U);
+            auto locationSize = Endian::write<EndianType::Little, uint8_t>(5U);
+            auto keySize = Endian::write<EndianType::Little, uint8_t>(9U);
+            auto segmentBits = Endian::write<EndianType::Little, uint8_t>(30U);
+            auto start = Endian::write<EndianType::Big, uint32_t>(0U);
+            auto end = Endian::write<EndianType::Big, uint32_t>(0x40000000);
+
+            auto it = v.begin();
+
+            std::copy(version.begin(), version.end(), it);
+            std::copy(file.begin(), file.end(), it += version.size());
+            std::copy(lengthSize.begin(), lengthSize.end(), it += file.size());
+            std::copy(locationSize.begin(), locationSize.end(), it += lengthSize.size());
+            std::copy(keySize.begin(), keySize.end(), it += locationSize.size());
+            std::copy(segmentBits.begin(), segmentBits.end(), it += keySize.size());
+            std::copy(start.begin(), start.end(), it += segmentBits.size());
+            std::copy(end.begin(), end.end(), it += start.size());
+
+            auto headerSize = Endian::write<EndianType::Little, uint32_t>(16U);
+            auto headerHash = Endian::write<EndianType::Little, uint32_t>(lookup3(v.begin(), v.begin() + 16U, 0));
+
+            stream.write(headerSize.data(), headerSize.size());
+            stream.write(headerHash.data(), headerHash.size());
+            stream.write(v.data(), v.size());
+
+            auto dataSize = Endian::write<EndianType::Little, uint32_t >(files.size() * 18U);
+            stream.write(dataSize.data(), dataSize.size());
+            
+            std::pair<uint32_t, uint32_t> hash{ 0, 0 };
+            auto hashPos = stream.tellp();
+            stream.seekp(4, std::ios_base::cur);
+
+            /*std::vector<std::pair<std::vector<char>, CascReference>> refs(files.begin(), files.end());
+
+            std::sort(refs.begin(), refs.end(), [](
+                std::pair<std::vector<char>, CascReference> &a,
+                std::pair<std::vector<char>, CascReference> &b)
+            {
+                for (auto i = 0U; i < a.first.size(); ++i)
+                {
+                    if (*reinterpret_cast<unsigned char*>(&a.first[i]) != *reinterpret_cast<unsigned char*>(&b.first[i]))
+                    {
+                        return *reinterpret_cast<unsigned char*>(&b.first[i]) > *reinterpret_cast<unsigned char*>(&a.first[i]);
+                    }
+                }
+
+                return b.first > a.first;
+            });*/
+
+            for (auto &file : files)
+            {
+                auto bytes = file.second.serialize(9, 5, 4, 30);
+                hash = lookup3(bytes, hash);
+
+                stream.write(bytes.data(), bytes.size());
+            }
+
+            auto pos = stream.tellp();
+            pos = pos + (0x10000 - pos % 0x18000);
+
+            auto dataHash = Endian::write<EndianType::Little, uint32_t>(hash.first);
+            stream.seekp(hashPos);
+            stream.write(dataHash.data(), dataHash.size());
+
+            stream.seekp(pos); // Seek to end of reserved space.
+            stream.seekp(0x7FFF, std::ios_base::cur); // Seek to the end of the diff block.
+            stream.write("\0", 1);
+        }
+
+        const std::string &path() const
+        {
+            return path_;
         }
     };
 }
