@@ -28,6 +28,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "../Exceptions.hpp"
+
 #include "../lookup3.hpp"
 #include "../md5.hpp"
 
@@ -67,6 +70,8 @@ namespace Casc
                 template <EndianType Type, typename T, typename InputIt>
                 inline T read(InputIt first, InputIt last = InputIt(nullptr))
                 {
+                    using namespace Casc::Exceptions;
+
                     if (last == InputIt(nullptr))
                     {
                         last = first + sizeof(T);
@@ -161,12 +166,15 @@ namespace Casc
                 }
 
                 template <typename Container>
-                inline std::pair<uint32_t, uint32_t> lookup3(const Container &data, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
+                inline std::pair<uint32_t, uint32_t> lookup3(const Container &container, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
                 {
                     auto pc = init.first;
                     auto pb = init.second;
 
-                    hashlittle2(std::data(data), std::size(data), &pc, &pb);
+                    hashlittle2(
+                        &*std::begin(container),
+                        sizeof(typename Container::value_type) * (std::end(container) - std::begin(container)),
+                        &pc, &pb);
 
                     return std::make_pair(pc, pb);
                 }
@@ -190,7 +198,10 @@ namespace Casc
                 template <typename Container>
                 inline uint32_t lookup3(const Container &container, const uint32_t &init)
                 {
-                    return hashlittle(std::data(container), std::size(container), init);
+                    return hashlittle(
+                        &*std::begin(container),
+                        sizeof(typename Container::value_type) * (std::end(container) - std::begin(container)),
+                        init);
                 }
 
                 inline uint32_t lookup3(std::ifstream &stream, uint32_t length, const uint32_t &init)

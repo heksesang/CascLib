@@ -108,6 +108,9 @@
     <ClInclude Include="Casc\Shared\CompressionMode.hpp">
       <Filter>Header Files\Types\Shared</Filter>
     </ClInclude>
+    <ClInclude Include="Casc\Exceptions.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\The CASC Filesystem_v1-2.txt" />

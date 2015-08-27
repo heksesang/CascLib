@@ -63,7 +63,7 @@ namespace Casc
         size_t copyToVector(const SrcContainer &src, DestContainer &dest, size_t offset) const
         {
             std::copy(std::begin(src), std::end(src), std::begin(dest) + offset);
-            return offset + std::size(src);
+            return offset + (std::end(src) - std::begin(src));
         }
 
         std::vector<char> createDataHeader(const std::vector<char> &blteHeader, const std::vector<descriptor_type> &chunks) const

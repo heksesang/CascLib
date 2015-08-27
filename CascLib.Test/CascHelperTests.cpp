@@ -15,15 +15,6 @@ namespace CascLibTest
 	TEST_CLASS(CascHelperTests)
 	{
 	public:
-		
-		/*TEST_METHOD(ReadMemoryInfo)
-		{
-			MemoryInfo ref(5, 3221225406, 65);
-
-			Assert::AreEqual(22, ref.file());
-			Assert::AreEqual((size_t)1073741758u, ref.offset());
-			Assert::AreEqual((size_t)65u, ref.size());
-		}*/
 
 		TEST_METHOD(SwapBytes)
 		{
@@ -43,7 +34,7 @@ namespace CascLibTest
 
 		TEST_METHOD(HashFilename)
 		{
-			auto hash = lookup3("SPELLS\\BONE_CYCLONE_STATE.M2", 0);
+			auto hash = lookup3(std::string("SPELLS\\BONE_CYCLONE_STATE.M2"), 0);
 			Assert::AreEqual(0x502501AAu, hash);
 		}
 
