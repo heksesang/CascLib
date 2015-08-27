@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *
@@ -44,12 +44,12 @@ namespace Casc
          */
         std::string findKey(const std::string &hash) const
         {
-            Hex<16> hex(hash);
+            Hex hex(hash);
 
             for (unsigned int i = 0; i < chunkHeadsA.size(); ++i)
             {
-                Hex<16> current(chunkHeadsA.at(i).first);
-                Hex<16> next((i + 1) >= chunkHeadsA.size() ?
+                Hex current(chunkHeadsA.at(i).first);
+                Hex next((i + 1) >= chunkHeadsA.size() ?
                     std::array<uint8_t, 16> { (uint8_t)0xFF } :
                     chunkHeadsA.at(i + 1).first);
 
@@ -68,12 +68,14 @@ namespace Casc
                         if (chunk->unk != 1)
                             break;
                         
-                        if (hex.data() == chunk->hash)
+                        if (std::equal(
+                                hex.data().begin(), hex.data().end(),
+                                chunk->hash.begin(), chunk->hash.end()))
                         {
                             std::array<uint8_t, 9> temp;
                             std::memcpy(&temp[0], &chunk->key[0], temp.size());
 
-                            return Hex<9>(temp).string();
+                            return Hex(temp).string();
                         }
 
                         ++chunk;
@@ -83,8 +85,8 @@ namespace Casc
 
             for (unsigned int i = 0; i < chunkHeadsB.size(); ++i)
             {
-                Hex<16> current(chunkHeadsB.at(i).first);
-                Hex<16> next((i + 1) >= chunkHeadsB.size() ?
+                Hex current(chunkHeadsB.at(i).first);
+                Hex next((i + 1) >= chunkHeadsB.size() ?
                     std::array<uint8_t, 16> { (uint8_t)0xFF } :
                     chunkHeadsB.at(i + 1).first);
 
@@ -103,12 +105,14 @@ namespace Casc
                         if (chunk->unk != 1)
                             break;
 
-                        if (hex.data() == chunk->hash)
+                        if (std::equal(
+                                hex.data().begin(), hex.data().end(),
+                                chunk->hash.begin(), chunk->hash.end()))
                         {
                             std::array<uint8_t, 9> temp;
                             std::memcpy(&temp[0], &chunk->key[0], temp.size());
 
-                            return Hex<9>(temp).string();
+                            return Hex(temp).string();
                         }
 
                         ++chunk;
@@ -138,13 +142,13 @@ namespace Casc
          * @param big   true if big endian.
          * @return      the data.
          */
-        template <typename T>
-        const T &read(T &value, bool big = false) const
+        template <EndianType Endian = EndianType::Little, typename T>
+        const T &read(T &value) const
         {
             char b[sizeof(T)];
             stream->read(b, sizeof(T));
 
-            return value = big ? readBE<T>(b) : readLE<T>(b);
+            return value = Endian::read<Endian, T>(b);
         }
 
         /**
@@ -269,14 +273,14 @@ namespace Casc
             uint32_t tableSizeA;
             uint32_t tableSizeB;
 
-            read(tableSizeA, true);
-            read(tableSizeB, true);
+            read<EndianType::Big>(tableSizeA);
+            read<EndianType::Big>(tableSizeB);
 
             uint32_t stringTableSize;
 
             this->stream->seekg(1, std::ios_base::cur);
 
-            read(stringTableSize, true);
+            read<EndianType::Big>(stringTableSize);
 
             this->stream->seekg(stringTableSize, std::ios_base::cur);
 

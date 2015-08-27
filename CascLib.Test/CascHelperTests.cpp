@@ -9,7 +9,6 @@ using namespace Casc::Shared;
 using namespace Casc::Shared::Functions;
 using namespace Casc::Shared::Functions::Endian;
 using namespace Casc::Shared::Functions::Hash;
-using namespace Casc::Shared::DataTypes;
 
 namespace CascLibTest
 {
@@ -17,20 +16,21 @@ namespace CascLibTest
 	{
 	public:
 		
-		TEST_METHOD(ReadMemoryInfo)
+		/*TEST_METHOD(ReadMemoryInfo)
 		{
 			MemoryInfo ref(5, 3221225406, 65);
 
 			Assert::AreEqual(22, ref.file());
 			Assert::AreEqual((size_t)1073741758u, ref.offset());
 			Assert::AreEqual((size_t)65u, ref.size());
-		}
+		}*/
 
 		TEST_METHOD(SwapBytes)
 		{
-			uint32_t le = 3221225406u;
+            std::array<char, sizeof(uint32_t)> le;
+            *reinterpret_cast<uint32_t*>(le.data()) = 3221225406u;
 
-			Assert::AreEqual(3204448191u, readBE(le));
+			Assert::AreEqual(3204448191u, read<EndianType::Big, uint32_t>(le.begin(), le.end()));
 		}
 
         TEST_METHOD(HashBytes)

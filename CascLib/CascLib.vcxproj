@@ -231,7 +231,7 @@
     <ClInclude Include="Casc\CascEncoding.hpp" />
     <ClInclude Include="Casc\CascBlteHandler.hpp" />
     <ClInclude Include="Casc\CascIndex.hpp" />
-    <ClInclude Include="Casc\CascIndexRecord.hpp" />
+    <ClInclude Include="Casc\CascReference.hpp" />
     <ClInclude Include="Casc\CascRootHandler.hpp" />
     <ClInclude Include="Casc\CascStream.hpp" />
     <ClInclude Include="Casc\Common.hpp" />
@@ -245,11 +245,7 @@
     <ClInclude Include="Casc\md5.hpp" />
     <ClInclude Include="Casc\Shared\FileSearch.hpp" />
     <ClInclude Include="Casc\Shared\Hex.hpp" />
-    <ClInclude Include="Casc\DataTypes\MemoryInfo.hpp" />
-    <ClInclude Include="Casc\DataTypes\Reference.hpp" />
-    <ClInclude Include="Casc\Shared\BufferInfo.hpp" />
-    <ClInclude Include="Casc\Shared\ChunkInfo.hpp" />
-    <ClInclude Include="Casc\DataTypes\CompressionMode.hpp" />
+    <ClInclude Include="Casc\Shared\CompressionMode.hpp" />
     <ClInclude Include="Casc\CascShmem.hpp" />
     <ClInclude Include="Casc\StreamOps.hpp" />
     <ClInclude Include="Casc\Shared\Functions.hpp" />

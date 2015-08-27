@@ -57,7 +57,7 @@ namespace CascLibTest
                 root->read(reinterpret_cast<char*>(&hash[0]), 16);
                 std::getline(*root.get(), name, '\0');
 
-                Hex<16> hex(hash);
+                Hex hex(hash);
 
                 try
                 {
@@ -161,6 +161,17 @@ namespace CascLibTest
 
             container->write(*enc.get(), CascLayoutDescriptor({
                 CascChunkDescriptor(CompressionMode::None, 0, (size_t)size) }));
+        }
+
+        TEST_METHOD(GetBucket)
+        {
+            std::vector<uint8_t> vec{ 0x41, 0xEE, 0x19, 0x86, 0xAC, 0xC5, 0x33, 0xCC, 0x00 };
+            std::array<uint8_t, 9> arr{ 0x41, 0xEE, 0x19, 0x86, 0xAC, 0xC5, 0x33, 0xCC, 0x00 };
+
+            auto a = CascIndex::bucket(arr.begin(), arr.end());
+            auto b = CascIndex::bucket(vec.begin(), vec.end());
+
+            Assert::AreEqual(a, b);
         }
 
 	};

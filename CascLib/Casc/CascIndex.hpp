@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *
@@ -25,7 +25,6 @@
 #include <string>
 
 #include "Common.hpp"
-#include "CascIndexRecord.hpp"
 
 namespace Casc
 {
@@ -35,16 +34,27 @@ namespace Casc
     class CascIndex
     {
     public:
-        static uint32_t bucket(std::array<uint8_t, 9> key)
+        /**
+         * Gets the bucket number for a file key.
+         */
+        template <typename KeyIt>
+        static uint32_t bucket(KeyIt first, KeyIt last)
         {
-            uint8_t const xorred = key[0] ^ key[1] ^ key[2] ^ key[3] ^ key[4] ^ key[5] ^ key[6] ^ key[7] ^ key[8];
+            uint8_t xorred = 0;
+
+            for (auto it = first; it != last; ++it)
+            {
+                if ((it - last) > 1)
+                    xorred = xorred ^ *it;
+            }
+
             return xorred & 0xF ^ (xorred >> 4);
         }
 
     private:
     public:
         // The files available in the index.
-        std::unordered_map<std::array<uint8_t, 9>, MemoryInfo> files;
+        std::unordered_map<std::vector<char>, CascReference> files;
 
         // The version of this index.
         int version;
@@ -84,15 +94,15 @@ namespace Casc
             
             uint8_t lengthFieldSize;
             uint8_t locationFieldSize;
-            uint8_t hashFieldSize;
-            uint8_t offsetBitCount;
+            uint8_t keyFieldSize;
+            uint8_t segmentBits;
 
             fs >> le >> version;
             fs >> le >> file;
             fs >> lengthFieldSize;
             fs >> locationFieldSize;
-            fs >> hashFieldSize;
-            fs >> offsetBitCount;
+            fs >> keyFieldSize;
+            fs >> segmentBits;
 
             this->version = version;
             this->file = file;
@@ -117,9 +127,14 @@ namespace Casc
                 std::array<char, 18> bytes{};
                 fs.read(bytes.data(), 18);
 
-                CascIndexRecord *record = reinterpret_cast<CascIndexRecord*>(bytes.data());
-                files[record->hash] = MemoryInfo(record->location,
-                    readBE<uint32_t>(record->offset), readLE<uint32_t>(record->length));
+                CascReference ref(
+                    bytes.begin(), bytes.end(),
+                    keyFieldSize,
+                    locationFieldSize,
+                    lengthFieldSize,
+                    segmentBits);
+
+                files.insert({ ref.key(), ref });
 
                 dataHash = lookup3(bytes, dataHash);
             }
@@ -133,25 +148,30 @@ namespace Casc
         }
 
         /**
-         * Gets the location and size of a file.
+         * Gets a file record.
          */
-        MemoryInfo find(std::array<uint8_t, 9> key) const
+        template <typename KeyIt>
+        CascReference find(KeyIt first, KeyIt last) const
         {
-            auto result = files.find(key);
+            auto result = files.find({ first, last });
 
             if (result == files.end())
             {
-                throw FileNotFoundException(Hex<9>(key).string());
+                throw FileNotFoundException(Hex(first, last).string());
             }
 
             return result->second;
         }
 
-        bool insert(std::array<uint8_t, 9> key, MemoryInfo &loc)
+        /**
+         * Inserts a file record.
+         */
+        template <typename KeyIt>
+        bool insert(KeyIt first, KeyIt last, CascReference &loc)
         {
-            if (bucket(key) == file)
+            if (bucket(first, last) == file)
             {
-                files[key] = loc;
+                files[{first, last}] = loc;
 
                 return true;
             }

@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *
@@ -61,13 +61,13 @@ namespace Casc
          * @param big   true if big endian.
          * @return      the data.
          */
-        template <typename T>
-        const T &read(std::ifstream &stream, T &value, bool big = false) const
+        template <EndianType Endian, typename T>
+        const T &read(std::ifstream &stream, T &value) const
         {
             char b[sizeof(T)];
             stream.read(b, sizeof(T));
-
-            return value = big ? readBE<T>(b) : readLE<T>(b);
+            
+            return value = read<Endian, T>(b, b + sizeof(T));
         }
 
         /**

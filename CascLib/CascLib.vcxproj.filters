@@ -27,12 +27,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Casc\Shared\BufferInfo.hpp">
-      <Filter>Header Files\Types\Shared</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\Shared\ChunkInfo.hpp">
-      <Filter>Header Files\Types\Shared</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\Shared\FileSearch.hpp">
       <Filter>Header Files\Helpers</Filter>
     </ClInclude>
@@ -66,9 +60,6 @@
     <ClInclude Include="Casc\CascIndex.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\CascIndexRecord.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\CascRootHandler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -80,15 +71,6 @@
     </ClInclude>
     <ClInclude Include="Casc\Common.hpp">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\DataTypes\MemoryInfo.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\DataTypes\Reference.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\DataTypes\CompressionMode.hpp">
-      <Filter>Header Files\Types\Shared</Filter>
     </ClInclude>
     <ClInclude Include="Casc\zlib.hpp">
       <Filter>Header Files\Functions</Filter>
@@ -119,6 +101,12 @@
     </ClInclude>
     <ClInclude Include="Casc\lookup3.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\CascReference.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Shared\CompressionMode.hpp">
+      <Filter>Header Files\Types\Shared</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

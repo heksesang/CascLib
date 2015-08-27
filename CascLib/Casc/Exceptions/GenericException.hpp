@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *

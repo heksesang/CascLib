@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *
@@ -46,6 +46,41 @@ namespace Casc
     {
     private:
         const int BlteSignature = 0x45544C42;
+
+        struct BufferInfo
+        {
+            typedef std::filebuf::traits_type Traits;
+
+            // The offset of the first byte in the buffer.
+            Traits::off_type begin;
+
+            // The offset of the last byte in the buffer.
+            Traits::off_type end;
+
+            // The offset of the current byte in the buffer.
+            Traits::off_type offset;
+        };
+
+        struct ChunkInfo
+        {
+            typedef std::filebuf::traits_type Traits;
+
+            // The offset of the first byte in the decompressed data.
+            Traits::off_type begin;
+
+            // The offset of the last byte in the decompressed data.
+            Traits::off_type end;
+
+            // The offset where the compressed data starts.
+            // The base position is this->offset.
+            Traits::off_type offset;
+
+            // The size of the compressed data.
+            size_t size;
+
+            // Data is compressed.
+            /*bool compressed;*/
+        };
 
         // True when the file is properly initialized.
         // The file is properly initialized once all the headers have been read.
@@ -94,7 +129,7 @@ namespace Casc
             std::array<uint8_t, 16> checksum;
             std::copy(header, header + 16, checksum.begin());
             std::reverse(checksum.begin(), checksum.end());
-            auto size = readLE<uint32_t>(header + 0x10);
+            auto size = read<EndianType::Little, uint32_t>(header + 0x10);
 
             // Checking the hash of the header.
             MD5 headerHasher;
@@ -103,12 +138,13 @@ namespace Casc
             char header2[0x08];
 
             std::filebuf::xsgetn(header2, 0x08);
-            if (readLE<uint32_t>(header2) != BlteSignature)
+            if (read<EndianType::Little, uint32_t>(header2) != BlteSignature)
             {
-                throw InvalidSignatureException(readLE<uint32_t>(header2), 0x45544C42);
+                throw InvalidSignatureException(
+                    read<EndianType::Little, uint32_t>(header2), 0x45544C42);
             }
 
-            auto readBytes = readBE<uint32_t>(header2 + 0x04);
+            auto readBytes = read<EndianType::Big, uint32_t>(header2 + 0x04);
 
             // Add the first 8 bytes of the header.
             headerHasher.update(header2, 8);
@@ -129,17 +165,17 @@ namespace Casc
                 // Parse the header
                 auto pos = bytes.get();
 
-                auto flags = readBE<uint16_t>(pos);
+                auto flags = read<EndianType::Big, uint16_t>(pos);
                 pos += sizeof(uint16_t);
-                auto chunkCount = readBE<uint16_t>(pos);
+                auto chunkCount = read<EndianType::Big, uint16_t>(pos);
                 pos += sizeof(uint16_t);
 
                 for (int i = 0; i < chunkCount; ++i)
                 {
-                    auto compressedSize = readBE<uint32_t>(pos);
+                    auto compressedSize = read<EndianType::Big, uint32_t>(pos);
                     pos += sizeof(uint32_t);
 
-                    auto decompressedSize = readBE<uint32_t>(pos);
+                    auto decompressedSize = read<EndianType::Big, uint32_t>(pos);
                     pos += sizeof(uint32_t);
 
                     std::array<uint8_t, 16> checksum;
@@ -173,10 +209,10 @@ namespace Casc
                     chunkHasher.update(buf.get(), chunk.size);
                     chunkHasher.finalize();
 
-                    if (chunkHasher.hexdigest() != Hex<16>(checksum).string())
+                    if (chunkHasher.hexdigest() != Hex(checksum).string())
                     {
                         throw InvalidHashException(
-                            lookup3(Hex<16>(checksum).string(), 0),
+                            lookup3(Hex(checksum).string(), 0),
                             lookup3(chunkHasher.hexdigest(), 0),
                             "");
                     }
@@ -197,10 +233,10 @@ namespace Casc
             // Finish the hash check of the header.
             headerHasher.finalize();
             
-            if (headerHasher.hexdigest() != Hex<16>(checksum).string())
+            if (headerHasher.hexdigest() != Hex(checksum).string())
             {
                 throw InvalidHashException(
-                    lookup3(Hex<16>(checksum).string(), 0),
+                    lookup3(Hex(checksum).string(), 0),
                     lookup3(headerHasher.hexdigest(), 0),
                     "");
             }

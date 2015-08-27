@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *
@@ -47,7 +47,8 @@
 
 namespace Casc
 {
-    using namespace Casc::Shared;
+    using namespace Casc::Shared::Functions::Endian;
+    using namespace Casc::Shared::Functions::Hash;
 
     /**
      * A container for a CASC archive.
@@ -57,19 +58,12 @@ namespace Casc
     private:
         typedef std::pair<CascChunkDescriptor, std::vector<char>> descriptor_type;
         typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
-        
-        template <typename T, size_t Size>
-        size_t copyToVector(const std::array<T, Size> &&src, std::vector<T> &dest, size_t offset) const
-        {
-            std::copy(src.begin(), src.end(), dest.begin() + offset);
-            return offset + Size;
-        }
 
-        template <typename T, size_t Size>
-        size_t copyToVector(const std::array<T, Size> &src, std::vector<T> &dest, size_t offset) const
+        template <typename SrcContainer, typename DestContainer>
+        size_t copyToVector(const SrcContainer &src, DestContainer &dest, size_t offset) const
         {
-            std::copy(src.begin(), src.end(), dest.begin() + offset);
-            return offset + Size;
+            std::copy(std::begin(src), std::end(src), std::begin(dest) + offset);
+            return offset + std::size(src);
         }
 
         std::vector<char> createDataHeader(const std::vector<char> &blteHeader, const std::vector<descriptor_type> &chunks) const
@@ -81,10 +75,10 @@ namespace Casc
 
             std::vector<char> header(DataHeaderSize, '\0');
 
-            auto hash = Hex<16, char>(md5(blteHeader)).data();
-
+            auto hash = Hex(md5(blteHeader)).data();
+            
             copyToVector(hash, header, 0);
-            copyToVector(writeLE<uint32_t>(dataSize), header, 16);
+            copyToVector(Endian::write<EndianType::Little, uint32_t>(dataSize), header, 16);
 
             return std::move(header);
         }
@@ -103,18 +97,16 @@ namespace Casc
             *reinterpret_cast<uint32_t*>(&header[pos]) = BlteSignature;
             pos += sizeof(uint32_t);
 
-            pos = copyToVector(writeBE<uint32_t>(headerSize), header, pos);
-
-            pos = copyToVector(writeBE<uint16_t>(0xF00), header, pos);
-
-            pos = copyToVector(writeBE<uint16_t>((uint16_t)chunks.size()), header, pos);
+            pos = copyToVector(Endian::write<EndianType::Big, uint32_t>(headerSize), header, pos);
+            pos = copyToVector(Endian::write<EndianType::Big, uint16_t>(0xF00), header, pos);
+            pos = copyToVector(Endian::write<EndianType::Big, uint16_t>((uint16_t)chunks.size()), header, pos);
 
             for (auto &chunk : chunks)
             {
-                pos = copyToVector(writeBE<uint32_t>((uint16_t)chunk.second.size()), header, pos);
-                pos = copyToVector(writeBE<uint32_t>((uint16_t)chunk.first.count()), header, pos);
+                pos = copyToVector(Endian::write<EndianType::Big, uint32_t>((uint16_t)chunk.second.size()), header, pos);
+                pos = copyToVector(Endian::write<EndianType::Big, uint32_t>((uint16_t)chunk.first.count()), header, pos);
                 
-                auto hash = Hex<16, char>(md5(chunk.second)).data();
+                auto hash = Hex(md5(chunk.second)).data();
 
                 pos = copyToVector(hash, header, pos);
             }
@@ -183,10 +175,14 @@ namespace Casc
             root->read(&magic[0], 4);
             root->seekg(0, std::ios_base::beg);
 
-            return openFileByKey(encoding->findKey(rootHandlers.at(readLE<uint32_t>(magic))->findHash(name)));
+            return openFileByKey(
+                encoding->findKey(
+                    rootHandlers.at(
+                        Endian::read<EndianType::Little, uint32_t>(magic.begin(), magic.end())
+                    )->findHash(name)));
         }
 
-        MemoryInfo write(std::istream &stream, CascLayoutDescriptor &descriptor)
+        CascReference write(std::istream &stream, CascLayoutDescriptor &descriptor)
         {
             auto arr = createData(stream, descriptor);
             auto loc = shmem_.reserveSpace(arr.size());
@@ -255,15 +251,15 @@ namespace Casc
          *
          * @param key   the key of the file.
          */
-        MemoryInfo findFileLocation(const std::string &key) const
+        CascReference findFileLocation(const std::string &key) const
         {
-            auto bytes = Hex<9>(key).data();
+            auto bytes = Hex(key).data();
 
             for (auto index : indices_)
             {
                 try
                 {
-                    return index.find(bytes);
+                    return index.find(bytes.begin(), bytes.begin() + 9);
                 }
                 catch (FileNotFoundException&) // TODO: Better exception handling
                 {
@@ -281,13 +277,13 @@ namespace Casc
          * @return		a stream object.
          */
         template <bool Writeable>
-        std::shared_ptr<CascStream<Writeable>> openStream(MemoryInfo loc) const
+        std::shared_ptr<CascStream<Writeable>> openStream(CascReference loc) const
         {
             std::stringstream ss;
             conv_type conv;
 
             ss << shmem_.path() << conv.to_bytes(std::wstring{ fs::path::preferred_separator }) << "data." << std::setw(3) << std::setfill('0') << loc.file();
-            
+
             return std::make_shared<CascStream<Writeable>>(
                 ss.str(), loc.offset(),
                 mapToVector(this->blteHandlers));

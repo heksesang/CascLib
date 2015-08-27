@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *
@@ -19,15 +19,17 @@
 
 #pragma once
 
-#include <cctype>
-#include <string>
 #include <algorithm>
-#include <bitset>
 #include <array>
+#include <bitset>
+#include <cctype>
 #include <fstream>
-#include <vector>
+#include <iterator>
+#include <string>
 #include <utility>
+#include <vector>
 #include "../lookup3.hpp"
+#include "../md5.hpp"
 
 namespace Casc
 {
@@ -56,124 +58,115 @@ namespace Casc
 
             namespace Endian
             {
-                template <typename T>
-                inline std::array<char, sizeof(T)> writeLE(T value)
+                enum class EndianType
                 {
-                    std::array<char, sizeof(T)> output;
+                    Little,
+                    Big
+                };
 
-                    for (int i = 0; i < sizeof(T); ++i)
+                template <EndianType Type, typename T, typename InputIt>
+                inline T read(InputIt first, InputIt last = InputIt(nullptr))
+                {
+                    if (last == InputIt(nullptr))
                     {
-                        output[i] = (value >> i * 8) & 0xFF;
+                        last = first + sizeof(T);
                     }
 
-                    return output;
-                }
+                    if ((last - first) > sizeof(T))
+                    {
+                        throw GenericException("The iterators are not valid for this data type.");
+                    }
 
-                template <typename T>
-                inline T readLE(unsigned char* arr)
-                {
                     T output{};
+                    auto it = first;
 
-                    for (int i = 0; i < sizeof(T); ++i)
+                    typedef typename std::make_unsigned<typename std::iterator_traits<InputIt>::value_type>::type* unsigned_ptr;
+                    typedef typename std::make_signed<typename std::iterator_traits<InputIt>::value_type>::type* signed_ptr;
+                    
+                    switch (Type)
                     {
-                        output |= arr[i] << i * 8;
+                    case EndianType::Little:
+                        for (it = first; it != last; ++it)
+                        {
+                            if (std::is_unsigned<T>::value)
+                            {
+                                output |= *reinterpret_cast<unsigned_ptr>(&*it) << (it - first) * 8;
+                            }
+                            else if (std::is_signed<T>::value)
+                            {
+                                output |= *reinterpret_cast<signed_ptr>(&*it) << (it - first) * 8;
+                            }
+                        }
+                        break;
+
+                    case EndianType::Big:
+                        for (it = last - 1; it >= first; --it)
+                        {
+                            if (std::is_unsigned<T>::value)
+                            {
+                                output |= *reinterpret_cast<unsigned_ptr>(&*it) << ((sizeof(T) - 1) - (it - first)) * 8;
+                            }
+                            else if (std::is_signed<T>::value)
+                            {
+                                output |= *reinterpret_cast<signed_ptr>(&*it) << ((sizeof(T) - 1) - (it - first)) * 8;
+                            }
+                        }
+                        break;
                     }
 
                     return output;
                 }
 
-                template <typename T>
-                inline T readLE(char* arr)
+                template <EndianType Type, typename T>
+                inline std::array<char, sizeof(T)> write(T value)
                 {
-                    return readLE<T>(reinterpret_cast<unsigned char*>(arr));
-                }
+                    std::array<char, sizeof(T)> output{};
+                    int i;
 
-                template <typename T>
-                inline T readLE(T value)
-                {
-                    return readLE<T>(reinterpret_cast<unsigned char*>(&value));
-                }
-
-                template <typename T, typename ElementType, size_t Size>
-                inline T readLE(std::array<ElementType, Size> arr)
-                {
-                    return readLE<T>(arr.data());
-                }
-
-                template <typename T>
-                inline std::array<char, sizeof(T)> writeBE(T value)
-                {
-                    std::array<char, sizeof(T)> output;
-
-                    for (int i = 0; i < sizeof(T); ++i)
+                    switch (Type)
                     {
-                        output[(sizeof(T) - 1) - i] = (value >>  i * 8) & 0xFF;
+                    case EndianType::Little:
+                        for (i = 0; i < sizeof(T); ++i)
+                        {
+                            output[i] = (value >> i * 8) & 0xFF;
+                        }
+                        break;
+
+                    case EndianType::Big:
+                        for (i = 0; i < sizeof(T); ++i)
+                        {
+                            output[(sizeof(T) - 1) - i] = (value >> i * 8) & 0xFF;
+                        }
+                        break;
                     }
 
                     return output;
-                }
-
-                template <typename T>
-                inline T readBE(unsigned char* arr)
-                {
-                    T output{};
-
-                    for (int i = sizeof(T) - 1; i >= 0; --i)
-                    {
-                        output |= arr[i] << ((sizeof(T) - 1) - i) * 8;
-                    }
-
-                    return output;
-                }
-
-                template <typename T>
-                inline T readBE(char* arr)
-                {
-                    return readBE<T>(reinterpret_cast<unsigned char*>(arr));
-                }
-
-                template <typename T>
-                inline T readBE(T value)
-                {
-                    return readBE<T>(reinterpret_cast<unsigned char*>(&value));
-                }
-
-                template <typename T, typename ElementType, size_t Size>
-                inline T readBE(std::array<ElementType, Size> arr)
-                {
-                    return readBE<T>(arr.data());
                 }
             }
 
             namespace Hash
             {
-                inline std::pair<uint32_t, uint32_t> lookup3(const std::string &data, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
+                inline std::string md5(const std::string &str)
                 {
-                    auto pc = init.first;
-                    auto pb = init.second;
+                    MD5 md5 = MD5(str);
 
-                    hashlittle2(data.c_str(), data.size() + 1, &pc, &pb);
-
-                    return std::make_pair(pc, pb);
+                    return md5.hexdigest();
                 }
 
-                inline std::pair<uint32_t, uint32_t> lookup3(const std::vector<char> &data, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
+                inline std::string md5(const std::vector<char> &input)
                 {
-                    auto pc = init.first;
-                    auto pb = init.second;
+                    MD5 md5 = MD5(input);
 
-                    hashlittle2(data.data(), data.size(), &pc, &pb);
-
-                    return std::make_pair(pc, pb);
+                    return md5.hexdigest();
                 }
 
-                template <typename ElementType, size_t Size>
-                inline std::pair<uint32_t, uint32_t> lookup3(const std::array<ElementType, Size> &data, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
+                template <typename Container>
+                inline std::pair<uint32_t, uint32_t> lookup3(const Container &data, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
                 {
                     auto pc = init.first;
                     auto pb = init.second;
 
-                    hashlittle2(reinterpret_cast<const void*>(data.data()), data.size() * sizeof(ElementType), &pc, &pb);
+                    hashlittle2(std::data(data), std::size(data), &pc, &pb);
 
                     return std::make_pair(pc, pb);
                 }
@@ -193,21 +186,11 @@ namespace Casc
 
                     return std::make_pair(pc, pb);
                 }
-
-                inline uint32_t lookup3(const std::string &data, const uint32_t &init)
+                
+                template <typename Container>
+                inline uint32_t lookup3(const Container &container, const uint32_t &init)
                 {
-                    return hashlittle(data.data(), data.size(), init);
-                }
-
-                inline uint32_t lookup3(const std::vector<char> &data, const uint32_t &init)
-                {
-                    return hashlittle(data.data(), data.size(), init);
-                }
-
-                template <typename ElementType, size_t Size>
-                inline uint32_t lookup3(const std::array<ElementType, Size> &data, const uint32_t &init)
-                {
-                    return hashlittle(reinterpret_cast<const void*>(data.data()), data.size() * sizeof(ElementType), init);
+                    return hashlittle(std::data(container), std::size(container), init);
                 }
 
                 inline uint32_t lookup3(std::ifstream &stream, uint32_t length, const uint32_t &init)

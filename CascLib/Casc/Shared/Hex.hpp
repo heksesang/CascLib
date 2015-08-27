@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *
@@ -25,50 +25,64 @@
 
 namespace Casc
 {
-    template <int Size, typename ElementType = uint8_t>
     class Hex
     {
-        std::array<ElementType, Size> arr;
+        std::vector<uint8_t> bytes;
         std::string str;
 
     public:
-        Hex(const std::string &str)
+        template <typename Container>
+        Hex(const Container &container)
+            : bytes(std::begin(container), std::end(container))
         {
-            for (unsigned int i = 0; i < arr.size(); ++i)
+            std::stringstream ss;
+
+            ss << std::hex
+                << std::setfill('0');
+
+            for (auto it = std::begin(bytes); it != std::end(bytes); ++it)
             {
-                std::stringstream ss;
-                ss << str[i * 2];
-                ss << str[i * 2 + 1];
-
-                int i1;
-                ss >> std::hex >> i1;
-
-                arr[i] = i1;
+                ss << std::setw(2) << (size_t)*it;
             }
 
-            this->str = str;
+            this->str = ss.str();
         }
 
-        Hex(const std::array<ElementType, Size> &arr)
+        template <typename InputIt>
+        Hex(InputIt first, InputIt last)
+            : bytes(first, last)
         {
             std::stringstream ss;
 
             ss << std::hex
                << std::setfill('0');
 
-            for (unsigned int c : arr)
+            for (auto it = first; it != last; ++it)
             {
-                ss << std::setw(2)
-                   << c;
+                ss << std::setw(2) << *it;
             }
 
             this->str = ss.str();
-            this->arr = arr;
         }
 
-        const std::array<ElementType, Size> &data()
+        Hex(const std::string &str)
+            : bytes(str.size() / 2), str(str)
         {
-            return arr;
+            for (unsigned int i = 0; i < bytes.size(); ++i)
+            {
+                std::stringstream ss;
+                ss << str[i * 2] << str[i * 2 + 1];
+
+                int i1;
+                ss >> std::hex >> i1;
+
+                bytes[i] = i1;
+            }
+        }
+
+        const std::vector<uint8_t> &data()
+        {
+            return bytes;
         }
 
         const std::string &string()

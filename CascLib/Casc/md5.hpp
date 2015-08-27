@@ -377,17 +377,3 @@ private:
         a = rotate_left(a + I(b, c, d) + x + ac, s) + b;
     }
 };
-
-inline std::string md5(const std::string str)
-{
-    MD5 md5 = MD5(str);
-
-    return md5.hexdigest();
-}
-
-inline std::string md5(const std::vector<char> &input)
-{
-    MD5 md5 = MD5(input);
-
-    return md5.hexdigest();
-}

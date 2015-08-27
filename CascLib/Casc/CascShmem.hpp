@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *
@@ -44,7 +44,6 @@ namespace Casc
 #else
     namespace fs = boost::filesystem;
 #endif
-    using namespace Casc::Shared::DataTypes;
 
     /**
      * Contains information about which CASC files are available for writing,
@@ -53,7 +52,7 @@ namespace Casc
     class CascShmem
     {
     public:
-        MemoryInfo reserveSpace(uint32_t size)
+        CascReference reserveSpace(uint32_t size)
         {
             uint32_t available = 0;
 
@@ -66,17 +65,19 @@ namespace Casc
 
                 if (location.size() >= size)
                 {
-                    location = MemoryInfo(
+                    std::vector<char> key;
+
+                    location = CascReference(
+                        key.begin(), key.end(),
                         location.file(),
                         location.offset() + size,
-                        location.size() - size,
-                        false);
+                        location.size() - size);
 
-                    return MemoryInfo(
+                    return CascReference(
+                        key.begin(), key.end(),
                         location.file(),
                         location.offset() - size,
-                        size,
-                        false);
+                        size);
                 }
             }
 
@@ -87,7 +88,7 @@ namespace Casc
         typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
 
         static const int EntriesPerBlock = 1090U;
-        static const int BlockSize = EntriesPerBlock * sizeof(Ref);
+        static const int BlockSize = EntriesPerBlock * 5U;
 
         /**
         * Different SHMEM block types:
@@ -113,7 +114,7 @@ namespace Casc
         std::map<uint32_t, uint32_t> versions_;
 
         // The list of free spaces of memory in the data files. 
-        std::vector<MemoryInfo> freeSpace_;
+        std::vector<CascReference> freeSpace_;
 
         /**
          * Reads a chunk of type ShmemType::WriteableMemory.
@@ -128,18 +129,24 @@ namespace Casc
 
             file.seekg(24, std::ios_base::cur);
 
-            std::array<Ref, EntriesPerBlock> first;
-            std::array<Ref, EntriesPerBlock> second;
+            std::array<char, 2 * BlockSize> arr;
 
-            file.read(reinterpret_cast<char*>(&first[0]), BlockSize);
-            file.read(reinterpret_cast<char*>(&second[0]), BlockSize);
-
-            for (unsigned int i = 0; i < writeableMemoryCount; ++i)
+            for (auto i = 0U; i < EntriesPerBlock; ++i)
             {
-                freeSpace_.push_back(MemoryInfo(
-                    second[i].hi,
-                    readBE(second[i].lo),
-                    readBE(first[i].lo)));
+                file.read(arr.data() + i * 9, 5);
+            }
+
+            for (auto i = 0U; i < EntriesPerBlock; ++i)
+            {
+                file.read(arr.data() + 5 + i * 9, 4);
+            }
+
+            for (auto i = 0U; i < writeableMemoryCount; ++i)
+            {
+                auto begin = arr.begin() + i * 9;
+                auto end = begin + 9;
+
+                freeSpace_.emplace_back(begin, end, 0, 5, 4, 30);
             }
         }
 
@@ -277,7 +284,9 @@ namespace Casc
             {
                 if (i < freeSpaceCount)
                 {
-                    auto bytes = freeSpace_.at(i).bytes<MemoryInfo::BytesType::Count>();
+                    str << '\0';
+
+                    auto bytes = freeSpace_.at(i).serialize(0, 0, 4, 0);
                     str.write(bytes.data(), bytes.size());
                 }
                 else
@@ -290,7 +299,7 @@ namespace Casc
             {
                 if (i < freeSpaceCount)
                 {
-                    auto bytes = freeSpace_.at(i).bytes<MemoryInfo::BytesType::Offset>();
+                    auto bytes = freeSpace_.at(i).serialize(0, 5, 0, 30);
                     str.write(bytes.data(), bytes.size());
                 }
                 else
@@ -354,7 +363,8 @@ namespace Casc
         void writeFile() const
         {
             std::ofstream file;
-            file.open(path_, std::ios_base::out | std::ios_base::binary);
+            std::string path = path_;
+            file.open(path.append(".out"), std::ios_base::out | std::ios_base::binary);
 
             writeHeader(file);
             writeFreeSpace(file);
@@ -425,7 +435,7 @@ namespace Casc
          *
          * @return the list of free memory blocks.
          */
-        const std::vector<MemoryInfo> &freeSpace() const
+        const std::vector<CascReference> &freeSpace() const
         {
             return freeSpace_;
         }

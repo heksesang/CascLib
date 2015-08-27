@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *
@@ -40,10 +40,10 @@ namespace Casc
     class CascConfiguration;
     class CascEncoding;
     class CascIndex;
-    struct CascIndexRecord;
     class CascLayoutDescriptor;
     class CascRootHandler;
     class CascShmem;
+    class CascReference;
 
     /* BLTE handler */
     template <typename Traits>
@@ -75,8 +75,7 @@ namespace Casc
 
 using namespace Casc::Exceptions;
 
-#include "Shared/BufferInfo.hpp"
-#include "Shared/ChunkInfo.hpp"
+#include "Shared/CompressionMode.hpp"
 #include "Shared/FileSearch.hpp"
 #include "Shared/Functions.hpp"
 #include "Shared/Hex.hpp"
@@ -92,12 +91,19 @@ namespace std
             return Casc::Shared::Functions::Hash::lookup3(key, 0);
         }
     };
+
+    template <>
+    class std::hash<std::vector<char>>
+    {
+    public:
+        size_t operator()(const std::vector<char> &key) const
+        {
+            return Casc::Shared::Functions::Hash::lookup3(key, 0);
+        }
+    };
 }
 
-#include "DataTypes/CompressionMode.hpp"
-#include "DataTypes/MemoryInfo.hpp"
-#include "DataTypes/Reference.hpp"
-
+#include "CascReference.hpp"
 #include "CascBlteHandler.hpp"
 #include "CascBuffer.hpp"
 #include "CascBuildInfo.hpp"

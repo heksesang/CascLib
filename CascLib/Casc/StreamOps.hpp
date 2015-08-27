@@ -1,5 +1,5 @@
 /*
-* Copyright 2014 Gunnar Lilleaasen
+* Copyright 2015 Gunnar Lilleaasen
 *
 * This file is part of CascLib.
 *
@@ -65,12 +65,12 @@ namespace Casc
 
         if (input.iword(endian_index) == 0)
         {
-            value = readLE(value);
+            value = read<EndianType::Little, uint32_t>(b, b + sizeof(T));
         }
 
         if (input.iword(endian_index) == 1)
         {
-            value = readBE(value);
+            value = read<EndianType::Big, uint32_t>(b, b + sizeof(T));
         }
 
         return input;
@@ -83,12 +83,12 @@ namespace Casc
 
         if (input.iword(endian_index) == 0)
         {
-            input.write(writeLE<T>(value).data(), sizeof(T));
+            input.write(write<EndianType::Little>(value).data(), sizeof(T));
         }
 
         if (input.iword(endian_index) == 1)
         {
-            input.write(writeBE<T>(value).data(), sizeof(T));
+            input.write(write<EndianType::Big>(value).data(), sizeof(T));
         }
 
         return input;
