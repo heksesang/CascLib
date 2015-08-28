@@ -237,6 +237,7 @@
     <ClInclude Include="Casc\Common.hpp" />
     <ClInclude Include="Casc\Exceptions.hpp" />
     <ClInclude Include="Casc\Exceptions\CascException.hpp" />
+    <ClInclude Include="Casc\Exceptions\FileDoesNotExistException.hpp" />
     <ClInclude Include="Casc\Exceptions\FileNotFoundException.hpp" />
     <ClInclude Include="Casc\Exceptions\InvalidHashException.hpp" />
     <ClInclude Include="Casc\Exceptions\InvalidSignatureException.hpp" />

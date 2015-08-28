@@ -24,6 +24,7 @@
 #else
 #include <boost/filesystem.hpp>
 #endif
+#include <fstream>
 #include <iomanip>
 #include <locale>
 #include <numeric>
@@ -196,6 +197,8 @@ namespace Casc
             std::array<char, 16> key;
             std::reverse_copy(arr.begin(), arr.begin() + 16, key.begin());
 
+            loc = CascReference(key.begin(), key.begin() + 9, loc.file(), loc.offset(), loc.size());
+
             auto bucket = CascIndex::bucket(key.begin(), key.begin() + 9);
             indices_[bucket].insert(key.begin(), key.begin() + 9, loc);
 
@@ -272,7 +275,7 @@ namespace Casc
                 {
                     return index.find(bytes.begin(), bytes.begin() + 9);
                 }
-                catch (FileNotFoundException&) // TODO: Better exception handling
+                catch (FileNotFoundException&)
                 {
                     continue;
                 }
@@ -351,15 +354,15 @@ namespace Casc
             path_ = path;
             buildInfo_.parse(path + ".build.info");
 
-            FileSearch fs({
+            FileSearch fileSearch({
                 buildInfo_.build(0).at("Build Key"),
                 buildInfo_.build(0).at("CDN Key"),
                 "shmem"
             }, path_);
 
-            buildConfig_.parse(fs.results().at(0));
-            cdnConfig_.parse(fs.results().at(1));
-            shmem_.parse(fs.results().at(2), path);
+            buildConfig_.parse(fileSearch.results().at(0));
+            cdnConfig_.parse(fileSearch.results().at(1));
+            shmem_.parse(fileSearch.results().at(2), path);
 
             for (size_t i = 0; i < shmem_.versions().size(); ++i)
             {
@@ -371,7 +374,34 @@ namespace Casc
                 ss << std::setw(8) << std::setfill('0') << std::hex << shmem_.versions().at(i);
                 ss << ".idx";
 
-                indices_.push_back(ss.str());
+                bool latestVersionMissing = !fs::exists(ss.str());
+
+                if (latestVersionMissing)
+                {
+                    std::stringstream old;
+                    old.str("");
+
+                    old << shmem_.path() << conv.to_bytes({ fs::path::preferred_separator });
+                    old << std::setw(2) << std::setfill('0') << std::hex << i;
+                    old << std::setw(8) << std::setfill('0') << std::hex << shmem_.versions().at(i) - 1;
+                    old << ".idx";
+
+                    indices_.push_back(old.str());
+                }
+                else
+                {
+                    indices_.push_back(ss.str());
+                }
+
+                if (latestVersionMissing)
+                {
+                    indices_.at(i).updateVersion(shmem_.versions().at(i));
+
+                    std::ofstream fs;
+                    fs.open(ss.str(), std::ios_base::out | std::ios_base::binary);
+                    indices_.at(i).write(fs);
+                    fs.close();
+                }
             }
 
             encoding = std::make_unique<CascEncoding>(openFileByKey(buildConfig_["encoding"].back()));

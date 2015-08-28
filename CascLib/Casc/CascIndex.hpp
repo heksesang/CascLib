@@ -52,6 +52,8 @@ namespace Casc
         }
 
     private:
+        typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
+
         // The files available in the index.
         std::map<std::vector<char>, CascReference> files;
 
@@ -147,6 +149,28 @@ namespace Casc
         }
 
         /**
+         * Bumps the version number.
+         */
+        void updateVersion(int version)
+        {
+            fs::path p(path_);
+
+            auto parent = p.parent_path();
+            
+            std::stringstream ss;
+            conv_type conv;
+
+            ss << std::setw(2) << std::setfill('0') << std::hex << file;
+            ss << std::setw(8) << std::setfill('0') << std::hex << version;
+            ss << ".idx";
+
+            parent.append(conv.to_bytes({ fs::path::preferred_separator }));
+            parent.append(ss.str());
+
+            path_ = parent.string();
+        }
+
+        /**
          * Gets a file record.
          */
         template <typename KeyIt>
@@ -221,7 +245,7 @@ namespace Casc
             auto hashPos = stream.tellp();
             stream.seekp(4, std::ios_base::cur);
 
-            /*std::vector<std::pair<std::vector<char>, CascReference>> refs(files.begin(), files.end());
+            std::vector<std::pair<std::vector<char>, CascReference>> refs(files.begin(), files.end());
 
             std::sort(refs.begin(), refs.end(), [](
                 std::pair<std::vector<char>, CascReference> &a,
@@ -236,9 +260,9 @@ namespace Casc
                 }
 
                 return b.first > a.first;
-            });*/
+            });
 
-            for (auto &file : files)
+            for (auto &file : refs)
             {
                 auto bytes = file.second.serialize(9, 5, 4, 30);
                 hash = lookup3(bytes, hash);
@@ -247,14 +271,13 @@ namespace Casc
             }
 
             auto pos = stream.tellp();
-            pos = pos + (0x10000 - pos % 0x18000);
+            pos = pos + (0x10000 - pos % 0x10000 - 1);
 
             auto dataHash = Endian::write<EndianType::Little, uint32_t>(hash.first);
             stream.seekp(hashPos);
             stream.write(dataHash.data(), dataHash.size());
 
             stream.seekp(pos); // Seek to end of reserved space.
-            stream.seekp(0x7FFF, std::ios_base::cur); // Seek to the end of the diff block.
             stream.write("\0", 1);
         }
 

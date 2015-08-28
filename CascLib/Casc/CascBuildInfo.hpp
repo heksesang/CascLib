@@ -70,7 +70,7 @@ namespace Casc
          *
          * @param path	the path of the .build.info file.
          */
-        CascBuildInfo(std::string path)
+        CascBuildInfo(const std::string &path)
         {
             parse(path);
         }
@@ -108,8 +108,13 @@ namespace Casc
          *
          * @param path	the path of the .build.info file.
          */
-        void parse(std::string path)
+        void parse(const std::string &path)
         {
+            if (!fs::exists(path))
+            {
+                throw FileNotFoundException(path);
+            }
+
             values.clear();
 
             State currentState = State::KeyBegin;

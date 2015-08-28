@@ -26,6 +26,12 @@
 #include <iostream>
 #include <codecvt>
 
+#ifdef _MSC_VER
+#include <experimental/filesystem>
+#else
+#include <boost/filesystem.hpp>
+#endif
+
 template<class Facet>
 struct deletable_facet : Facet
 {
@@ -62,11 +68,18 @@ namespace Casc
 
     /* Container */
     class CascContainer;
+
+#ifdef _MSC_VER
+    namespace fs = std::experimental::filesystem::v1;
+#else
+    namespace fs = boost::filesystem;
+#endif
 }
 
 #include "StreamOps.hpp"
 
 #include "Exceptions/CascException.hpp"
+#include "Exceptions/FileDoesNotExistException.hpp"
 #include "Exceptions/FileNotFoundException.hpp"
 #include "Exceptions/GenericException.hpp"
 #include "Exceptions/InvalidHashException.hpp"

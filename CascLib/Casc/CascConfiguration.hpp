@@ -65,7 +65,7 @@ namespace Casc
          *
          * @param path	the path of the configuration file.
          */
-        CascConfiguration(std::string path)
+        CascConfiguration(const std::string &path)
         {
             parse(path);
         }
@@ -94,8 +94,13 @@ namespace Casc
          *
          * @param path	the path of the configuration file.
          */
-        void parse(std::string path)
+        void parse(const std::string &path)
         {
+            if (!fs::exists(path))
+            {
+                throw FileNotFoundException(path);
+            }
+
             values_.clear();
 
             std::ifstream fs;

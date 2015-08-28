@@ -39,12 +39,6 @@
 
 namespace Casc
 {
-#ifdef _MSC_VER
-    namespace fs = std::experimental::filesystem::v1;
-#else
-    namespace fs = boost::filesystem;
-#endif
-
     /**
      * Contains information about which CASC files are available for writing,
      * and which is the current version of the index lists.
@@ -364,7 +358,7 @@ namespace Casc
         {
             std::ofstream file;
             std::string path = path_;
-            file.open(path.append(".out"), std::ios_base::out | std::ios_base::binary);
+            file.open(path, std::ios_base::out | std::ios_base::binary);
 
             writeHeader(file);
             writeFreeSpace(file);
