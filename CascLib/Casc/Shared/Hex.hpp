@@ -31,14 +31,19 @@ namespace Casc
         std::string str;
 
     public:
+        typedef uint8_t value_type;
+
+        Hex()
+        {
+
+        }
+
         template <typename Container>
         Hex(const Container &container)
             : bytes(std::begin(container), std::end(container))
         {
             std::stringstream ss;
-
-            ss << std::hex
-                << std::setfill('0');
+            ss << std::hex << std::setfill('0');
 
             for (auto it = std::begin(bytes); it != std::end(bytes); ++it)
             {
@@ -53,9 +58,7 @@ namespace Casc
             : bytes(first, last)
         {
             std::stringstream ss;
-
-            ss << std::hex
-               << std::setfill('0');
+            ss << std::hex << std::setfill('0');
 
             for (auto it = first; it != last; ++it)
             {
@@ -88,6 +91,56 @@ namespace Casc
         const std::string &string()
         {
             return str;
+        }
+
+        decltype(auto) begin() const noexcept
+        {
+            return bytes.cbegin();
+        }
+
+        decltype(auto) end() const noexcept
+        {
+            return bytes.cend();
+        }
+
+        decltype(auto) size() const noexcept
+        {
+            return bytes.size();
+        }
+
+        decltype(auto) empty() const noexcept
+        {
+            return bytes.empty();
+        }
+
+        bool operator ==(const Hex &b) const
+        {
+            return str == b.str;
+        }
+
+        bool operator !=(const Hex &b) const
+        {
+            return !(*this == b);
+        }
+
+        bool operator <(const Hex &b) const
+        {
+            return str < b.str;
+        }
+
+        bool operator >(const Hex &b) const
+        {
+            return str > b.str;
+        }
+
+        bool operator <=(const Hex &b) const
+        {
+            return b.str <= str;
+        }
+
+        bool operator >=(const Hex &b) const
+        {
+            return b.str >= str;
         }
     };
 }

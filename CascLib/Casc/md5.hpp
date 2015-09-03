@@ -91,7 +91,8 @@ public:
         update(text.c_str(), text.length());
         finalize();
     }
-    MD5(const std::vector<char>& input)
+    template <typename Container>
+    MD5(const Container& input)
     {
         init();
         update(input.data(), input.size());

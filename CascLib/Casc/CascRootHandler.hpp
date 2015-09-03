@@ -104,9 +104,7 @@ namespace Casc
         /**
          * Destructor.
          */
-        virtual ~CascRootHandler()
-        {
-        }
+        virtual ~CascRootHandler() = default;
 
         /**
          * The file magic of the root file.

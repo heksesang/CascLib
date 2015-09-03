@@ -66,6 +66,9 @@ namespace Casc
         // The path of the index file.
         std::string path_;
 
+        // The size of the keys in the index file.
+        size_t keySize_;
+
     public:
         /**
          * Constructor
@@ -107,6 +110,7 @@ namespace Casc
 
             this->version = version;
             this->file = file;
+            this->keySize_ = keyFieldSize;
 
             for (unsigned int i = 0; i < (size - 8); i += 8)
             {
@@ -284,6 +288,11 @@ namespace Casc
         const std::string &path() const
         {
             return path_;
+        }
+
+        const size_t &keySize() const
+        {
+            return keySize_;
         }
     };
 }

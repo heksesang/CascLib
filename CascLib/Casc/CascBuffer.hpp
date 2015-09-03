@@ -137,11 +137,12 @@ namespace Casc
             // Read BLTE header.
             char header2[0x08];
 
+            uint32_t signature;
+
             std::filebuf::xsgetn(header2, 0x08);
-            if (read<EndianType::Little, uint32_t>(header2) != BlteSignature)
+            if ((signature = read<EndianType::Little, uint32_t>(header2)) != BlteSignature)
             {
-                throw InvalidSignatureException(
-                    read<EndianType::Little, uint32_t>(header2), 0x45544C42);
+                throw InvalidSignatureException(signature, 0x45544C42);
             }
 
             auto readBytes = read<EndianType::Big, uint32_t>(header2 + 0x04);
@@ -228,15 +229,27 @@ namespace Casc
                     38,
                     size
                 });
+
+                ChunkInfo &chunk = chunks.back();
+                auto blteSize = size_t(chunk.size - chunk.offset);
+
+                auto buf = std::make_unique<char[]>(blteSize);
+                auto pos = std::filebuf::seekoff(0, std::ios_base::cur, std::ios_base::in);
+                std::filebuf::seekoff(this->offset + chunk.offset, std::ios_base::beg, std::ios_base::in);
+                std::filebuf::xsgetn(buf.get(), blteSize);
+
+                headerHasher.update(buf.get(), blteSize);
             }
 
             // Finish the hash check of the header.
             headerHasher.finalize();
+
+            Hex expected(checksum);
             
-            if (headerHasher.hexdigest() != Hex(checksum).string())
+            if (headerHasher.hexdigest() != expected.string())
             {
                 throw InvalidHashException(
-                    lookup3(Hex(checksum).string(), 0),
+                    lookup3(expected.string(), 0),
                     lookup3(headerHasher.hexdigest(), 0),
                     "");
             }

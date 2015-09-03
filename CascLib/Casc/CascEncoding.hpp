@@ -29,6 +29,7 @@ namespace Casc
     using namespace Casc::Shared;
     using namespace Casc::Shared::Functions;
     using namespace Casc::Shared::Functions::Endian;
+    using namespace Casc::Shared::Functions::Hash;
 
     /**
      * Maps file content MD5 hash to file key.
@@ -39,88 +40,20 @@ namespace Casc
         /**
          * Find the file key for the given hash.
          *
-         * @param hash  the MD5 hash of the file content.
-         * @return      the key in hex format.
+         * @param hash      the MD5 hash of the file content.
+         * @return          the key in hex format.
          */
-        std::string findKey(const std::string &hash) const
+        std::vector<Hex> find(const std::string &hash) const
         {
-            Hex hex(hash);
+            Hex target(hash);
+            std::vector<Hex> keys;
 
-            for (unsigned int i = 0; i < chunkHeadsA.size(); ++i)
+            if ((keys = searchTable(target, chunkHeadsA, chunksOffsetA, hashSizeA)).empty())
             {
-                Hex current(chunkHeadsA.at(i).first);
-                Hex next((i + 1) >= chunkHeadsA.size() ?
-                    std::array<uint8_t, 16> { (uint8_t)0xFF } :
-                    chunkHeadsA.at(i + 1).first);
-
-                if ((i + 1) >= chunkHeadsA.size() ||
-                    (hash >= current.string() && hash < next.string()))
-                {
-                    stream->seekg(chunksOffsetA + ChunkBodySize * i, std::ios_base::beg);
-
-                    char data[4096];
-                    stream->read(data, 4096);
-
-                    ChunkBody* chunk = reinterpret_cast<ChunkBody*>(data);
-
-                    while (true)
-                    {
-                        if (chunk->unk != 1)
-                            break;
-                        
-                        if (std::equal(
-                                hex.data().begin(), hex.data().end(),
-                                chunk->hash.begin(), chunk->hash.end()))
-                        {
-                            std::array<uint8_t, 9> temp;
-                            std::memcpy(&temp[0], &chunk->key[0], temp.size());
-
-                            return Hex(temp).string();
-                        }
-
-                        ++chunk;
-                    }
-                }
+                throw FileNotFoundException(hash);
             }
 
-            for (unsigned int i = 0; i < chunkHeadsB.size(); ++i)
-            {
-                Hex current(chunkHeadsB.at(i).first);
-                Hex next((i + 1) >= chunkHeadsB.size() ?
-                    std::array<uint8_t, 16> { (uint8_t)0xFF } :
-                    chunkHeadsB.at(i + 1).first);
-
-                if ((i + 1) >= chunkHeadsB.size() ||
-                    (hash >= current.string() && hash < next.string()))
-                {
-                    stream->seekg(chunksOffsetB + ChunkBodySize * i, std::ios_base::beg);
-
-                    char data[4096];
-                    stream->read(data, 4096);
-
-                    ChunkBody* chunk = reinterpret_cast<ChunkBody*>(data);
-
-                    while (true)
-                    {
-                        if (chunk->unk != 1)
-                            break;
-
-                        if (std::equal(
-                                hex.data().begin(), hex.data().end(),
-                                chunk->hash.begin(), chunk->hash.end()))
-                        {
-                            std::array<uint8_t, 9> temp;
-                            std::memcpy(&temp[0], &chunk->key[0], temp.size());
-
-                            return Hex(temp).string();
-                        }
-
-                        ++chunk;
-                    }
-                }
-            }
-
-            throw FileNotFoundException(hash);
+            return keys;
         }
 
     private:
@@ -169,14 +102,26 @@ namespace Casc
             std::array<uint8_t, 16> hash;
         };
 
-        struct ChunkBody
+        class ChunkBody
         {
-            uint16_t unk;
+        public:
+            ChunkBody(size_t hashSize)
+                : hash(hashSize), keys(1, std::vector<char>(hashSize))
+            {
+
+            }
+
             uint32_t fileSize;
-            std::array<uint8_t, 16> hash;
-            std::array<uint8_t, 16> key;
+            std::vector<char> hash;
+            std::vector<std::vector<char>> keys;
         };
 #pragma pack(pop)
+
+        // The size of the hashes in table A.
+        size_t hashSizeA;
+
+        // The size of the hashes in table B.
+        size_t hashSizeB;
 
         // The headers for the chunks in table A.
         std::vector<ChunkHead> chunkHeadsA;
@@ -189,6 +134,66 @@ namespace Casc
 
         // The offset of the chunks in table B.
         std::streamsize chunksOffsetB;
+
+        std::vector<Hex> searchTable(Hex target, const std::vector<ChunkHead> &heads, std::streamsize offset, size_t hashSize) const
+        {
+            std::vector<Hex> keys;
+
+            for (unsigned int i = 0; keys.empty() && i < heads.size(); ++i)
+            {
+                Hex first(heads.at(i).first);
+
+                if (target > first)
+                {
+                    stream->seekg(offset + ChunkBodySize * (heads.size() - 1 - i), std::ios_base::beg);
+
+                    std::array<char, 4096> data;
+                    stream->read(data.data(), 4096);
+
+                    Hex expected(heads.at(i).hash);
+                    Hex actual(md5(data));
+
+                    if (actual != expected)
+                    {
+                        throw InvalidHashException(lookup3(expected, 0), lookup3(actual, 0), "");
+                    }
+
+                    for (auto it = data.begin(), end = data.end(); keys.empty() && it < end;)
+                    {
+                        auto keyCount =
+                            Endian::read<EndianType::Little, uint16_t>(it);
+                        it += sizeof(keyCount);
+
+                        if (keyCount == 0)
+                            break;
+
+                        auto fileSize =
+                            Endian::read<EndianType::Big, uint32_t>(it);
+                        it += sizeof(fileSize);
+
+                        std::vector<char> hash(hashSizeA);
+                        std::copy(it, it + hashSizeA, hash.begin());
+                        it += hashSizeA;
+
+                        Hex current(hash);
+
+                        for (auto i = 0U; i < keyCount; ++i)
+                        {
+                            std::vector<char> key(hashSizeA);
+                            std::copy(it, it + hashSizeA, key.begin());
+                            it += hashSizeA;
+
+                            if (target == current)
+                            {
+                                keys.emplace_back(key);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return keys;
+        }
 
     public:
         /**
@@ -260,15 +265,21 @@ namespace Casc
         {
             this->stream = stream;
 
-            char magic[2];
-            this->stream->read(magic, 2);
-
-            if (magic[0] != 0x45 || magic[1] != 0x4E)
+            uint16_t signature;
+            if (read(signature) != 0x4E45)
             {
-                throw InvalidSignatureException(*reinterpret_cast<uint16_t*>(&magic), 0x454E);
+                throw InvalidSignatureException(signature, 0x4E45);
             }
 
-            this->stream->seekg(7, std::ios_base::cur);
+            this->stream->seekg(1, std::ios_base::cur);
+
+            uint8_t hashSizeA;
+            uint8_t hashSizeB;
+
+            this->hashSizeA = read<EndianType::Little, uint8_t>(hashSizeA);
+            this->hashSizeB = read<EndianType::Little, uint8_t>(hashSizeB);
+
+            this->stream->seekg(4, std::ios_base::cur);
 
             uint32_t tableSizeA;
             uint32_t tableSizeB;
@@ -292,6 +303,8 @@ namespace Casc
                 chunkHeadsA.push_back(head);
             }
 
+            std::reverse(chunkHeadsA.begin(), chunkHeadsA.end());
+
             chunksOffsetA = HeaderSize + stringTableSize + tableSizeA * sizeof(ChunkHead);
 
             this->stream->seekg(tableSizeA * ChunkBodySize, std::ios_base::cur);
@@ -304,9 +317,112 @@ namespace Casc
                 chunkHeadsB.push_back(head);
             }
 
-            chunksOffsetB = HeaderSize + stringTableSize + tableSizeA * sizeof(ChunkHead) + tableSizeA * ChunkBodySize;
+            std::reverse(chunkHeadsB.begin(), chunkHeadsB.end());
+
+            chunksOffsetB = HeaderSize + stringTableSize +
+                tableSizeA * sizeof(ChunkHead) + tableSizeA * ChunkBodySize +
+                tableSizeB * sizeof(ChunkHead);
 
             checkForErrors();
+        }
+
+        /**
+        * Inserts a file record.
+        */
+        std::vector<char> insert(const std::string &hash, const std::string &key, size_t fileSize) const
+        {
+            std::vector<char> v(22 + chunkHeadsA.size() * (hashSizeA * 2 + 4096) +
+                chunkHeadsB.size() * (hashSizeB * 2 + 4096));
+
+            std::map<Hex, ChunkBody> bodies;
+
+            size_t count = 0U;
+            for (auto i = 0U; i < chunkHeadsA.size(); ++i)
+            {
+                stream->seekg(chunksOffsetA + ChunkBodySize * i, std::ios_base::beg);
+                
+                std::array<char, 4096> data;
+                stream->read(data.data(), 4096);
+
+                for (auto it = data.begin(), end = data.end(); it < end;)
+                {
+                    ChunkBody body(hashSizeA);
+
+                    auto keyCount =
+                        Endian::read<EndianType::Little, uint16_t>(it);
+                    it += sizeof(keyCount);
+
+                    body.keys.resize(keyCount, std::vector<char>(hashSizeA));
+
+                    if (keyCount == 0)
+                        break;
+
+                    body.fileSize =
+                        Endian::read<EndianType::Big, uint32_t>(it);
+                    it += sizeof(fileSize);
+
+                    std::copy(it, it + hashSizeA, body.hash.begin());
+                    it += hashSizeA;
+
+                    for (auto i = 0U; i < keyCount; ++i)
+                    {
+                        std::copy(it, it + hashSizeA, body.keys[i].begin());
+                        it += hashSizeA;
+                    }
+
+                    bodies.insert({ Hex(body.hash), body });
+                }
+            }
+
+            /*for (auto i = 0U; i < chunkHeadsB.size(); ++i)
+            {
+                stream->seekg(chunksOffsetB + ChunkBodySize * i, std::ios_base::beg);
+
+                std::array<char, 4096> data;
+                stream->read(data.data(), 4096);
+
+                for (auto it = data.begin(), end = data.end(); it < end;)
+                {
+                    ChunkBody body(hashSizeB);
+
+                    auto keyCount =
+                        Endian::read<EndianType::Little, uint16_t>(it);
+                    it += sizeof(keyCount);
+
+                    body.keys.resize(keyCount, std::vector<char>(hashSizeB));
+
+                    if (keyCount == 0)
+                        break;
+
+                    body.fileSize =
+                        Endian::read<EndianType::Little, uint32_t>(it);
+                    it += sizeof(fileSize);
+
+                    std::copy(it, it + hashSizeB, body.hash.begin());
+                    it += hashSizeB;
+
+                    for (auto i = 0U; i < keyCount; ++i)
+                    {
+                        std::copy(it, it + hashSizeB, body.keys[i].begin());
+                        it += hashSizeB;
+                    }
+
+                    bodies.insert({ Hex(body.hash), body });
+                }
+            }*/
+
+            auto magic = write<EndianType::Little, uint16_t>(0x4E45);
+            auto unk1 = write<EndianType::Big, uint8_t>(1);
+            auto checksumSizeA = write<EndianType::Big, uint8_t>(16);
+            auto checksumSizeB = write<EndianType::Big, uint8_t>(16);
+            auto flagsA = write<EndianType::Big, uint16_t>(4);
+            auto flagsB = write<EndianType::Big, uint16_t>(4);
+            auto countA = write<EndianType::Big, uint32_t>(chunkHeadsA.size());
+            auto countB = write<EndianType::Big, uint32_t>(chunkHeadsB.size());
+            auto unk2 = write<EndianType::Big, uint8_t>(0);
+            auto stringBlockSize = write<EndianType::Big, uint32_t>(0);
+
+            return v;
         }
     };
 }

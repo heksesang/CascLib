@@ -165,7 +165,7 @@ namespace Casc
 
         std::shared_ptr<CascStream<false>> openFileByHash(const std::string &hash) const
         {
-            return openFileByKey(encoding->findKey(hash));
+            return openFileByKey(encoding_->find(hash).at(0).string());
         }
 
         std::shared_ptr<CascStream<false>> openFileByName(const std::string &name) const
@@ -177,10 +177,10 @@ namespace Casc
             root->seekg(0, std::ios_base::beg);
 
             return openFileByKey(
-                encoding->findKey(
+                encoding_->find(
                     rootHandlers.at(
                         Endian::read<EndianType::Little, uint32_t>(magic.begin(), magic.end())
-                    )->findHash(name)));
+                    )->findHash(name)).at(0).string());
         }
 
         CascReference write(std::istream &stream, CascLayoutDescriptor &descriptor)
@@ -233,8 +233,14 @@ namespace Casc
         static const int BlteSignature = 0x45544C42;
         static const int DataHeaderSize = 30U;
 
-        // The path of the archive folder.
+        // The path separator for this system.
+        const std::string PathSeparator;
+
+        // The path of the game directory.
         std::string path_;
+
+        // The relative path of the data directory.
+        std::string dataPath_;
 
         // The build info.
         CascBuildInfo buildInfo_;
@@ -252,7 +258,7 @@ namespace Casc
         std::vector<CascIndex> indices_;
 
         // The encoding file.
-        std::unique_ptr<CascEncoding> encoding;
+        std::unique_ptr<CascEncoding> encoding_;
 
         // Chunk handlers
         std::map<char, std::shared_ptr<CascBlteHandler>> blteHandlers;
@@ -308,6 +314,7 @@ namespace Casc
          * Default constructor.
          */
         CascContainer()
+            : PathSeparator(conv_type().to_bytes({ fs::path::preferred_separator }))
         {
             registerHandler<DefaultHandler>();
         }
@@ -315,16 +322,17 @@ namespace Casc
         /**
          * Constructor.
          *
-         * @param path	the path of the archive folder.
+         * @param path	    the path of the game directory.
+         * @param dataPath	the relative path to the data directory.
          */
-        CascContainer(std::string path,
+        CascContainer(const std::string &path, const std::string &dataPath,
             std::vector<std::shared_ptr<CascBlteHandler>> blteHandlers = {},
             std::vector<std::shared_ptr<CascRootHandler>> rootHandlers = {})
             : CascContainer()
         {
             registerHandlers(blteHandlers);
             registerHandlers(rootHandlers);
-            load(path);
+            load(path,  dataPath);
         }
 
         /**
@@ -347,64 +355,66 @@ namespace Casc
         /**
          * Loads a CASC archive into this container.
          *
-         * @param path	the path of the archive folder.
+         * @param path	    the path of the game directory.
+         * @param dataPath	the relative path to the data directory.
          */
-        void load(std::string path)
+        void load(const std::string &path, const std::string &dataPath)
         {
             path_ = path;
+            dataPath_ = dataPath;
             buildInfo_.parse(path + ".build.info");
 
             FileSearch fileSearch({
-                buildInfo_.build(0).at("Build Key"),
-                buildInfo_.build(0).at("CDN Key"),
                 "shmem"
             }, path_);
 
-            buildConfig_.parse(fileSearch.results().at(0));
-            cdnConfig_.parse(fileSearch.results().at(1));
-            shmem_.parse(fileSearch.results().at(2), path);
+
+            auto buildConfigHash = buildInfo_.build(0).at("Build Key");
+            auto cdnConfigHash = buildInfo_.build(0).at("CDN Key");
+
+            std::stringstream buildConfig;
+            buildConfig << path_ << PathSeparator << dataPath_
+                << PathSeparator << "config"
+                << PathSeparator << buildConfigHash.substr(0, 2)
+                << PathSeparator << buildConfigHash.substr(2, 2)
+                << PathSeparator << buildConfigHash;
+
+            std::stringstream cdnConfig;
+            cdnConfig << path_ << PathSeparator << dataPath_
+                << PathSeparator << "config"
+                << PathSeparator << cdnConfigHash.substr(0, 2)
+                << PathSeparator << cdnConfigHash.substr(2, 2)
+                << PathSeparator << cdnConfigHash;
+            
+            std::stringstream shmem;
+
+            buildConfig_.parse(buildConfig.str());
+            cdnConfig_.parse(cdnConfig.str());
+            shmem_.parse(fileSearch.results().at(0), path);
 
             for (size_t i = 0; i < shmem_.versions().size(); ++i)
             {
                 std::stringstream ss;
-                conv_type conv;
 
-                ss << shmem_.path() << conv.to_bytes({ fs::path::preferred_separator });
+                ss << shmem_.path() << PathSeparator;
                 ss << std::setw(2) << std::setfill('0') << std::hex << i;
                 ss << std::setw(8) << std::setfill('0') << std::hex << shmem_.versions().at(i);
                 ss << ".idx";
 
-                bool latestVersionMissing = !fs::exists(ss.str());
-
-                if (latestVersionMissing)
+                if (!fs::exists(ss.str()))
                 {
-                    std::stringstream old;
-                    old.str("");
-
-                    old << shmem_.path() << conv.to_bytes({ fs::path::preferred_separator });
-                    old << std::setw(2) << std::setfill('0') << std::hex << i;
-                    old << std::setw(8) << std::setfill('0') << std::hex << shmem_.versions().at(i) - 1;
-                    old << ".idx";
-
-                    indices_.push_back(old.str());
-                }
-                else
-                {
-                    indices_.push_back(ss.str());
+                    throw FileDoesNotExist(ss.str());
                 }
 
-                if (latestVersionMissing)
-                {
-                    indices_.at(i).updateVersion(shmem_.versions().at(i));
+                indices_.push_back(ss.str());
 
-                    std::ofstream fs;
-                    fs.open(ss.str(), std::ios_base::out | std::ios_base::binary);
-                    indices_.at(i).write(fs);
-                    fs.close();
-                }
+                /*std::ofstream fs;
+                fs.open(ss.str(), std::ios_base::out | std::ios_base::binary);
+                indices_.at(i).write(fs);
+                fs.close();*/
             }
 
-            encoding = std::make_unique<CascEncoding>(openFileByKey(buildConfig_["encoding"].back()));
+            encoding_ = std::make_unique<CascEncoding>(openFileByKey(buildConfig_["encoding"].back()));
         }
 
         const std::string &path() const
@@ -430,6 +440,11 @@ namespace Casc
         const CascShmem &shmem() const
         {
             return shmem_;
+        }
+
+        const CascEncoding &encoding() const
+        {
+            return *encoding_;
         }
     };
 }

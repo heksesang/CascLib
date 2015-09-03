@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
 
     try
     {
-        Casc::CascContainer container(argv[1], {
+        Casc::CascContainer container(argv[1], "Data", {
             std::make_shared<Casc::ZlibHandler>()
         });
 

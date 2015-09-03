@@ -153,16 +153,13 @@ namespace Casc
             {
                 inline std::string md5(const std::string &str)
                 {
-                    MD5 md5 = MD5(str);
-
-                    return md5.hexdigest();
+                    return MD5(str).hexdigest();
                 }
 
-                inline std::string md5(const std::vector<char> &input)
+                template <typename Container>
+                inline std::string md5(const Container &input)
                 {
-                    MD5 md5 = MD5(input);
-
-                    return md5.hexdigest();
+                    return MD5(input).hexdigest();
                 }
 
                 template <typename Container>

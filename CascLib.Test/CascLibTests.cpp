@@ -22,6 +22,7 @@ namespace CascLibTest
         {
             auto container = std::make_unique<CascContainer>(
                 R"(I:\Diablo III\)",
+                "Data",
                 std::vector<std::shared_ptr<CascBlteHandler>> {
                     std::make_shared<ZlibHandler>()
             });
@@ -31,6 +32,7 @@ namespace CascLibTest
 		{
             auto container = std::make_unique<CascContainer>(
                 R"(I:\Diablo III\)",
+                "Data",
                 std::vector<std::shared_ptr<CascBlteHandler>> {
                     std::make_shared<ZlibHandler>()
             });
@@ -49,7 +51,7 @@ namespace CascLibTest
             root->read(magic, 4);
             root->read((char*)&count, 4);
 
-            for (int i = 0; i < count; ++i)
+            /*for (int i = 0; i < count; ++i)
             {
                 std::array<uint8_t, 16> hash;
                 std::string name;
@@ -81,36 +83,34 @@ namespace CascLibTest
                 {
                     continue;
                 }
-            }
+            }*/
 
             root->seekg(0, std::ios_base::beg);
             arr = new char[(size_t)size];
 
             root->read(arr, size);
 
-            fs.open("root.out", std::ios_base::out | std::ios_base::binary);
+            fs.open("root.d3.out", std::ios_base::out | std::ios_base::binary);
 
             fs.write(arr, size);
             fs.close();
 
             delete[] arr;
-
-
 		}
 
 		TEST_METHOD(GetEncodingFile)
 		{
             auto container = std::make_unique<CascContainer>(
                 R"(I:\Diablo III\)",
+                "Data",
                 std::vector<std::shared_ptr<CascBlteHandler>> {
                     std::make_shared<ZlibHandler>()
             });
-			CascEncoding enc(
-                container->openFileByKey(container->buildConfig()["encoding"].back()));
 
-			auto key = enc.findKey(container->buildConfig()["root"].front());
+			auto key = container->encoding().find(container->buildConfig()["root"].front());
+            container->openFileByKey(key.at(0).string());
 
-            /*auto enc = container->openFileByKey(container->buildConfig()["encoding"].back());
+            auto enc = container->openFileByKey(container->buildConfig()["encoding"].back());
 
             enc->seekg(0, std::ios_base::end);
             auto size = enc->tellg();
@@ -121,13 +121,45 @@ namespace CascLibTest
             enc->read(arr, size);
 
             std::fstream fs;
-            fs.open("enc.out", std::ios_base::out | std::ios_base::binary);
+            fs.open("enc.d3.out", std::ios_base::out | std::ios_base::binary);
 
             fs.write(arr, size);
             fs.close();
 
-            delete[] arr;*/
+            delete[] arr;
 		}
+
+        TEST_METHOD(GetUnknownFile)
+        {
+            auto container = std::make_unique<CascContainer>(
+                R"(I:\World of Warcraft\)",
+                "Data",
+                std::vector<std::shared_ptr<CascBlteHandler>> {
+                std::make_shared<ZlibHandler>()
+            });
+            /*CascEncoding enc(
+            container->openFileByKey(container->buildConfig()["encoding"].back()));
+
+            auto key = enc.find(container->buildConfig()["root"].front());*/
+
+            auto enc = container->openFileByKey("0000078f0af7715be04aef1aaed38b90");
+
+            enc->seekg(0, std::ios_base::end);
+            auto size = enc->tellg();
+
+            enc->seekg(0, std::ios_base::beg);
+            auto arr = new char[(size_t)size];
+
+            enc->read(arr, size);
+
+            std::fstream fs;
+            fs.open("0000078f0af7715be04aef1aaed38b90", std::ios_base::out | std::ios_base::binary);
+
+            fs.write(arr, size);
+            fs.close();
+
+            delete[] arr;
+        }
 
 		TEST_METHOD(ReadConfiguration)
 		{
@@ -148,19 +180,28 @@ namespace CascLibTest
         {
             auto container = std::make_unique<CascContainer>(
                 R"(I:\Diablo III\)",
+                "Data",
                 std::vector<std::shared_ptr<CascBlteHandler>> {
                     std::make_shared<ZlibHandler>()
             });
 
-            auto enc = container->openFileByKey(container->buildConfig()["encoding"].back());
+            std::fstream fs;
+            fs.open(R"(C:\Users\Gunnar\Source\Repos\CascLib\Fast\casc.exe)", std::ios_base::in | std::ios_base::binary);
 
-            enc->seekg(0, std::ios_base::end);
-            auto size = enc->tellg();
+            if (fs.fail())
+            {
+                throw std::runtime_error("Failed to open file.");
+            }
 
-            enc->seekg(0, std::ios_base::beg);
+            fs.seekg(0, std::ios_base::end);
+            auto size = fs.tellg();
 
-            container->write(*enc.get(), CascLayoutDescriptor({
-                CascChunkDescriptor(CompressionMode::None, 0, (size_t)size) }));
+            fs.seekg(0, std::ios_base::beg);
+
+            /*container->write(fs, CascLayoutDescriptor({
+                CascChunkDescriptor(CompressionMode::None, 0, (size_t)size) }));*/
+
+            auto enc = container->encoding().insert("", "", 0);
         }
 
         TEST_METHOD(GetBucket)

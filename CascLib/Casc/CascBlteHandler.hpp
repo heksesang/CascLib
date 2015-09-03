@@ -77,14 +77,14 @@ namespace Casc
 
         std::unique_ptr<char[]> read(std::filebuf &buf, off_type offset, size_t inSize, size_t outSize, off_type &chunkSize) override
         {
-            char* out = new char[outSize];
+            auto out = std::make_unique<char[]>(outSize);
 
             if (offset > 0)
                 buf.pubseekoff(offset, std::ios_base::cur);
             
-            if (buf.sgetn(out, outSize) == outSize)
+            if (buf.sgetn(out.get(), outSize) == outSize)
             {
-                return std::unique_ptr<char[]>(out);
+                return out;
             }
 
             return nullptr;
