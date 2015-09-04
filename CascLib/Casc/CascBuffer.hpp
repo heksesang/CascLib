@@ -56,9 +56,6 @@ namespace Casc
 
             // The offset of the last byte in the buffer.
             Traits::off_type end;
-
-            // The offset of the current byte in the buffer.
-            Traits::off_type offset;
         };
 
         struct ChunkInfo
@@ -287,7 +284,7 @@ namespace Casc
         */
         pos_type pos()
         {
-            return pos_type(currentBuffer.offset);
+            return pos_type(currentBuffer.begin + gptr() - eback());
         }
 
         /**
@@ -302,17 +299,14 @@ namespace Casc
             {
             case std::ios_base::cur:
                 setg(eback(), gptr() + offset, egptr());
-                currentBuffer.offset += offset;
                 break;
 
             case std::ios_base::beg:
                 setg(eback(), eback() + offset, egptr());
-                currentBuffer.offset = offset;
                 break;
 
             case std::ios_base::end:
                 setg(eback(), egptr() - offset, egptr());
-                currentBuffer.offset = currentBuffer.end - offset;
                 break;
 
             default:
@@ -335,9 +329,7 @@ namespace Casc
                 return pos();
             }
 
-            currentBuffer.offset += offset;
-
-            return buffer(currentBuffer.offset);
+            return buffer(pos() + offset);
         }
 
         /**
@@ -398,6 +390,7 @@ namespace Casc
                 static_cast<size_t>(chunks.back().end - offset));
             
             pos_type end = offset + bufferSize;
+            pos_type beg = offset;
 
             ChunkInfo chunk;
             size_t count;
@@ -434,14 +427,13 @@ namespace Casc
             }
 
             currentBuffer.begin = offset - pos;
-            currentBuffer.offset = currentBuffer.begin;
             currentBuffer.end = offset;
 
             setg(out.get(), out.get(), out.get() + currentBuffer.end - currentBuffer.begin);
 
             isBuffering = false;
 
-            return pos_type(offset);
+            return this->pos();
         }
 
     protected:
@@ -615,7 +607,7 @@ namespace Casc
 
             this->currentBuffer.begin = 0;
             this->currentBuffer.end = -1;
-            this->currentBuffer.offset = 0;
+            this->setg(nullptr, nullptr, nullptr);
 
             if (chunks.size() > 0)
             {

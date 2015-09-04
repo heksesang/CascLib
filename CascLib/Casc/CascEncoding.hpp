@@ -135,6 +135,9 @@ namespace Casc
         // The offset of the chunks in table B.
         std::streamsize chunksOffsetB;
 
+        // The encoding profiles
+        std::vector<std::vector<CascEncodingBlock>> profiles;
+
         std::vector<Hex> searchTable(Hex target, const std::vector<ChunkHead> &heads, std::streamsize offset, size_t hashSize) const
         {
             std::vector<Hex> keys;
@@ -293,7 +296,13 @@ namespace Casc
 
             read<EndianType::Big>(stringTableSize);
 
-            this->stream->seekg(stringTableSize, std::ios_base::cur);
+            while (this->stream->tellg() < (HeaderSize + stringTableSize - 1))
+            {
+                std::string profile;
+                std::getline(*this->stream, profile, '\0');
+
+                profiles.emplace_back(CascEncodingBlock::parse(profile));
+            }
 
             for (unsigned int i = 0; i < tableSizeA; ++i)
             {

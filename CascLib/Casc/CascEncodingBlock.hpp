@@ -63,155 +63,162 @@ namespace Casc
                 ++it;
             }
 
-            if (*it != '\0')
+            if (*it == '\0')
             {
-                if (*it != ':')
-                    return;
+                return;
+            }
 
-                *encodingModeEnd = '\0';
+            if (*it != ':')
+                return;
 
+            *encodingModeEnd = '\0';
+
+            do
+            {
+                ++it;
+            } while (isWhitespace(*it));
+
+            if (*it == '{')
+            {
                 do
                 {
                     ++it;
                 } while (isWhitespace(*it));
 
-                if (*it == '{')
+                *nParams = 1;
+
+                if (!*it)
+                    return;
+
+                char *paramsStart = it;
+
+                int state = 1;
+                do
                 {
-                    do
+                    if (!isWhitespace(*it))
                     {
-                        ++it;
-                    } while (isWhitespace(*it));
+                        if (!state)
+                            return;
 
-                    *nParams = 1;
-
-                    if (!*it)
-                        return;
-
-                    char *paramsStart = it;
-
-                    int state = 1;
-                    do
-                    {
-                        if (!isWhitespace(*it))
+                        if (*it == '{')
                         {
-                            if (!state)
-                                return;
-
-                            if (*it == '{')
+                            state++;
+                        }
+                        else
+                        {
+                            if (*it == '}')
                             {
-                                state++;
+                                --state;
                             }
                             else
                             {
-                                if (*it == '}')
-                                {
-                                    --state;
-                                }
-                                else
-                                {
-                                    if (*it == ',' && state == 1)
-                                        ++*nParams;
-                                }
+                                if (*it == ',' && state == 1)
+                                    ++*nParams;
                             }
                         }
-                    } while (*++it);
+                    }
+                } while (*++it);
 
-                    if (state)
-                        return;
+                if (state)
+                    return;
 
-                    char **paramArray = (char **)new char[(4 * (*nParams) | -((uint64_t)*nParams >> 30 != 0))];
+                char **paramArray = (char **)new char[(4 * (*nParams) | -((uint64_t)*nParams >> 30 != 0))];
 
-                    if (*params)
-                        delete [] *params;
-                    *params = paramArray;
+                if (*params)
+                    delete [] *params;
+                *params = paramArray;
 
-                    int paramIndex = 0;
-                    **params = paramsStart;
-                    for (int state = 1; *paramsStart; ++paramsStart)
+                int paramIndex = 0;
+                **params = paramsStart;
+                for (int state = 1; *paramsStart; ++paramsStart)
+                {
+                    if (*paramsStart != ' ' && *paramsStart != '\t' && *paramsStart != '\v' && *paramsStart != '\r' && *paramsStart != '\f' && *paramsStart != '\n')
                     {
-                        if (*paramsStart != ' ' && *paramsStart != '\t' && *paramsStart != '\v' && *paramsStart != '\r' && *paramsStart != '\f' && *paramsStart != '\n')
+                        if (!state)
+                            return;
+
+                        if (*paramsStart == '{')
                         {
+                            ++state;
+                        }
+                        else if (*paramsStart == '}')
+                        {
+                            --state;
+
                             if (!state)
-                                return;
-
-                            if (*paramsStart == '{')
                             {
-                                ++state;
-                            }
-                            else if (*paramsStart == '}')
-                            {
-                                --state;
-
-                                if (!state)
+                                char *paramsEnd;
+                                for (paramsEnd = paramsStart; paramsEnd > (*params)[paramIndex]; --paramsEnd)
                                 {
-                                    char *paramsEnd;
-                                    for (paramsEnd = paramsStart; paramsEnd > (*params)[paramIndex]; --paramsEnd)
-                                    {
-                                        char ch = *(paramsEnd - 1);
-                                        if (ch != ' ' && ch != '\t' && ch != '\v' && ch != '\r' && ch != '\f' && ch != '\n')
-                                            break;
-                                    }
-                                    *paramsEnd = '\0';
-                                }
-                            }
-                            else if (*paramsStart == ',' && state == 1)
-                            {
-                                char *paramsEnd = paramsStart;
-                                if (paramsStart > (*params)[paramIndex])
-                                {
-                                    do
-                                    {
-                                        if (!isWhitespace(*(paramsEnd - 1)))
-                                            break;
-                                        --paramsEnd;
-                                    } while (paramsEnd > (*params)[paramIndex]);
-                                }
-                                *paramsEnd = '\0';
-                                ++paramIndex;
-                                for (; *paramsStart; ++paramsStart)
-                                {
-                                    if (!isWhitespace(paramsStart[1]))
+                                    char ch = *(paramsEnd - 1);
+                                    if (ch != ' ' && ch != '\t' && ch != '\v' && ch != '\r' && ch != '\f' && ch != '\n')
                                         break;
                                 }
-                                (*params)[paramIndex] = paramsStart + 1;
+                                *paramsEnd = '\0';
                             }
                         }
+                        else if (*paramsStart == ',' && state == 1)
+                        {
+                            char *paramsEnd = paramsStart;
+                            if (paramsStart > (*params)[paramIndex])
+                            {
+                                do
+                                {
+                                    if (!isWhitespace(*(paramsEnd - 1)))
+                                        break;
+                                    --paramsEnd;
+                                } while (paramsEnd > (*params)[paramIndex]);
+                            }
+                            *paramsEnd = '\0';
+                            ++paramIndex;
+                            for (; *paramsStart; ++paramsStart)
+                            {
+                                if (!isWhitespace(paramsStart[1]))
+                                    break;
+                            }
+                            (*params)[paramIndex] = paramsStart + 1;
+                        }
                     }
-
-                    if (paramIndex + 1 != *nParams)
-                        abort();
-                }
-                else
-                {
-                    *nParams = 1;
-
-                    char **paramArray = (char **)new char[4];
-
-                    if (*params)
-                        delete [] *params;
-                    *params = paramArray;
-
-                    **params = it;
-
-                    for (it = &it[strlen(it)]; it > **params; --it)
-                    {
-                        char ch = *(it - 1);
-                        if (ch != ' ' && ch != '\t' && ch != '\v' && ch != '\r' && ch != '\f' && ch != '\n')
-                            break;
-                    }
-
-                    *it = '\0';
                 }
 
-                if (*nParams == 1 && !***params)
-                {
-                    *nParams = 0;
-
-                    if (*params)
-                        delete [] *params;
-                    *params = 0;
-                }
+                if (paramIndex + 1 != *nParams)
+                    abort();
             }
+            else
+            {
+                *nParams = 1;
+
+                char **paramArray = (char **)new char[4];
+
+                if (*params)
+                    delete [] *params;
+                *params = paramArray;
+
+                **params = it;
+
+                for (it = &it[strlen(it)]; it > **params; --it)
+                {
+                    char ch = *(it - 1);
+                    if (ch != ' ' && ch != '\t' && ch != '\v' && ch != '\r' && ch != '\f' && ch != '\n')
+                        break;
+                }
+
+                *it = '\0';
+            }
+
+            if (*nParams == 1 && !***params)
+            {
+                *nParams = 0;
+
+                if (*params)
+                    delete [] *params;
+                *params = 0;
+            }
+            else
+            {
+                return;
+            }
+
             throw EncodingProfileParserException(std::string{ encodingProfile });
         }
 
