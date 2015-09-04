@@ -223,6 +223,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Casc\CascEncodingBlock.hpp" />
     <ClInclude Include="Casc\CascLayoutDescriptor.hpp" />
     <ClInclude Include="Casc\CascBuffer.hpp" />
     <ClInclude Include="Casc\CascConfiguration.hpp" />
@@ -237,6 +238,7 @@
     <ClInclude Include="Casc\Common.hpp" />
     <ClInclude Include="Casc\Exceptions.hpp" />
     <ClInclude Include="Casc\Exceptions\CascException.hpp" />
+    <ClInclude Include="Casc\Exceptions\EncodingProfileParserException.hpp" />
     <ClInclude Include="Casc\Exceptions\FileDoesNotExistException.hpp" />
     <ClInclude Include="Casc\Exceptions\FileNotFoundException.hpp" />
     <ClInclude Include="Casc\Exceptions\InvalidHashException.hpp" />

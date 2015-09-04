@@ -59,6 +59,14 @@ namespace Casc
                 return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
             }
 
+            inline bool isWhitespace(int value)
+            {
+                bool result;
+
+                result = value == ' ' || value == '\t' || value == '\v' || value == '\r' || value == '\f' || value == '\n';
+                return result;
+            }
+
             namespace Endian
             {
                 enum class EndianType

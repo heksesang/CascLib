@@ -45,6 +45,7 @@ namespace Casc
     class CascBuildInfo;
     class CascConfiguration;
     class CascEncoding;
+    class CascEncodingBlock;
     class CascIndex;
     class CascLayoutDescriptor;
     class CascRootHandler;
@@ -79,6 +80,7 @@ namespace Casc
 #include "StreamOps.hpp"
 
 #include "Exceptions/CascException.hpp"
+#include "Exceptions/EncodingProfileParserException.hpp"
 #include "Exceptions/FileDoesNotExistException.hpp"
 #include "Exceptions/FileNotFoundException.hpp"
 #include "Exceptions/GenericException.hpp"
@@ -116,6 +118,7 @@ namespace std
     };
 }
 
+#include "CascEncodingBlock.hpp"
 #include "CascReference.hpp"
 #include "CascBlteHandler.hpp"
 #include "CascBuffer.hpp"

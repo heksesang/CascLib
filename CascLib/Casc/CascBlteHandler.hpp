@@ -105,7 +105,8 @@ namespace Casc
     */
     class ZlibHandler : public CascBlteHandler
     {
-        const int CompressionLevel = Z_DEFAULT_COMPRESSION;
+        const int CompressionLevel = 9;
+        const int WindowBits = 15;
 
         ZStreamBase::char_t* out = nullptr;
         size_t avail_out = 0;

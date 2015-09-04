@@ -114,6 +114,12 @@
     <ClInclude Include="Casc\Exceptions\FileDoesNotExistException.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Casc\CascEncodingBlock.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Exceptions\EncodingProfileParserException.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\The CASC Filesystem_v1-2.txt" />
