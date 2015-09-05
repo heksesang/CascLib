@@ -127,7 +127,6 @@ namespace std
 #include "CascContainer.hpp"
 #include "CascEncoding.hpp"
 #include "CascIndex.hpp"
-#include "CascLayoutDescriptor.hpp"
 #include "CascRootHandler.hpp"
 #include "CascShmem.hpp"
 #include "CascStream.hpp"

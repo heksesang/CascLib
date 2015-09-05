@@ -224,7 +224,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Casc\CascEncodingBlock.hpp" />
-    <ClInclude Include="Casc\CascLayoutDescriptor.hpp" />
     <ClInclude Include="Casc\CascBuffer.hpp" />
     <ClInclude Include="Casc\CascConfiguration.hpp" />
     <ClInclude Include="Casc\CascBuildInfo.hpp" />

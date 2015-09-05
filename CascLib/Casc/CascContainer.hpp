@@ -44,7 +44,6 @@
 #include "CascIndex.hpp"
 #include "CascStream.hpp"
 #include "CascRootHandler.hpp"
-#include "CascLayoutDescriptor.hpp"
 
 namespace Casc
 {
@@ -57,7 +56,7 @@ namespace Casc
     class CascContainer
     {
     private:
-        typedef std::pair<CascChunkDescriptor, std::vector<char>> descriptor_type;
+        typedef std::pair<CascEncodingBlock, std::vector<char>> descriptor_type;
         typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
 
         template <typename SrcContainer, typename DestContainer>
@@ -67,12 +66,12 @@ namespace Casc
             return offset + (std::end(src) - std::begin(src));
         }
 
-        std::vector<char> createDataHeader(const std::vector<char> &blteHeader, const std::vector<descriptor_type> &chunks) const
+        std::vector<char> createDataHeader(const std::vector<char> &blteHeader, const std::vector<descriptor_type> &blocks) const
         {
             auto blteHeaderSize = blteHeader.size();
             auto dataSize = DataHeaderSize + blteHeader.size() +
-                std::accumulate(chunks.begin(), chunks.end(), 0,
-                    [](uint32_t value, descriptor_type descriptor) { return value + descriptor.second.size(); });
+                std::accumulate(blocks.begin(), blocks.end(), 0,
+                    [](uint32_t value, descriptor_type block) { return value + block.second.size(); });
 
             std::vector<char> header(DataHeaderSize, '\0');
 
@@ -84,12 +83,12 @@ namespace Casc
             return std::move(header);
         }
 
-        std::vector<char> createBlteHeader(const std::vector<descriptor_type> &chunks) const
+        std::vector<char> createBlteHeader(const std::vector<descriptor_type> &blocks) const
         {
-            auto dataSize = std::accumulate(chunks.begin(), chunks.end(), 0,
-                [](uint32_t value, descriptor_type descriptor) { return value + descriptor.second.size(); });
+            auto dataSize = std::accumulate(blocks.begin(), blocks.end(), 0,
+                [](uint32_t value, descriptor_type block) { return value + block.second.size(); });
             
-            auto headerSize = 8 + 8 + 24 * chunks.size();
+            auto headerSize = 8 + 8 + 24 * blocks.size();
 
             size_t pos = 0;
 
@@ -100,14 +99,14 @@ namespace Casc
 
             pos = copyToVector(Endian::write<EndianType::Big, uint32_t>(headerSize), header, pos);
             pos = copyToVector(Endian::write<EndianType::Big, uint16_t>(0xF00), header, pos);
-            pos = copyToVector(Endian::write<EndianType::Big, uint16_t>((uint16_t)chunks.size()), header, pos);
+            pos = copyToVector(Endian::write<EndianType::Big, uint16_t>((uint16_t)blocks.size()), header, pos);
 
-            for (auto &chunk : chunks)
+            for (auto &block : blocks)
             {
-                pos = copyToVector(Endian::write<EndianType::Big, uint32_t>((uint16_t)chunk.second.size()), header, pos);
-                pos = copyToVector(Endian::write<EndianType::Big, uint32_t>((uint16_t)chunk.first.count()), header, pos);
+                pos = copyToVector(Endian::write<EndianType::Big, uint32_t>((uint16_t)block.second.size()), header, pos);
+                pos = copyToVector(Endian::write<EndianType::Big, uint32_t>((uint16_t)block.first.size()), header, pos);
                 
-                auto hash = Hex(md5(chunk.second)).data();
+                auto hash = Hex(md5(block.second)).data();
 
                 pos = copyToVector(hash, header, pos);
             }
@@ -115,23 +114,25 @@ namespace Casc
             return std::move(header);
         }
 
-        std::vector<descriptor_type> createChunkData(std::istream &stream, const CascLayoutDescriptor &descriptor) const
+        std::vector<descriptor_type> createChunkData(std::istream &stream, const std::vector<CascEncodingBlock> &blocks) const
         {
             std::vector<descriptor_type> chunks;
 
-            for (auto &chunk : descriptor.chunks())
+            auto offset = 0U;
+            for (auto &block : blocks)
             {
-                stream.seekg(chunk.begin(), std::ios_base::beg);
-                chunks.emplace_back(chunk,
-                    blteHandlers.at(chunk.mode())->write(stream, chunk.count()));
+                stream.seekg(offset, std::ios_base::beg);
+                chunks.emplace_back(block,
+                    blteHandlers.at(block.mode())->write(stream, block.size()));
+                offset += block.size();
             }
 
             return std::move(chunks);
         }
 
-        std::vector<char> createData(std::istream &stream, const CascLayoutDescriptor &descriptor) const
+        std::vector<char> createData(std::istream &stream, const std::vector<CascEncodingBlock> &blocks) const
         {
-            auto chunks = createChunkData(stream, descriptor);
+            auto chunks = createChunkData(stream, blocks);
             auto blteHeader = createBlteHeader(chunks);
             auto dataHeader = createDataHeader(blteHeader, chunks);
 
@@ -183,7 +184,7 @@ namespace Casc
                     )->findHash(name)).at(0).string());
         }
 
-        CascReference write(std::istream &stream, CascLayoutDescriptor &descriptor)
+        CascReference write(std::istream &stream, std::vector<CascEncodingBlock> &descriptor)
         {
             auto arr = createData(stream, descriptor);
             

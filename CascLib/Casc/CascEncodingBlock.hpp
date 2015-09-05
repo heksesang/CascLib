@@ -35,10 +35,17 @@ namespace Casc
 
     class CascEncodingBlock
     {
-        size_t size;
-        bool wildcard;
-        CompressionMode mode;
-        std::vector<std::string> params;
+        // The size of the block.
+        size_t size_;
+
+        // The block is "greedy".
+        bool wildcard_;
+
+        // The encoding mode of the block.
+        CompressionMode mode_;
+
+        // The encoder parameters for the block.
+        std::vector<std::string> params_;
 
         static void parseEncodingProfile(char *encodingProfile, char **encodingMode, char ***params, unsigned int *nParams)
         {
@@ -224,10 +231,10 @@ namespace Casc
 
     public:
         CascEncodingBlock(std::string input, std::vector<std::string> &params)
-            : params(params), wildcard(false), size(0), mode(CompressionMode::None)
+            : params_(params), wildcard_(false), size_(0), mode_(CompressionMode::None)
         {
             auto it = std::find(input.begin(), input.end(), '=');
-            this->mode = (CompressionMode)*(it + 1);
+            this->mode_ = (CompressionMode)*(it + 1);
 
             std::string size(input.begin(), it);
             std::vector<char> symbols{ 'M', 'K', '*' };
@@ -235,7 +242,7 @@ namespace Casc
 
             std::stringstream ss;
             ss << std::string(size.begin(), it);
-            ss >> this->size;
+            ss >> this->size_;
 
             if (it != size.end())
             {
@@ -244,19 +251,39 @@ namespace Casc
                     switch (*it)
                     {
                     case 'M':
-                        this->size *= 1024 * 1024;
+                        this->size_ *= 1024 * 1024;
                         break;
 
                     case 'K':
-                        this->size *= 1024;
+                        this->size_ *= 1024;
                         break;
 
                     case '*':
-                        wildcard = true;
+                        wildcard_ = true;
                         break;
                     }
                 }
             }
+        }
+
+        decltype(auto) size() const
+        {
+            return size_;
+        }
+
+        decltype(auto) wildcard() const
+        {
+            return wildcard_;
+        }
+
+        decltype(auto) mode() const
+        {
+            return mode_;
+        }
+
+        decltype(auto) params() const
+        {
+            return (params_);
         }
 
         static std::vector<CascEncodingBlock> parse(std::string profile)
