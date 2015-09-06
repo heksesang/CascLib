@@ -32,8 +32,7 @@ namespace Casc
 {
     namespace Filesystem
     {
-        using namespace Casc::Shared;
-        using namespace Casc::Shared::Functions::Endian;
+        using namespace Casc::Functions::Endian;
 
         /**
          * Maps filename to file content MD5 hash.

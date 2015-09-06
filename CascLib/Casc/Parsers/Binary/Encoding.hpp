@@ -31,10 +31,9 @@ namespace Casc
     {
         namespace Binary
         {
-            using namespace Casc::Shared;
-            using namespace Casc::Shared::Functions;
-            using namespace Casc::Shared::Functions::Endian;
-            using namespace Casc::Shared::Functions::Hash;
+            using namespace Casc::Functions;
+            using namespace Casc::Functions::Endian;
+            using namespace Casc::Functions::Hash;
 
             /**
              * Maps file content MD5 hash to file key.

@@ -63,7 +63,7 @@ namespace Casc
                 Reference(InputIt first, InputIt last,
                     size_t keySize, size_t locationSize, size_t lengthSize, size_t segmentBits)
                 {
-                    using namespace Casc::Shared::Functions::Endian;
+                    using namespace Casc::Functions::Endian;
 
                     auto it = first;
 
@@ -123,7 +123,7 @@ namespace Casc
                 std::vector<char> serialize(size_t keySize, size_t locationSize,
                     size_t lengthSize, size_t segmentBits) const
                 {
-                    using namespace Casc::Shared::Functions::Endian;
+                    using namespace Casc::Functions::Endian;
 
                     std::vector<char> v(keySize + locationSize + lengthSize);
 

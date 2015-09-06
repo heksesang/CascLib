@@ -34,8 +34,7 @@ namespace Casc
     {
         namespace Text
         {
-            using namespace Casc::Shared;
-            using namespace Casc::Shared::Functions;
+            using namespace Casc::Functions;
 
             class EncodingBlock
             {

@@ -51,10 +51,9 @@
 
 namespace Casc
 {
-    using namespace Casc::Shared;
-    using namespace Casc::Shared::Functions;
-    using namespace Casc::Shared::Functions::Endian;
-    using namespace Casc::Shared::Functions::Hash;
+    using namespace Casc::Functions;
+    using namespace Casc::Functions::Endian;
+    using namespace Casc::Functions::Hash;
 
     /**
      * A container for a CASC archive.

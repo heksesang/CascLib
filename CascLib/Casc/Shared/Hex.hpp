@@ -26,125 +26,122 @@
 
 namespace Casc
 {
-    namespace Shared
+    class Hex
     {
-        class Hex
+        std::vector<uint8_t> bytes;
+        std::string str;
+
+    public:
+        typedef uint8_t value_type;
+
+        Hex()
         {
-            std::vector<uint8_t> bytes;
-            std::string str;
 
-        public:
-            typedef uint8_t value_type;
+        }
 
-            Hex()
+        template <typename Container>
+        Hex(const Container &container)
+            : bytes(std::begin(container), std::end(container))
+        {
+            std::stringstream ss;
+            ss << std::hex << std::setfill('0');
+
+            for (auto it = std::begin(bytes); it != std::end(bytes); ++it)
             {
-
+                ss << std::setw(2) << (size_t)*it;
             }
 
-            template <typename Container>
-            Hex(const Container &container)
-                : bytes(std::begin(container), std::end(container))
+            this->str = ss.str();
+        }
+
+        template <typename InputIt>
+        Hex(InputIt first, InputIt last)
+            : bytes(first, last)
+        {
+            std::stringstream ss;
+            ss << std::hex << std::setfill('0');
+
+            for (auto it = first; it != last; ++it)
+            {
+                ss << std::setw(2) << *it;
+            }
+
+            this->str = ss.str();
+        }
+
+        Hex(const std::string str)
+            : bytes(str.size() / 2), str(str)
+        {
+            for (unsigned int i = 0; i < bytes.size(); ++i)
             {
                 std::stringstream ss;
-                ss << std::hex << std::setfill('0');
+                ss << str[i * 2] << str[i * 2 + 1];
 
-                for (auto it = std::begin(bytes); it != std::end(bytes); ++it)
-                {
-                    ss << std::setw(2) << (size_t)*it;
-                }
+                int i1;
+                ss >> std::hex >> i1;
 
-                this->str = ss.str();
+                bytes[i] = i1;
             }
+        }
 
-            template <typename InputIt>
-            Hex(InputIt first, InputIt last)
-                : bytes(first, last)
-            {
-                std::stringstream ss;
-                ss << std::hex << std::setfill('0');
+        const std::vector<uint8_t> &data()
+        {
+            return bytes;
+        }
 
-                for (auto it = first; it != last; ++it)
-                {
-                    ss << std::setw(2) << *it;
-                }
+        const std::string &string()
+        {
+            return str;
+        }
 
-                this->str = ss.str();
-            }
+        decltype(auto) begin() const noexcept
+        {
+            return bytes.cbegin();
+        }
 
-            Hex(const std::string str)
-                : bytes(str.size() / 2), str(str)
-            {
-                for (unsigned int i = 0; i < bytes.size(); ++i)
-                {
-                    std::stringstream ss;
-                    ss << str[i * 2] << str[i * 2 + 1];
+        decltype(auto) end() const noexcept
+        {
+            return bytes.cend();
+        }
 
-                    int i1;
-                    ss >> std::hex >> i1;
+        decltype(auto) size() const noexcept
+        {
+            return bytes.size();
+        }
 
-                    bytes[i] = i1;
-                }
-            }
+        decltype(auto) empty() const noexcept
+        {
+            return bytes.empty();
+        }
 
-            const std::vector<uint8_t> &data()
-            {
-                return bytes;
-            }
+        bool operator ==(const Hex &b) const
+        {
+            return str == b.str;
+        }
 
-            const std::string &string()
-            {
-                return str;
-            }
+        bool operator !=(const Hex &b) const
+        {
+            return !(*this == b);
+        }
 
-            decltype(auto) begin() const noexcept
-            {
-                return bytes.cbegin();
-            }
+        bool operator <(const Hex &b) const
+        {
+            return str < b.str;
+        }
 
-            decltype(auto) end() const noexcept
-            {
-                return bytes.cend();
-            }
+        bool operator >(const Hex &b) const
+        {
+            return str > b.str;
+        }
 
-            decltype(auto) size() const noexcept
-            {
-                return bytes.size();
-            }
+        bool operator <=(const Hex &b) const
+        {
+            return b.str <= str;
+        }
 
-            decltype(auto) empty() const noexcept
-            {
-                return bytes.empty();
-            }
-
-            bool operator ==(const Hex &b) const
-            {
-                return str == b.str;
-            }
-
-            bool operator !=(const Hex &b) const
-            {
-                return !(*this == b);
-            }
-
-            bool operator <(const Hex &b) const
-            {
-                return str < b.str;
-            }
-
-            bool operator >(const Hex &b) const
-            {
-                return str > b.str;
-            }
-
-            bool operator <=(const Hex &b) const
-            {
-                return b.str <= str;
-            }
-
-            bool operator >=(const Hex &b) const
-            {
-                return b.str >= str;
-            }
-        };
-    }
+        bool operator >=(const Hex &b) const
+        {
+            return b.str >= str;
+        }
+    };
 }

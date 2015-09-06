@@ -36,210 +36,207 @@
 
 namespace Casc
 {
-    namespace Shared
+    namespace Functions
     {
-        namespace Functions
+        template <typename M>
+        std::vector<typename M::mapped_type> mapToVector(const  M &m) {
+            std::vector<typename M::mapped_type> v;
+
+            for (typename M::const_iterator it = m.begin(); it != m.end(); ++it) {
+                v.push_back(it->second);
+            }
+
+            return std::move(v);
+        }
+
+        inline std::string trim(const std::string s)
         {
-            template <typename M>
-            std::vector<typename M::mapped_type> mapToVector(const  M &m) {
-                std::vector<typename M::mapped_type> v;
+            int (*pred)(int c) = std::isspace;
+            auto wsfront = std::find_if_not(s.begin(), s.end(), pred);
+            auto wsback = std::find_if_not(s.rbegin(), s.rend(), pred).base();
+            return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
+        }
 
-                for (typename M::const_iterator it = m.begin(); it != m.end(); ++it) {
-                    v.push_back(it->second);
+        inline bool isWhitespace(int value)
+        {
+            bool result;
+
+            result = value == ' ' || value == '\t' || value == '\v' || value == '\r' || value == '\f' || value == '\n';
+            return result;
+        }
+
+        namespace Endian
+        {
+            template <IO::EndianType Type, typename T, typename InputIt>
+            inline T read(InputIt first, InputIt last = InputIt(nullptr))
+            {
+                using namespace Casc::Exceptions;
+
+                if (last == InputIt(nullptr))
+                {
+                    last = first + sizeof(T);
                 }
 
-                return std::move(v);
-            }
-
-            inline std::string trim(const std::string s)
-            {
-                int (*pred)(int c) = std::isspace;
-                auto wsfront = std::find_if_not(s.begin(), s.end(), pred);
-                auto wsback = std::find_if_not(s.rbegin(), s.rend(), pred).base();
-                return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
-            }
-
-            inline bool isWhitespace(int value)
-            {
-                bool result;
-
-                result = value == ' ' || value == '\t' || value == '\v' || value == '\r' || value == '\f' || value == '\n';
-                return result;
-            }
-
-            namespace Endian
-            {
-                template <IO::EndianType Type, typename T, typename InputIt>
-                inline T read(InputIt first, InputIt last = InputIt(nullptr))
+                if ((last - first) > sizeof(T))
                 {
-                    using namespace Casc::Exceptions;
+                    throw CascException("The iterators are not valid for this data type.");
+                }
 
-                    if (last == InputIt(nullptr))
-                    {
-                        last = first + sizeof(T);
-                    }
+                T output{};
+                auto it = first;
 
-                    if ((last - first) > sizeof(T))
-                    {
-                        throw CascException("The iterators are not valid for this data type.");
-                    }
-
-                    T output{};
-                    auto it = first;
-
-                    typedef typename std::make_unsigned<typename std::iterator_traits<InputIt>::value_type>::type* unsigned_ptr;
-                    typedef typename std::make_signed<typename std::iterator_traits<InputIt>::value_type>::type* signed_ptr;
+                typedef typename std::make_unsigned<typename std::iterator_traits<InputIt>::value_type>::type* unsigned_ptr;
+                typedef typename std::make_signed<typename std::iterator_traits<InputIt>::value_type>::type* signed_ptr;
                     
-                    switch (Type)
-                    {
-                    case IO::EndianType::Little:
-                        for (it = first; it != last; ++it)
-                        {
-                            if (std::is_unsigned<T>::value)
-                            {
-                                output |= *reinterpret_cast<unsigned_ptr>(&*it) << (it - first) * 8;
-                            }
-                            else if (std::is_signed<T>::value)
-                            {
-                                output |= *reinterpret_cast<signed_ptr>(&*it) << (it - first) * 8;
-                            }
-                        }
-                        break;
-
-                    case IO::EndianType::Big:
-                        for (it = last - 1; it >= first; --it)
-                        {
-                            if (std::is_unsigned<T>::value)
-                            {
-                                output |= *reinterpret_cast<unsigned_ptr>(&*it) << ((sizeof(T) - 1) - (it - first)) * 8;
-                            }
-                            else if (std::is_signed<T>::value)
-                            {
-                                output |= *reinterpret_cast<signed_ptr>(&*it) << ((sizeof(T) - 1) - (it - first)) * 8;
-                            }
-                        }
-                        break;
-                    }
-
-                    return output;
-                }
-
-                template <IO::EndianType Type, typename T>
-                inline std::array<char, sizeof(T)> write(T value)
+                switch (Type)
                 {
-                    std::array<char, sizeof(T)> output{};
-                    int i;
-
-                    switch (Type)
+                case IO::EndianType::Little:
+                    for (it = first; it != last; ++it)
                     {
-                    case IO::EndianType::Little:
-                        for (i = 0; i < sizeof(T); ++i)
+                        if (std::is_unsigned<T>::value)
                         {
-                            output[i] = (value >> i * 8) & 0xFF;
+                            output |= *reinterpret_cast<unsigned_ptr>(&*it) << (it - first) * 8;
                         }
-                        break;
-
-                    case IO::EndianType::Big:
-                        for (i = 0; i < sizeof(T); ++i)
+                        else if (std::is_signed<T>::value)
                         {
-                            output[(sizeof(T) - 1) - i] = (value >> i * 8) & 0xFF;
+                            output |= *reinterpret_cast<signed_ptr>(&*it) << (it - first) * 8;
                         }
-                        break;
                     }
+                    break;
 
-                    return output;
+                case IO::EndianType::Big:
+                    for (it = last - 1; it >= first; --it)
+                    {
+                        if (std::is_unsigned<T>::value)
+                        {
+                            output |= *reinterpret_cast<unsigned_ptr>(&*it) << ((sizeof(T) - 1) - (it - first)) * 8;
+                        }
+                        else if (std::is_signed<T>::value)
+                        {
+                            output |= *reinterpret_cast<signed_ptr>(&*it) << ((sizeof(T) - 1) - (it - first)) * 8;
+                        }
+                    }
+                    break;
                 }
+
+                return output;
             }
 
-            namespace Hash
+            template <IO::EndianType Type, typename T>
+            inline std::array<char, sizeof(T)> write(T value)
             {
-                inline std::string md5(const std::string str)
+                std::array<char, sizeof(T)> output{};
+                int i;
+
+                switch (Type)
                 {
-                    return MD5(str).hexdigest();
+                case IO::EndianType::Little:
+                    for (i = 0; i < sizeof(T); ++i)
+                    {
+                        output[i] = (value >> i * 8) & 0xFF;
+                    }
+                    break;
+
+                case IO::EndianType::Big:
+                    for (i = 0; i < sizeof(T); ++i)
+                    {
+                        output[(sizeof(T) - 1) - i] = (value >> i * 8) & 0xFF;
+                    }
+                    break;
                 }
 
-                template <typename Container>
-                inline std::string md5(const Container &input)
-                {
-                    return MD5(input).hexdigest();
-                }
+                return output;
+            }
+        }
 
-                template <typename Container>
-                inline std::pair<uint32_t, uint32_t> lookup3(const Container &container, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
-                {
-                    auto pc = init.first;
-                    auto pb = init.second;
+        namespace Hash
+        {
+            inline std::string md5(const std::string str)
+            {
+                return MD5(str).hexdigest();
+            }
 
-                    hashlittle2(
-                        &*std::begin(container),
-                        sizeof(typename Container::value_type) * (std::end(container) - std::begin(container)),
-                        &pc, &pb);
+            template <typename Container>
+            inline std::string md5(const Container &input)
+            {
+                return MD5(input).hexdigest();
+            }
 
-                    return std::make_pair(pc, pb);
-                }
+            template <typename Container>
+            inline std::pair<uint32_t, uint32_t> lookup3(const Container &container, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
+            {
+                auto pc = init.first;
+                auto pb = init.second;
 
-                template <typename InputIt>
-                inline std::pair<uint32_t, uint32_t> lookup3(InputIt first, InputIt last, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
-                {
-                    auto pc = init.first;
-                    auto pb = init.second;
+                hashlittle2(
+                    &*std::begin(container),
+                    sizeof(typename Container::value_type) * (std::end(container) - std::begin(container)),
+                    &pc, &pb);
 
-                    hashlittle2(
-                        &*first,
-                        sizeof(typename std::iterator_traits<InputIt>::value_type) * (last - first),
-                        &pc, &pb);
+                return std::make_pair(pc, pb);
+            }
 
-                    return std::make_pair(pc, pb);
-                }
+            template <typename InputIt>
+            inline std::pair<uint32_t, uint32_t> lookup3(InputIt first, InputIt last, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
+            {
+                auto pc = init.first;
+                auto pb = init.second;
 
-                inline std::pair<uint32_t, uint32_t> lookup3(std::ifstream &stream, uint32_t length, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
-                {
-                    auto pc = init.first;
-                    auto pb = init.second;
-                    std::vector<char> buffer(length);
+                hashlittle2(
+                    &*first,
+                    sizeof(typename std::iterator_traits<InputIt>::value_type) * (last - first),
+                    &pc, &pb);
 
-                    auto pos = stream.tellg();
+                return std::make_pair(pc, pb);
+            }
 
-                    stream.read(buffer.data(), length);
-                    hashlittle2(buffer.data(), length, &pc, &pb);
+            inline std::pair<uint32_t, uint32_t> lookup3(std::ifstream &stream, uint32_t length, const std::pair<uint32_t, uint32_t> &init = { 0, 0 })
+            {
+                auto pc = init.first;
+                auto pb = init.second;
+                std::vector<char> buffer(length);
 
-                    stream.seekg(pos);
+                auto pos = stream.tellg();
 
-                    return std::make_pair(pc, pb);
-                }
+                stream.read(buffer.data(), length);
+                hashlittle2(buffer.data(), length, &pc, &pb);
+
+                stream.seekg(pos);
+
+                return std::make_pair(pc, pb);
+            }
                 
-                template <typename Container>
-                inline uint32_t lookup3(const Container &container, const uint32_t &init)
-                {
-                    return hashlittle(
-                        &*std::begin(container),
-                        sizeof(typename Container::value_type) * (std::end(container) - std::begin(container)),
-                        init);
-                }
+            template <typename Container>
+            inline uint32_t lookup3(const Container &container, const uint32_t &init)
+            {
+                return hashlittle(
+                    &*std::begin(container),
+                    sizeof(typename Container::value_type) * (std::end(container) - std::begin(container)),
+                    init);
+            }
 
-                template <typename InputIt>
-                inline uint32_t lookup3(InputIt first, InputIt last, const uint32_t &init)
-                {
-                    return hashlittle(
-                        &*first,
-                        sizeof(typename std::iterator_traits<InputIt>::value_type) * (last - first),
-                        init);
-                }
+            template <typename InputIt>
+            inline uint32_t lookup3(InputIt first, InputIt last, const uint32_t &init)
+            {
+                return hashlittle(
+                    &*first,
+                    sizeof(typename std::iterator_traits<InputIt>::value_type) * (last - first),
+                    init);
+            }
 
-                inline uint32_t lookup3(std::ifstream &stream, uint32_t length, const uint32_t &init)
-                {
-                    auto hash = init;
-                    std::vector<char> buffer(length);
+            inline uint32_t lookup3(std::ifstream &stream, uint32_t length, const uint32_t &init)
+            {
+                auto hash = init;
+                std::vector<char> buffer(length);
 
-                    auto pos = stream.tellg();
+                auto pos = stream.tellg();
 
-                    stream.read(buffer.data(), length);
-                    hash = hashlittle(buffer.data(), length, hash);
+                stream.read(buffer.data(), length);
+                hash = hashlittle(buffer.data(), length, hash);
 
-                    stream.seekg(pos);
+                stream.seekg(pos);
 
-                    return hash;
-                }
+                return hash;
             }
         }
     }

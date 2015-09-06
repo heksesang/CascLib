@@ -40,8 +40,6 @@ namespace Casc
 {
     namespace IO
     {
-        using namespace Casc::Shared;
-
         /**
          * A buffer which can be used to read compressed data from CASC file.
          * When used with a stream, the stream will be able to transparently output decompressed data.

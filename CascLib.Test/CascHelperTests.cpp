@@ -6,10 +6,6 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #include "../CascLib/Casc/Common.hpp"
 
 using namespace Casc;
-using namespace Casc::Shared;
-using namespace Casc::Shared::Functions;
-using namespace Casc::Shared::Functions::Endian;
-using namespace Casc::Shared::Functions::Hash;
 
 namespace CascLibTest
 {
@@ -25,18 +21,18 @@ namespace CascLibTest
 			Assert::AreEqual(3204448191u, read<IO::EndianType::Big, uint32_t>(le.begin(), le.end()));
 		}
 
-        TEST_METHOD(HashBytes)
+        TEST_METHOD(Lookup3HashBytes)
         {
             std::array<char, 16> data{ 0x07, 0x00, 0x00, 0x00, 0x04, 0x05, 0x09, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00 };
-            auto hash = lookup3(data, 0);
+            auto hash = Functions::Hash::lookup3(data, 0);
 
             Assert::AreEqual(1116121890U, hash);
         }
 
-		TEST_METHOD(HashFilename)
+		TEST_METHOD(Lookup3HashString)
 		{
-			auto hash = lookup3(std::string("SPELLS\\BONE_CYCLONE_STATE.M2"), 0);
-			Assert::AreEqual(0x502501AAu, hash);
+			auto hash = Functions::Hash::lookup3(std::string("SPELLS\\BONE_CYCLONE_STATE.M2"), 0);
+			Assert::AreEqual(0x92D10BBAu, hash);
 		}
 
 	};

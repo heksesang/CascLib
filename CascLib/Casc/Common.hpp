@@ -157,7 +157,7 @@ namespace Casc
     template <typename T>
     inline std::ifstream &operator>>(std::ifstream  &input, T &value)
     {
-        using namespace Shared::Functions::Endian;
+        using namespace Functions::Endian;
         char b[sizeof(T)];
         input.read(b, sizeof(T));
 
@@ -179,7 +179,7 @@ namespace Casc
     template <typename T>
     inline std::ofstream &operator<<(std::ofstream  &input, const T &value)
     {
-        using namespace Shared::Functions::Endian;
+        using namespace Functions::Endian;
 
         if (input.iword(endian_index) == 0)
         {
@@ -224,7 +224,7 @@ namespace std
     public:
         size_t operator()(const std::array<uint8_t, 9> &key) const
         {
-            return Casc::Shared::Functions::Hash::lookup3(key, 0);
+            return Casc::Functions::Hash::lookup3(key, 0);
         }
     };
 
@@ -234,7 +234,7 @@ namespace std
     public:
         size_t operator()(const std::vector<char> &key) const
         {
-            return Casc::Shared::Functions::Hash::lookup3(key, 0);
+            return Casc::Functions::Hash::lookup3(key, 0);
         }
     };
 }

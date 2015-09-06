@@ -34,7 +34,7 @@ namespace Casc
     {
         namespace Text
         {
-            using namespace Casc::Shared::Functions;
+            using namespace Casc::Functions;
 
             /**
              * Class for parsing CASC configuration files.
