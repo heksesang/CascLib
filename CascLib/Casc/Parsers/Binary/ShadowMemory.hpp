@@ -113,7 +113,7 @@ namespace Casc
                 * Header
                 * Free space table
                 */
-                enum ShmemType
+                enum BlockType
                 {
                     Header = 4,
                     FreeSpace = 1
@@ -136,7 +136,7 @@ namespace Casc
                 std::vector<Reference> freeSpaceOffset_;
 
                 /**
-                 * Reads a chunk of type ShmemType::WriteableMemory.
+                 * Reads a chunk of type BlockType::WriteableMemory.
                  *
                  * @param file the file stream to read the data from.
                  */
@@ -172,7 +172,7 @@ namespace Casc
                 }
 
                 /**
-                 * Reads a chunk of type ShmemType::Header.
+                 * Reads a chunk of type BlockType::Header.
                  *
                  * @param file the file stream to read the data from.
                  * @param base the path of the base directory.
@@ -250,10 +250,10 @@ namespace Casc
 
                         switch (type)
                         {
-                        case ShmemType::Header:
+                        case BlockType::Header:
                             break;
 
-                        case ShmemType::FreeSpace:
+                        case BlockType::FreeSpace:
                             readFreeSpace(file);
                             break;
                         }
@@ -276,11 +276,11 @@ namespace Casc
 
                     switch (type)
                     {
-                    case ShmemType::Header:
+                    case BlockType::Header:
                         readHeader(file);
                         break;
 
-                    case ShmemType::FreeSpace:
+                    case BlockType::FreeSpace:
                         break;
                     }
 
@@ -296,7 +296,7 @@ namespace Casc
                 {
                     uint32_t freeSpaceCount = freeSpaceLength_.size();
 
-                    str << le << (uint32_t)ShmemType::FreeSpace;
+                    str << le << (uint32_t)BlockType::FreeSpace;
                     str << le << freeSpaceCount;
 
                     str.seekp(0x18, std::ios_base::cur);
@@ -345,7 +345,7 @@ namespace Casc
                     uint32_t headerSize = 264 + versionCount * sizeof(uint32_t) +
                         blockCount * (sizeof(uint32_t) * 2);
 
-                    str << le << (uint32_t)ShmemType::Header;
+                    str << le << (uint32_t)BlockType::Header;
                     str << le << (uint32_t)headerSize;
 
                     std::array<char, 0x100> buf{};
@@ -403,10 +403,10 @@ namespace Casc
                  * @param path the path of the SHMEM file.
                  * @param base the path of the base directory.
                  */
-                ShadowMemory(std::string path, std::string base)
+                ShadowMemory(std::string path)
                     : path_(path)
                 {
-                    parse(path, base);
+                    parse(path);
                 }
 
                 /**
@@ -420,12 +420,10 @@ namespace Casc
                  * Parses a SHMEM file.
                  *
                  * @param path the path of the SHMEM file.
-                 * @param base the path of the base directory.
                  */
-                void parse(std::string path, std::string base)
+                void parse(std::string path)
                 {
                     path_ = path;
-                    basePath_ = base;
                     readFile(path);
                 }
 

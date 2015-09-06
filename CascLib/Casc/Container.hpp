@@ -394,7 +394,7 @@ namespace Casc
 
             buildConfig_.parse(buildConfig.str());
             cdnConfig_.parse(cdnConfig.str());
-            shmem_.parse(shadowMemory.str(), path);
+            shmem_.parse(shadowMemory.str());
 
             for (size_t i = 0; i < shmem_.versions().size(); ++i)
             {
