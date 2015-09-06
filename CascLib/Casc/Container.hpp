@@ -34,29 +34,35 @@
 #include <vector>
 
 #include "Common.hpp"
+#include "Exceptions.hpp"
+
 #include "md5.hpp"
 
-#include "CascShmem.hpp"
-#include "CascBlteHandler.hpp"
-#include "CascBuildInfo.hpp"
-#include "CascConfiguration.hpp"
-#include "CascEncoding.hpp"
-#include "CascIndex.hpp"
-#include "CascStream.hpp"
-#include "CascRootHandler.hpp"
+#include "Filesystem/RootHandler.hpp"
+#include "IO/Handler.hpp"
+#include "IO/Stream.hpp"
+#include "Parsers/Text/BuildInfo.hpp"
+#include "Parsers/Text/Configuration.hpp"
+#include "Parsers/Text/EncodingBlock.hpp"
+#include "Parsers/Binary/Encoding.hpp"
+#include "Parsers/Binary/Index.hpp"
+#include "Parsers/Binary/ShadowMemory.hpp"
+#include "Parsers/Binary/Reference.hpp"
 
 namespace Casc
 {
+    using namespace Casc::Shared;
+    using namespace Casc::Shared::Functions;
     using namespace Casc::Shared::Functions::Endian;
     using namespace Casc::Shared::Functions::Hash;
 
     /**
      * A container for a CASC archive.
      */
-    class CascContainer
+    class Container
     {
     private:
-        typedef std::pair<CascEncodingBlock, std::vector<char>> descriptor_type;
+        typedef std::pair<Parsers::Text::EncodingBlock, std::vector<char>> descriptor_type;
         typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
 
         template <typename SrcContainer, typename DestContainer>
@@ -78,7 +84,7 @@ namespace Casc
             auto hash = Hex(md5(blteHeader)).data();
             
             copyToVector(hash, header, 0);
-            copyToVector(Endian::write<EndianType::Little, uint32_t>(dataSize), header, 16);
+            copyToVector(Functions::Endian::write<IO::EndianType::Little, uint32_t>(dataSize), header, 16);
 
             return std::move(header);
         }
@@ -97,14 +103,14 @@ namespace Casc
             *reinterpret_cast<uint32_t*>(&header[pos]) = BlteSignature;
             pos += sizeof(uint32_t);
 
-            pos = copyToVector(Endian::write<EndianType::Big, uint32_t>(headerSize), header, pos);
-            pos = copyToVector(Endian::write<EndianType::Big, uint16_t>(0xF00), header, pos);
-            pos = copyToVector(Endian::write<EndianType::Big, uint16_t>((uint16_t)blocks.size()), header, pos);
+            pos = copyToVector(Functions::Endian::write<IO::EndianType::Big, uint32_t>(headerSize), header, pos);
+            pos = copyToVector(Functions::Endian::write<IO::EndianType::Big, uint16_t>(0xF00), header, pos);
+            pos = copyToVector(Functions::Endian::write<IO::EndianType::Big, uint16_t>((uint16_t)blocks.size()), header, pos);
 
             for (auto &block : blocks)
             {
-                pos = copyToVector(Endian::write<EndianType::Big, uint32_t>((uint16_t)block.second.size()), header, pos);
-                pos = copyToVector(Endian::write<EndianType::Big, uint32_t>((uint16_t)block.first.size()), header, pos);
+                pos = copyToVector(Functions::Endian::write<IO::EndianType::Big, uint32_t>((uint16_t)block.second.size()), header, pos);
+                pos = copyToVector(Functions::Endian::write<IO::EndianType::Big, uint32_t>((uint16_t)block.first.size()), header, pos);
                 
                 auto hash = Hex(md5(block.second)).data();
 
@@ -114,7 +120,7 @@ namespace Casc
             return std::move(header);
         }
 
-        std::vector<descriptor_type> createChunkData(std::istream &stream, const std::vector<CascEncodingBlock> &blocks) const
+        std::vector<descriptor_type> createChunkData(std::istream &stream, const std::vector<Parsers::Text::EncodingBlock> &blocks) const
         {
             std::vector<descriptor_type> chunks;
 
@@ -130,7 +136,7 @@ namespace Casc
             return std::move(chunks);
         }
 
-        std::vector<char> createData(std::istream &stream, const std::vector<CascEncodingBlock> &blocks) const
+        std::vector<char> createData(std::istream &stream, const std::vector<Parsers::Text::EncodingBlock> &blocks) const
         {
             auto chunks = createChunkData(stream, blocks);
             auto blteHeader = createBlteHeader(chunks);
@@ -138,7 +144,7 @@ namespace Casc
 
             auto dataSize = dataHeader.size() + blteHeader.size() +
                 std::accumulate(chunks.begin(), chunks.end(), 0,
-                    [](uint32_t value, descriptor_type descriptor) { return value + descriptor.second.size(); });
+                    [](uint32_t value, descriptor_type block) { return value + block.second.size(); });
 
             std::vector<char> data(dataSize, '\0');
             auto iter = data.begin();
@@ -159,17 +165,17 @@ namespace Casc
         }
 
     public:
-        std::shared_ptr<CascStream<false>> openFileByKey(const std::string &key) const
+        std::shared_ptr<IO::Stream<false>> openFileByKey(const std::string key) const
         {
             return openStream<false>(findFileLocation(key));
         }
 
-        std::shared_ptr<CascStream<false>> openFileByHash(const std::string &hash) const
+        std::shared_ptr<IO::Stream<false>> openFileByHash(const std::string hash) const
         {
             return openFileByKey(encoding_->find(hash).at(0).string());
         }
 
-        std::shared_ptr<CascStream<false>> openFileByName(const std::string &name) const
+        std::shared_ptr<IO::Stream<false>> openFileByName(const std::string name) const
         {
             auto root = openFileByHash(this->buildConfig()["root"].front());
 
@@ -180,13 +186,13 @@ namespace Casc
             return openFileByKey(
                 encoding_->find(
                     rootHandlers.at(
-                        Endian::read<EndianType::Little, uint32_t>(magic.begin(), magic.end())
+                        Functions::Endian::read<IO::EndianType::Little, uint32_t>(magic.begin(), magic.end())
                     )->findHash(name)).at(0).string());
         }
 
-        CascReference write(std::istream &stream, std::vector<CascEncodingBlock> &descriptor)
+        Parsers::Binary::Reference write(std::istream &stream, std::vector<Parsers::Text::EncodingBlock> &blocks)
         {
-            auto arr = createData(stream, descriptor);
+            auto arr = createData(stream, blocks);
             
             auto loc = shmem_.reserveSpace(arr.size());
             shmem_.writeFile();
@@ -198,9 +204,9 @@ namespace Casc
             std::array<char, 16> key;
             std::reverse_copy(arr.begin(), arr.begin() + 16, key.begin());
 
-            loc = CascReference(key.begin(), key.begin() + 9, loc.file(), loc.offset(), loc.size());
+            loc = Parsers::Binary::Reference(key.begin(), key.begin() + 9, loc.file(), loc.offset(), loc.size());
 
-            auto bucket = CascIndex::bucket(key.begin(), key.begin() + 9);
+            auto bucket = Parsers::Binary::Index::bucket(key.begin(), key.begin() + 9);
             indices_[bucket].insert(key.begin(), key.begin() + 9, loc);
 
             std::ofstream indexFs;
@@ -214,20 +220,20 @@ namespace Casc
         template <typename T>
         void registerHandler()
         {
-            CascBlteHandler* handler = new T;
-            this->blteHandlers[handler->compressionMode()] = std::shared_ptr<CascBlteHandler>(handler);
+            IO::Handler* handler = new T;
+            this->blteHandlers[handler->mode()] = std::shared_ptr<IO::Handler>(handler);
         }
 
-        void registerHandlers(std::vector<std::shared_ptr<CascBlteHandler>> handlers)
+        void registerHandlers(std::vector<std::shared_ptr<IO::Handler>> handlers)
         {
-            for (std::shared_ptr<CascBlteHandler> handler : handlers)
-                this->blteHandlers[handler->compressionMode()] = handler;
+            for (std::shared_ptr<IO::Handler> handler : handlers)
+                this->blteHandlers[handler->mode()] = handler;
         }
 
-        void registerHandlers(std::vector<std::shared_ptr<CascRootHandler>> handlers)
+        void registerHandlers(std::vector<std::shared_ptr<Filesystem::RootHandler>> handlers)
         {
-            for (std::shared_ptr<CascRootHandler> handler : handlers)
-                this->rootHandlers[handler->fileMagic()] = handler;
+            for (std::shared_ptr<Filesystem::RootHandler> handler : handlers)
+                this->rootHandlers[handler->signature()] = handler;
         }
 
     private:
@@ -244,35 +250,35 @@ namespace Casc
         std::string dataPath_;
 
         // The build info.
-        CascBuildInfo buildInfo_;
+        Parsers::Text::BuildInfo buildInfo_;
 
         // The build configuration.
-        CascConfiguration buildConfig_;
+        Parsers::Text::Configuration buildConfig_;
 
         // The CDN configuration.
-        CascConfiguration cdnConfig_;
+        Parsers::Text::Configuration cdnConfig_;
 
         // The SHMEM.
-        CascShmem shmem_;
+        Parsers::Binary::ShadowMemory shmem_;
 
         // The file indices.
-        std::vector<CascIndex> indices_;
+        std::vector<Parsers::Binary::Index> indices_;
 
         // The encoding file.
-        std::unique_ptr<CascEncoding> encoding_;
+        std::unique_ptr<Parsers::Binary::Encoding> encoding_;
 
         // Chunk handlers
-        std::map<char, std::shared_ptr<CascBlteHandler>> blteHandlers;
+        std::map<char, std::shared_ptr<IO::Handler>> blteHandlers;
 
         // Chunk handlers
-        std::map<uint32_t, std::shared_ptr<CascRootHandler>> rootHandlers;
+        std::map<uint32_t, std::shared_ptr<Filesystem::RootHandler>> rootHandlers;
 
         /**
          * Finds the location of a file.
          *
          * @param key   the key of the file.
          */
-        CascReference findFileLocation(const std::string &key) const
+        Parsers::Binary::Reference findFileLocation(const std::string key) const
         {
             auto bytes = Hex(key).data();
 
@@ -282,13 +288,13 @@ namespace Casc
                 {
                     return index.find(bytes.begin(), bytes.begin() + 9);
                 }
-                catch (FileNotFoundException&)
+                catch (Exceptions::KeyDoesNotExistException&)
                 {
                     continue;
                 }
             }
 
-            throw FileNotFoundException(key);
+            throw Exceptions::KeyDoesNotExistException(key);
         }
 
         /**
@@ -298,14 +304,14 @@ namespace Casc
          * @return		a stream object.
          */
         template <bool Writeable>
-        std::shared_ptr<CascStream<Writeable>> openStream(CascReference loc) const
+        std::shared_ptr<IO::Stream<Writeable>> openStream(Parsers::Binary::Reference loc) const
         {
             std::stringstream ss;
             conv_type conv;
 
             ss << shmem_.path() << conv.to_bytes(std::wstring{ fs::path::preferred_separator }) << "data." << std::setw(3) << std::setfill('0') << loc.file();
 
-            return std::make_shared<CascStream<Writeable>>(
+            return std::make_shared<IO::Stream<Writeable>>(
                 ss.str(), loc.offset(),
                 mapToVector(this->blteHandlers));
         }
@@ -314,10 +320,10 @@ namespace Casc
         /**
          * Default constructor.
          */
-        CascContainer()
+        Container()
             : PathSeparator(conv_type().to_bytes({ fs::path::preferred_separator }))
         {
-            registerHandler<DefaultHandler>();
+            registerHandler<IO::DefaultHandler>();
         }
 
         /**
@@ -326,10 +332,10 @@ namespace Casc
          * @param path	    the path of the game directory.
          * @param dataPath	the relative path to the data directory.
          */
-        CascContainer(const std::string &path, const std::string &dataPath,
-            std::vector<std::shared_ptr<CascBlteHandler>> blteHandlers = {},
-            std::vector<std::shared_ptr<CascRootHandler>> rootHandlers = {})
-            : CascContainer()
+        Container(const std::string path, const std::string dataPath,
+            std::vector<std::shared_ptr<IO::Handler>> blteHandlers = {},
+            std::vector<std::shared_ptr<Filesystem::RootHandler>> rootHandlers = {})
+            : Container()
         {
             registerHandlers(blteHandlers);
             registerHandlers(rootHandlers);
@@ -339,17 +345,17 @@ namespace Casc
         /**
          * Move constructor.
          */
-        CascContainer(CascContainer &&) = default;
+        Container(Container &&) = default;
 
         /**
          * Move operator.
          */
-        CascContainer &operator= (CascContainer &&) = default;
+        Container &operator= (Container &&) = default;
 
         /**
          * Destructor.
          */
-        virtual ~CascContainer()
+        virtual ~Container()
         {
         }
 
@@ -359,16 +365,11 @@ namespace Casc
          * @param path	    the path of the game directory.
          * @param dataPath	the relative path to the data directory.
          */
-        void load(const std::string &path, const std::string &dataPath)
+        void load(const std::string path, const std::string dataPath)
         {
             path_ = path;
             dataPath_ = dataPath;
             buildInfo_.parse(path + ".build.info");
-
-            FileSearch fileSearch({
-                "shmem"
-            }, path_);
-
 
             auto buildConfigHash = buildInfo_.build(0).at("Build Key");
             auto cdnConfigHash = buildInfo_.build(0).at("CDN Key");
@@ -387,11 +388,14 @@ namespace Casc
                 << PathSeparator << cdnConfigHash.substr(2, 2)
                 << PathSeparator << cdnConfigHash;
             
-            std::stringstream shmem;
+            std::stringstream shadowMemory;
+            shadowMemory << path_ << PathSeparator << dataPath_
+                << PathSeparator << "data"
+                << PathSeparator << "shmem";
 
             buildConfig_.parse(buildConfig.str());
             cdnConfig_.parse(cdnConfig.str());
-            shmem_.parse(fileSearch.results().at(0), path);
+            shmem_.parse(shadowMemory.str(), path);
 
             for (size_t i = 0; i < shmem_.versions().size(); ++i)
             {
@@ -404,7 +408,7 @@ namespace Casc
 
                 if (!fs::exists(ss.str()))
                 {
-                    throw FileDoesNotExist(ss.str());
+                    throw Exceptions::FileNotFoundException(ss.str());
                 }
 
                 indices_.push_back(ss.str());
@@ -415,7 +419,7 @@ namespace Casc
                 fs.close();*/
             }
 
-            encoding_ = std::make_unique<CascEncoding>(openFileByKey(buildConfig_["encoding"].back()));
+            encoding_ = std::make_unique<Parsers::Binary::Encoding>(openFileByKey(buildConfig_["encoding"].back()));
         }
 
         const std::string &path() const
@@ -423,27 +427,27 @@ namespace Casc
             return path_;
         }
 
-        const CascBuildInfo &buildInfo() const
+        const Parsers::Text::BuildInfo &buildInfo() const
         {
             return buildInfo_;
         }
 
-        const CascConfiguration &buildConfig() const
+        const Parsers::Text::Configuration &buildConfig() const
         {
             return buildConfig_;
         }
 
-        const CascConfiguration &cdnConfig() const
+        const Parsers::Text::Configuration &cdnConfig() const
         {
             return cdnConfig_;
         }
 
-        const CascShmem &shmem() const
+        const Parsers::Binary::ShadowMemory &shmem() const
         {
             return shmem_;
         }
 
-        const CascEncoding &encoding() const
+        const Parsers::Binary::Encoding &encoding() const
         {
             return *encoding_;
         }

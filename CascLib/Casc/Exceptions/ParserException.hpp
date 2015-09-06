@@ -25,16 +25,10 @@ namespace Casc
 {
     namespace Exceptions
     {
-        class EncodingProfileParserException : public CascException
+        class ParserException : public CascException
         {
         public:
-            EncodingProfileParserException(const std::string &profile)
-                : profile(profile), CascException("Invalid encoding profile.")
-            {
-
-            }
-
-            const std::string profile;
+            using CascException::CascException;
         };
     }
 }

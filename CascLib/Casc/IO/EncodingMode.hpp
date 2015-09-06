@@ -19,22 +19,17 @@
 
 #pragma once
 
-#include "CascException.hpp"
-
 namespace Casc
 {
-    namespace Exceptions
+    namespace IO
     {
-        class FileDoesNotExist : public CascException
+        /**
+        * The available encoding modes.
+        */
+        enum EncodingMode
         {
-        public:
-            FileDoesNotExist(std::string path)
-                : path(path), CascException("The file does not exist.")
-            {
-
-            }
-
-            const std::string path;
+            None = 0x4E,
+            Zlib = 0x5A
         };
     }
 }

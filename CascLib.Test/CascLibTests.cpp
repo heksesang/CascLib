@@ -20,21 +20,21 @@ namespace CascLibTest
 
         TEST_METHOD(LoadContainer)
         {
-            auto container = std::make_unique<CascContainer>(
+            auto container = std::make_unique<Container>(
                 R"(I:\Diablo III\)",
                 "Data",
-                std::vector<std::shared_ptr<CascBlteHandler>> {
-                    std::make_shared<ZlibHandler>()
+                std::vector<std::shared_ptr<IO::Handler>> {
+                    std::shared_ptr<IO::Handler>(new IO::ZlibHandler())
             });
         }
 
 		TEST_METHOD(GetRootFile)
 		{
-            auto container = std::make_unique<CascContainer>(
+            auto container = std::make_unique<Container>(
                 R"(I:\Diablo III\)",
                 "Data",
-                std::vector<std::shared_ptr<CascBlteHandler>> {
-                    std::make_shared<ZlibHandler>()
+                std::vector<std::shared_ptr<IO::Handler>> {
+                    std::shared_ptr<IO::Handler>(new IO::ZlibHandler())
             });
 			auto root = container->openFileByHash(container->buildConfig()["root"].front());
             
@@ -100,11 +100,11 @@ namespace CascLibTest
 
 		TEST_METHOD(GetEncodingFile)
 		{
-            auto container = std::make_unique<CascContainer>(
+            auto container = std::make_unique<Container>(
                 R"(I:\Diablo III\)",
                 "Data",
-                std::vector<std::shared_ptr<CascBlteHandler>> {
-                    std::make_shared<ZlibHandler>()
+                std::vector<std::shared_ptr<IO::Handler>> {
+                    std::make_shared<IO::ZlibHandler>()
             });
 
 			auto key = container->encoding().find(container->buildConfig()["root"].front());
@@ -131,13 +131,13 @@ namespace CascLibTest
 
         TEST_METHOD(GetUnknownFile)
         {
-            auto container = std::make_unique<CascContainer>(
+            auto container = std::make_unique<Container>(
                 R"(I:\World of Warcraft\)",
                 "Data",
-                std::vector<std::shared_ptr<CascBlteHandler>> {
-                std::make_shared<ZlibHandler>()
+                std::vector<std::shared_ptr<IO::Handler>> {
+                std::make_shared<IO::ZlibHandler>()
             });
-            /*CascEncoding enc(
+            /*Parsers::Binary::Encoding enc(
             container->openFileByKey(container->buildConfig()["encoding"].back()));
 
             auto key = enc.find(container->buildConfig()["root"].front());*/
@@ -163,26 +163,26 @@ namespace CascLibTest
 
 		TEST_METHOD(ReadConfiguration)
 		{
-			CascConfiguration configuration(R"(I:\Diablo III\Data\config\0d\a0\0da08d69484c74c91e50aab485f5b4ba)");
+			Parsers::Text::Configuration configuration(R"(I:\Diablo III\Data\config\0d\a0\0da08d69484c74c91e50aab485f5b4ba)");
 		}
 
 		TEST_METHOD(ReadBuildInfo)
 		{
-			CascBuildInfo buildInfo(R"(I:\Diablo III\.build.info)"); 
+			Parsers::Text::BuildInfo buildInfo(R"(I:\Diablo III\.build.info)"); 
 		}
 
 		TEST_METHOD(ReadShmem)
 		{
-            CascShmem shmem(R"(shmem)", R"(I:\Diablo III\)");
+            Parsers::Binary::ShadowMemory shmem(R"(shmem)", R"(I:\Diablo III\)");
 		}
 
         TEST_METHOD(WriteFile)
         {
-            auto container = std::make_unique<CascContainer>(
+            auto container = std::make_unique<Container>(
                 R"(I:\Diablo III\)",
                 "Data",
-                std::vector<std::shared_ptr<CascBlteHandler>> {
-                    std::make_shared<ZlibHandler>()
+                std::vector<std::shared_ptr<IO::Handler>> {
+                    std::make_shared<IO::ZlibHandler>()
             });
 
             std::fstream fs;
@@ -198,10 +198,9 @@ namespace CascLibTest
 
             fs.seekg(0, std::ios_base::beg);
 
-            /*container->write(fs, CascLayoutDescriptor({
-                CascChunkDescriptor(CompressionMode::None, 0, (size_t)size) }));*/
+            container->write(fs, std::vector<Parsers::Text::EncodingBlock>{ Parsers::Text::EncodingBlock((size_t)size, false, IO::EncodingMode::None, {}) });
 
-            auto enc = container->encoding().insert("", "", 0);
+            //auto enc = container->encoding().insert("", "", 0);
         }
 
         TEST_METHOD(GetBucket)
@@ -209,8 +208,8 @@ namespace CascLibTest
             std::vector<uint8_t> vec{ 0x41, 0xEE, 0x19, 0x86, 0xAC, 0xC5, 0x33, 0xCC, 0x00 };
             std::array<uint8_t, 9> arr{ 0x41, 0xEE, 0x19, 0x86, 0xAC, 0xC5, 0x33, 0xCC, 0x00 };
 
-            auto a = CascIndex::bucket(arr.begin(), arr.end());
-            auto b = CascIndex::bucket(vec.begin(), vec.end());
+            auto a = Parsers::Binary::Index::bucket(arr.begin(), arr.end());
+            auto b = Parsers::Binary::Index::bucket(vec.begin(), vec.end());
 
             Assert::AreEqual(a, b);
         }

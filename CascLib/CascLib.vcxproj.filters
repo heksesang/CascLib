@@ -27,47 +27,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Casc\Shared\FileSearch.hpp">
-      <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\Shared\Functions.hpp">
       <Filter>Header Files\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="Casc\Shared\Hex.hpp">
       <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\StreamOps.hpp">
-      <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\CascBlteHandler.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\CascBuffer.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\CascBuildInfo.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\CascConfiguration.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\CascContainer.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\CascEncoding.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\CascIndex.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\CascRootHandler.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\CascShmem.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\CascStream.hpp">
-      <Filter>Header Files\Types</Filter>
     </ClInclude>
     <ClInclude Include="Casc\Common.hpp">
       <Filter>Header Files</Filter>
@@ -87,34 +51,76 @@
     <ClInclude Include="Casc\Exceptions\InvalidSignatureException.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\Exceptions\GenericException.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\Exceptions\NoFreeSpaceException.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\md5.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Casc\lookup3.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\CascReference.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\Shared\CompressionMode.hpp">
-      <Filter>Header Files\Types\Shared</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\Exceptions.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\Exceptions\FileDoesNotExistException.hpp">
+    <ClInclude Include="Casc\Filesystem\RootHandler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\CascEncodingBlock.hpp">
+    <ClInclude Include="Casc\Container.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Handler.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\EncodingMode.hpp">
+      <Filter>Header Files\Types\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Stream.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Buffer.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Exceptions\KeyDoesNotExistException.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\Exceptions\EncodingProfileParserException.hpp">
+    <ClInclude Include="Casc\Exceptions\HashDoesNotExistException.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Exceptions\FilenameDoesNotExistException.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Exceptions\IOException.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Exceptions\FilesystemException.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Exceptions\ParserException.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Parsers\Binary\Encoding.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Parsers\Binary\Index.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Parsers\Binary\Reference.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Parsers\Text\BuildInfo.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Parsers\Text\Configuration.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Parsers\Text\EncodingBlock.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Parsers\Binary\ShadowMemory.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Exceptions\ReserveSpaceException.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\EndianType.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

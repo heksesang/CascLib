@@ -25,16 +25,10 @@ namespace Casc
 {
     namespace Exceptions
     {
-        class FileNotFoundException : public CascException
+        class FilesystemException : public CascException
         {
         public:
-            FileNotFoundException(std::string path)
-                : path(path), CascException("Couldn't find a file with the given path.")
-            {
-
-            }
-
-            const std::string path;
+            using CascException::CascException;
         };
     }
 }

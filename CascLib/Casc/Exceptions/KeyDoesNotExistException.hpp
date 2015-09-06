@@ -25,9 +25,16 @@ namespace Casc
 {
     namespace Exceptions
     {
-        class GenericException : public CascException
+        class KeyDoesNotExistException : public CascException
         {
-            using CascException::CascException;
+        public:
+            KeyDoesNotExistException(std::string key)
+                : key(key), CascException("The key does not exist.")
+            {
+
+            }
+
+            const std::string key;
         };
     }
 }

@@ -51,7 +51,7 @@ namespace Casc
                 return std::move(v);
             }
 
-            inline std::string trim(const std::string &s)
+            inline std::string trim(const std::string s)
             {
                 int (*pred)(int c) = std::isspace;
                 auto wsfront = std::find_if_not(s.begin(), s.end(), pred);
@@ -69,13 +69,7 @@ namespace Casc
 
             namespace Endian
             {
-                enum class EndianType
-                {
-                    Little,
-                    Big
-                };
-
-                template <EndianType Type, typename T, typename InputIt>
+                template <IO::EndianType Type, typename T, typename InputIt>
                 inline T read(InputIt first, InputIt last = InputIt(nullptr))
                 {
                     using namespace Casc::Exceptions;
@@ -87,7 +81,7 @@ namespace Casc
 
                     if ((last - first) > sizeof(T))
                     {
-                        throw GenericException("The iterators are not valid for this data type.");
+                        throw CascException("The iterators are not valid for this data type.");
                     }
 
                     T output{};
@@ -98,7 +92,7 @@ namespace Casc
                     
                     switch (Type)
                     {
-                    case EndianType::Little:
+                    case IO::EndianType::Little:
                         for (it = first; it != last; ++it)
                         {
                             if (std::is_unsigned<T>::value)
@@ -112,7 +106,7 @@ namespace Casc
                         }
                         break;
 
-                    case EndianType::Big:
+                    case IO::EndianType::Big:
                         for (it = last - 1; it >= first; --it)
                         {
                             if (std::is_unsigned<T>::value)
@@ -130,7 +124,7 @@ namespace Casc
                     return output;
                 }
 
-                template <EndianType Type, typename T>
+                template <IO::EndianType Type, typename T>
                 inline std::array<char, sizeof(T)> write(T value)
                 {
                     std::array<char, sizeof(T)> output{};
@@ -138,14 +132,14 @@ namespace Casc
 
                     switch (Type)
                     {
-                    case EndianType::Little:
+                    case IO::EndianType::Little:
                         for (i = 0; i < sizeof(T); ++i)
                         {
                             output[i] = (value >> i * 8) & 0xFF;
                         }
                         break;
 
-                    case EndianType::Big:
+                    case IO::EndianType::Big:
                         for (i = 0; i < sizeof(T); ++i)
                         {
                             output[(sizeof(T) - 1) - i] = (value >> i * 8) & 0xFF;
@@ -159,7 +153,7 @@ namespace Casc
 
             namespace Hash
             {
-                inline std::string md5(const std::string &str)
+                inline std::string md5(const std::string str)
                 {
                     return MD5(str).hexdigest();
                 }

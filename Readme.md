@@ -47,9 +47,9 @@ It is a replacement for the older MPQ format used by Blizzard in previous game t
     int main(int argc, char* argv[])
     {
         // Init the container, specifying the path and handlers.
-        Casc::CascContainer container(
+        Casc::Container container(
             R"(C:\Program Files (x86)\Diablo III\)",
-            std::vector<std::shared_ptr<Casc::CascBlteHandler>> {
+            std::vector<std::shared_ptr<Casc::IO::Handler>> {
                 std::make_shared<Casc::ZlibHandler>()
             }
         );

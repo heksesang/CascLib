@@ -1,7 +1,9 @@
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include "../CascLib/Casc/Common.hpp"
+#include "../CascLib/Casc/Exceptions.hpp"
 
 const char* usageText =
 "Usage: casc <location> <mode> <key> [<output_name>]\n\n"
@@ -20,25 +22,26 @@ int main(int argc, char* argv[])
 
     try
     {
-        Casc::CascContainer container(argv[1], "Data", {
-            std::make_shared<Casc::ZlibHandler>()
+        auto container = std::make_unique<Casc::Container>(argv[1], "Data",
+            std::vector<std::shared_ptr<Casc::IO::Handler>>{
+                std::shared_ptr<Casc::IO::Handler>(new Casc::IO::ZlibHandler())
         });
 
         try
         {
-            std::shared_ptr<Casc::CascStream<false>> file;
+            std::shared_ptr<Casc::IO::Stream<false>> file;
             
             if (strcmp(argv[2], "key") == 0)
             {
-                file = container.openFileByKey(argv[3]);
+                file = container->openFileByKey(argv[3]);
             }
             else if (strcmp(argv[2], "hash") == 0)
             {
-                file = container.openFileByHash(argv[3]);
+                file = container->openFileByHash(argv[3]);
             }
             else if (strcmp(argv[2], "filename") == 0)
             {
-                file = container.openFileByName(argv[3]);
+                file = container->openFileByName(argv[3]);
             }
             else
             {
@@ -98,7 +101,7 @@ int main(int argc, char* argv[])
                 return -1;
             }
         }
-        catch (FileNotFoundException ex)
+        catch (Casc::Exceptions::KeyDoesNotExistException ex)
         {
             std::stringstream ss;
             
@@ -107,8 +110,26 @@ int main(int argc, char* argv[])
             std::cout << ss.str() << std::endl;
             return -1;
         }
+        catch (Casc::Exceptions::HashDoesNotExistException ex)
+        {
+            std::stringstream ss;
+
+            ss << "Couldn't find a file with the given key (" << ex.hash << ").";
+
+            std::cout << ss.str() << std::endl;
+            return -1;
+        }
+        catch (Casc::Exceptions::FilenameDoesNotExistException ex)
+        {
+            std::stringstream ss;
+
+            ss << "Couldn't find a file with the given filename (" << ex.filename << ").";
+
+            std::cout << ss.str() << std::endl;
+            return -1;
+        }
     }
-    catch (CascException ex)
+    catch (Casc::Exceptions::CascException ex)
     {
         std::stringstream ss;
 

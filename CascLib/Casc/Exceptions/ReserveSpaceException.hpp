@@ -19,22 +19,24 @@
 
 #pragma once
 
+#include <stdint.h>
 #include "CascException.hpp"
 
 namespace Casc
 {
     namespace Exceptions
     {
-        class FileNotFoundException : public CascException
+        class ReserveSpaceException : public CascException
         {
         public:
-            FileNotFoundException(std::string path)
-                : path(path), CascException("Couldn't find a file with the given path.")
+            ReserveSpaceException(uint32_t requested, uint32_t available)
+                : requested(requested), available(available), CascException("Couldn't find enough free space.")
             {
 
             }
 
-            const std::string path;
+            const uint32_t requested;
+            const uint32_t available;
         };
     }
 }

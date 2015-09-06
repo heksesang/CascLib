@@ -19,24 +19,22 @@
 
 #pragma once
 
-#include <stdint.h>
 #include "CascException.hpp"
 
 namespace Casc
 {
     namespace Exceptions
     {
-        class NoFreeSpaceException : public CascException
+        class HashDoesNotExistException : public CascException
         {
         public:
-            NoFreeSpaceException(uint32_t requested, uint32_t available)
-                : requested(requested), available(available), CascException("Couldn't find enough free space.")
+            HashDoesNotExistException(std::string hash)
+                : hash(hash), CascException("The hash does not exist.")
             {
 
             }
 
-            const uint32_t requested;
-            const uint32_t available;
+            const std::string hash;
         };
     }
 }

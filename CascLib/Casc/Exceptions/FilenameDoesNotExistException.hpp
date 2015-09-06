@@ -19,17 +19,22 @@
 
 #pragma once
 
+#include "CascException.hpp"
+
 namespace Casc
 {
-    namespace Shared
+    namespace Exceptions
     {
-        /**
-        * The available compression modes for chunks.
-        */
-        enum CompressionMode
+        class FilenameDoesNotExistException : public CascException
         {
-            None = 0x4E,
-            Zlib = 0x5A
+        public:
+            FilenameDoesNotExistException(std::string filename)
+                : filename(filename), CascException("The filename does not exist.")
+            {
+
+            }
+
+            const std::string filename;
         };
     }
 }

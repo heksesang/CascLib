@@ -5,6 +5,7 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 #include "../CascLib/Casc/Common.hpp"
 
+using namespace Casc;
 using namespace Casc::Shared;
 using namespace Casc::Shared::Functions;
 using namespace Casc::Shared::Functions::Endian;
@@ -21,7 +22,7 @@ namespace CascLibTest
             std::array<char, sizeof(uint32_t)> le;
             *reinterpret_cast<uint32_t*>(le.data()) = 3221225406u;
 
-			Assert::AreEqual(3204448191u, read<EndianType::Big, uint32_t>(le.begin(), le.end()));
+			Assert::AreEqual(3204448191u, read<IO::EndianType::Big, uint32_t>(le.begin(), le.end()));
 		}
 
         TEST_METHOD(HashBytes)

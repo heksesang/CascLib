@@ -26,12 +26,7 @@
 #include <iostream>
 #include <codecvt>
 
-#ifdef _MSC_VER
-#include <experimental/filesystem>
-#else
-#include <boost/filesystem.hpp>
-#endif
-
+// Needed for wchar_t > char_t conversion
 template<class Facet>
 struct deletable_facet : Facet
 {
@@ -40,36 +35,15 @@ struct deletable_facet : Facet
     ~deletable_facet() {}
 };
 
+// Define boost or std <filesystem> header
+#ifdef _MSC_VER
+#include <experimental/filesystem>
+#else
+#include <boost/filesystem.hpp>
+#endif
+
 namespace Casc
 {
-    class CascBuildInfo;
-    class CascConfiguration;
-    class CascEncoding;
-    class CascEncodingBlock;
-    class CascIndex;
-    class CascLayoutDescriptor;
-    class CascRootHandler;
-    class CascShmem;
-    class CascReference;
-
-    /* BLTE handler */
-    template <typename Traits>
-    class BaseCascBlteHandler;
-    typedef BaseCascBlteHandler<std::filebuf::traits_type> CascBlteHandler;
-
-    /* Buffer */
-    template <size_t BufferSize>
-    class BaseCascBuffer;
-    typedef BaseCascBuffer<4096U> CascBuffer;
-
-    /* Stream */
-    template <bool Writeable>
-    class CascStream;
-
-
-    /* Container */
-    class CascContainer;
-
 #ifdef _MSC_VER
     namespace fs = std::experimental::filesystem::v1;
 #else
@@ -77,24 +51,167 @@ namespace Casc
 #endif
 }
 
-#include "StreamOps.hpp"
+// Forward declarations
+namespace Casc
+{
+    namespace Exceptions
+    {
+        class CascException;
+        
+        class ParserException;
+        class FilesystemException;
+        class IOException;
 
-#include "Exceptions/CascException.hpp"
-#include "Exceptions/EncodingProfileParserException.hpp"
-#include "Exceptions/FileDoesNotExistException.hpp"
-#include "Exceptions/FileNotFoundException.hpp"
-#include "Exceptions/GenericException.hpp"
-#include "Exceptions/InvalidHashException.hpp"
-#include "Exceptions/InvalidSignatureException.hpp"
-#include "Exceptions/NoFreeSpaceException.hpp"
+        class FileNotFoundException;
+        class FilenameDoesNotExistException;
+        class HashDoesNotExistException;
+        class InvalidHashException;
+        class InvalidSignatureException;
+        class KeyDoesNotExistException;
+        class ReserveSpaceException;
+    }
 
-using namespace Casc::Exceptions;
+    namespace Filesystem
+    {
+        class RootHandler;
+    }
 
-#include "Shared/CompressionMode.hpp"
-#include "Shared/FileSearch.hpp"
+    namespace IO
+    {
+        class Handler;
+        class DefaultHandler;
+        class ZlibHandler;
+        class Buffer;
+        template <bool Writeable>
+        class Stream;
+    }
+
+    namespace Parsers
+    {
+        namespace Binary
+        {
+            class Shmem;
+            class Encoding;
+            class Index;
+            class Reference;
+        }
+
+        namespace Text
+        {
+            class BuildInfo;
+            class Configuration;
+            class EncodingBlock;
+        }
+    }
+
+    class Container;
+}
+
+// Enums
+#include "IO/EncodingMode.hpp"
+#include "IO/EndianType.hpp"
+
+// Helpers
 #include "Shared/Functions.hpp"
 #include "Shared/Hex.hpp"
 
+/**
+* Stream operators
+*/
+namespace Casc
+{
+    static int const endian_index = std::ios_base::xalloc();
+
+    inline std::ifstream &le(std::ifstream &stream)
+    {
+        stream.iword(endian_index) = 0;
+
+        return stream;
+    }
+
+    inline std::ofstream &le(std::ofstream &stream)
+    {
+        stream.iword(endian_index) = 0;
+
+        return stream;
+    }
+
+    inline std::ifstream &be(std::ifstream &stream)
+    {
+        stream.iword(endian_index) = 1;
+
+        return stream;
+    }
+
+    inline std::ofstream &be(std::ofstream &stream)
+    {
+        stream.iword(endian_index) = 1;
+
+        return stream;
+    }
+
+    template <typename T>
+    inline std::ifstream &operator>>(std::ifstream  &input, T &value)
+    {
+        using namespace Shared::Functions::Endian;
+        char b[sizeof(T)];
+        input.read(b, sizeof(T));
+
+        value = *reinterpret_cast<T*>(b);
+
+        if (input.iword(endian_index) == 0)
+        {
+            value = read<IO::EndianType::Little, uint32_t>(b, b + sizeof(T));
+        }
+
+        if (input.iword(endian_index) == 1)
+        {
+            value = read<IO::EndianType::Big, uint32_t>(b, b + sizeof(T));
+        }
+
+        return input;
+    }
+
+    template <typename T>
+    inline std::ofstream &operator<<(std::ofstream  &input, const T &value)
+    {
+        using namespace Shared::Functions::Endian;
+
+        if (input.iword(endian_index) == 0)
+        {
+            input.write(write<IO::EndianType::Little>(value).data(), sizeof(T));
+        }
+
+        if (input.iword(endian_index) == 1)
+        {
+            input.write(write<IO::EndianType::Big>(value).data(), sizeof(T));
+        }
+
+        return input;
+    }
+
+    inline std::ifstream &operator>>(std::ifstream  &input, std::ifstream &func(std::ifstream &stream))
+    {
+        return func(input);
+    }
+
+    inline std::ofstream &operator>>(std::ofstream  &input, std::ofstream &func(std::ofstream &stream))
+    {
+        return func(input);
+    }
+
+    inline std::ifstream &operator<<(std::ifstream  &input, std::ifstream &func(std::ifstream &stream))
+    {
+        return func(input);
+    }
+
+    inline std::ofstream &operator<<(std::ofstream  &input, std::ofstream &func(std::ofstream &stream))
+    {
+        return func(input);
+    }
+}
+
+// Hash algorithm for unordered_map
 namespace std
 {
     template <>
@@ -108,7 +225,7 @@ namespace std
     };
 
     template <>
-    class std::hash<std::vector<char>>
+    class std::hash<::std::vector<char>>
     {
     public:
         size_t operator()(const std::vector<char> &key) const
@@ -118,15 +235,4 @@ namespace std
     };
 }
 
-#include "CascEncodingBlock.hpp"
-#include "CascReference.hpp"
-#include "CascBlteHandler.hpp"
-#include "CascBuffer.hpp"
-#include "CascBuildInfo.hpp"
-#include "CascConfiguration.hpp"
-#include "CascContainer.hpp"
-#include "CascEncoding.hpp"
-#include "CascIndex.hpp"
-#include "CascRootHandler.hpp"
-#include "CascShmem.hpp"
-#include "CascStream.hpp"
+#include "Container.hpp"
