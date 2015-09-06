@@ -65,7 +65,7 @@ namespace Casc
                 : buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
                 base_type(new buf_type())
             {
-                registerHandler<DefaultHandler>();
+                registerHandler<Impl::DefaultHandler>();
             }
 
             Stream(std::vector<std::shared_ptr<Handler>> handlers)

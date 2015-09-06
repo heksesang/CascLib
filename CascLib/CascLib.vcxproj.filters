@@ -123,6 +123,12 @@
     <ClInclude Include="Casc\IO\EndianType.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Casc\IO\Impl\ZlibHandler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Impl\DefaultHandler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\The CASC Filesystem_v1-2.txt" />

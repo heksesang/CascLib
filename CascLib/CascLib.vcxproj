@@ -228,6 +228,8 @@
     <ClInclude Include="Casc\Exceptions\IOException.hpp" />
     <ClInclude Include="Casc\Exceptions\KeyDoesNotExistException.hpp" />
     <ClInclude Include="Casc\IO\EndianType.hpp" />
+    <ClInclude Include="Casc\IO\Impl\DefaultHandler.hpp" />
+    <ClInclude Include="Casc\IO\Impl\ZlibHandler.hpp" />
     <ClInclude Include="Casc\Parsers\Text\EncodingBlock.hpp" />
     <ClInclude Include="Casc\IO\Buffer.hpp" />
     <ClInclude Include="Casc\Parsers\Text\Configuration.hpp" />

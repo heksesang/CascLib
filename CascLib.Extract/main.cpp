@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     {
         auto container = std::make_unique<Casc::Container>(argv[1], "Data",
             std::vector<std::shared_ptr<Casc::IO::Handler>>{
-                std::shared_ptr<Casc::IO::Handler>(new Casc::IO::ZlibHandler())
+                std::shared_ptr<Casc::IO::Handler>(new Casc::IO::Impl::ZlibHandler())
         });
 
         try

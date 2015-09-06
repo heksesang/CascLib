@@ -543,7 +543,7 @@ namespace Casc
                 : out(std::make_unique<char[]>(BufferSize)),
                 temp(std::make_unique<char[]>(BufferSize))
             {
-                registerHandler<DefaultHandler>();
+                registerHandler<Impl::DefaultHandler>();
             }
 
             /**

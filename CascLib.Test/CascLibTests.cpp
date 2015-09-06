@@ -24,7 +24,7 @@ namespace CascLibTest
                 R"(I:\Diablo III\)",
                 "Data",
                 std::vector<std::shared_ptr<IO::Handler>> {
-                    std::shared_ptr<IO::Handler>(new IO::ZlibHandler())
+                    std::shared_ptr<IO::Handler>(new IO::Impl::ZlibHandler())
             });
         }
 
@@ -34,7 +34,7 @@ namespace CascLibTest
                 R"(I:\Diablo III\)",
                 "Data",
                 std::vector<std::shared_ptr<IO::Handler>> {
-                    std::shared_ptr<IO::Handler>(new IO::ZlibHandler())
+                    std::shared_ptr<IO::Handler>(new IO::Impl::ZlibHandler())
             });
 			auto root = container->openFileByHash(container->buildConfig()["root"].front());
             
@@ -104,7 +104,7 @@ namespace CascLibTest
                 R"(I:\Diablo III\)",
                 "Data",
                 std::vector<std::shared_ptr<IO::Handler>> {
-                    std::make_shared<IO::ZlibHandler>()
+                    std::make_shared<IO::Impl::ZlibHandler>()
             });
 
 			auto key = container->encoding().find(container->buildConfig()["root"].front());
@@ -135,7 +135,7 @@ namespace CascLibTest
                 R"(I:\World of Warcraft\)",
                 "Data",
                 std::vector<std::shared_ptr<IO::Handler>> {
-                std::make_shared<IO::ZlibHandler>()
+                std::make_shared<IO::Impl::ZlibHandler>()
             });
             /*Parsers::Binary::Encoding enc(
             container->openFileByKey(container->buildConfig()["encoding"].back()));
@@ -182,7 +182,7 @@ namespace CascLibTest
                 R"(I:\Diablo III\)",
                 "Data",
                 std::vector<std::shared_ptr<IO::Handler>> {
-                    std::make_shared<IO::ZlibHandler>()
+                    std::make_shared<IO::Impl::ZlibHandler>()
             });
 
             std::fstream fs;

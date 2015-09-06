@@ -323,7 +323,7 @@ namespace Casc
         Container()
             : PathSeparator(conv_type().to_bytes({ fs::path::preferred_separator }))
         {
-            registerHandler<IO::DefaultHandler>();
+            registerHandler<IO::Impl::DefaultHandler>();
         }
 
         /**

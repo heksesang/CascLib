@@ -78,9 +78,13 @@ namespace Casc
 
     namespace IO
     {
+        namespace Impl
+        {
+            class DefaultHandler;
+            class ZlibHandler;
+        }
+
         class Handler;
-        class DefaultHandler;
-        class ZlibHandler;
         class Buffer;
         template <bool Writeable>
         class Stream;
