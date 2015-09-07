@@ -57,9 +57,9 @@ namespace Casc
              *
              * @return A pointer to the byte array.
              */
-            virtual std::unique_ptr<char[]> read(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize, std::filebuf::off_type &chunkSize) = 0;
+            virtual std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize, std::filebuf::off_type &chunkSize) = 0;
 
-            virtual std::vector<char> write(std::istream &stream, size_t inSize) const = 0;
+            virtual std::vector<char> encode(std::istream &stream, size_t inSize) const = 0;
         };
     }
 }

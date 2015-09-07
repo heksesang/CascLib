@@ -49,7 +49,7 @@ namespace Casc
                     return EncodingMode::Zlib;
                 }
 
-                std::unique_ptr<char[]> read(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize, std::filebuf::off_type &chunkSize) override
+                std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize, std::filebuf::off_type &chunkSize) override
                 {
                     if (offset == 0 || avail_out - offset < outSize)
                     {
@@ -71,7 +71,7 @@ namespace Casc
                     return std::unique_ptr<char[]>(reinterpret_cast<char*>(resizedOut));
                 }
 
-                std::vector<char> write(std::istream &stream, size_t inSize) const override
+                std::vector<char> encode(std::istream &stream, size_t inSize) const override
                 {
                     std::vector<char> v(inSize + 1, '\0');
                     v[0] = mode();

@@ -22,11 +22,6 @@ namespace CascLibTest
         {
             std::vector<uint8_t> vec{ 0x41, 0xEE, 0x19, 0x86, 0xAC, 0xC5, 0x33, 0xCC, 0x00 };
             std::array<uint8_t, 9> arr{ 0x41, 0xEE, 0x19, 0x86, 0xAC, 0xC5, 0x33, 0xCC, 0x00 };
-
-            auto a = Parsers::Binary::Index::bucket(arr.begin(), arr.end());
-            auto b = Parsers::Binary::Index::bucket(vec.begin(), vec.end());
-
-            Assert::AreEqual(a, b);
         }
 
         TEST_METHOD(ReadBuildInfo)
@@ -58,22 +53,28 @@ namespace CascLibTest
         {
             auto container = std::make_unique<Container>(
                 R"(I:\Diablo III\)",
-                "Data",
-                std::vector<std::shared_ptr<IO::Handler>> {
-                    std::shared_ptr<IO::Handler>(new IO::Impl::ZlibHandler())
-            });
+                "Data");
         }
 
         TEST_METHOD(GetFileByKey)
         {
             auto container = std::make_unique<Container>(
                 R"(I:\Diablo III\)",
-                "Data",
-                std::vector<std::shared_ptr<IO::Handler>> {
-                std::make_shared<IO::Impl::ZlibHandler>()
-            });
+                "Data");
 
-            auto file = container->openFileByKey(container->buildConfig()["encoding"].back());
+            Parsers::Text::BuildInfo buildInfo(R"(I:\Diablo III\.build.info)");
+
+            auto buildConfigHash = buildInfo.build(0).at("Build Key");
+
+            std::stringstream buildConfig;
+            buildConfig << R"(I:\Diablo III\Data\config)"
+                << "\\" << buildConfigHash.substr(0, 2)
+                << "\\" << buildConfigHash.substr(2, 2)
+                << "\\" << buildConfigHash;
+
+            Parsers::Text::Configuration configuration(buildConfig.str());
+
+            auto file = container->openFileByKey(configuration["encoding"].back());
 
             file->seekg(0, std::ios_base::end);
             auto size = file->tellg();
@@ -96,12 +97,21 @@ namespace CascLibTest
 		{
             auto container = std::make_unique<Container>(
                 R"(I:\Diablo III\)",
-                "Data",
-                std::vector<std::shared_ptr<IO::Handler>> {
-                    std::shared_ptr<IO::Handler>(new IO::Impl::ZlibHandler())
-            });
+                "Data");
 
-			auto file = container->openFileByHash(container->buildConfig()["root"].front());
+            Parsers::Text::BuildInfo buildInfo(R"(I:\Diablo III\.build.info)");
+
+            auto buildConfigHash = buildInfo.build(0).at("Build Key");
+
+            std::stringstream buildConfig;
+            buildConfig << R"(I:\Diablo III\Data\config)"
+                << "\\" << buildConfigHash.substr(0, 2)
+                << "\\" << buildConfigHash.substr(2, 2)
+                << "\\" << buildConfigHash;
+
+            Parsers::Text::Configuration configuration(buildConfig.str());
+
+			auto file = container->openFileByHash(configuration["root"].front());
             
             file->seekg(0, std::ios_base::end);
             auto size = file->tellg();
@@ -133,10 +143,7 @@ namespace CascLibTest
         {
             auto container = std::make_unique<Container>(
                 R"(I:\Diablo III\)",
-                "Data",
-                std::vector<std::shared_ptr<IO::Handler>> {
-                    std::make_shared<IO::Impl::ZlibHandler>()
-            });
+                "Data");
 
             unsigned char hexData[10] = {
                 0xDE, 0xAD, 0xBE, 0xEF, 0x3D, 0x60, 0x0D, 0xF0, 0x0D, 0x00

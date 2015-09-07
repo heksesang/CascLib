@@ -38,55 +38,46 @@ namespace Casc
         namespace Binary
         {
             /**
-             * Contains the index of files in the CASC archive.
+             * Provides access to the file index.
              */
             class Index
             {
-            public:
+            private:
+                // The files listed in the index.
+                std::map<std::vector<char>, Parsers::Binary::Reference> files_;
+
+                // The versions of the .idx files.
+                std::map<uint32_t, uint32_t> versions_;
+
+                // The path of the .idx files.
+                std::string path_;
+
+                // The size of the keys in the .idx files.
+                std::map<uint32_t, uint32_t> keySize_;
+
                 /**
-                 * Gets the bucket number for a file key.
+                 * Finds the bucket for a file key.
                  */
                 template <typename KeyIt>
-                static uint32_t bucket(KeyIt first, KeyIt last)
+                uint32_t findBucket(KeyIt first, KeyIt last)
                 {
                     uint8_t xorred = 0;
 
                     for (auto it = first; it != last; ++it)
                     {
-                        if ((it - last) > 1)
-                            xorred = xorred ^ *it;
+                        xorred = xorred ^ *it;
                     }
 
                     return xorred & 0xF ^ (xorred >> 4);
                 }
 
-            private:
-                typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
-
-                // The files available in the index.
-                std::map<std::vector<char>, Parsers::Binary::Reference> files;
-
-                // The version of this index.
-                int version;
-
-                // The file number.
-                int file;
-
-                // The path of the index file.
-                std::string path_;
-
-                // The size of the keys in the index file.
-                size_t keySize_;
-
-            public:
                 /**
-                 * Constructor
+                 * Parses an .idx file.
                  */
-                Index(const std::string path)
-                    : path_(path)
+                void parse(const std::string &path)
                 {
-                    using namespace Endian;
-                    using namespace Hash;
+                    using namespace Functions::Endian;
+                    using namespace Functions::Hash;
                     std::ifstream fs;
                     fs.open(path, std::ios_base::in | std::ios_base::binary);
 
@@ -103,7 +94,7 @@ namespace Casc
                     }
 
                     uint16_t version;
-                    uint16_t file;
+                    uint16_t bucket;
 
                     uint8_t lengthFieldSize;
                     uint8_t locationFieldSize;
@@ -111,15 +102,14 @@ namespace Casc
                     uint8_t segmentBits;
 
                     fs >> le >> version;
-                    fs >> le >> file;
+                    fs >> le >> bucket;
                     fs >> lengthFieldSize;
                     fs >> locationFieldSize;
                     fs >> keyFieldSize;
                     fs >> segmentBits;
 
-                    this->version = version;
-                    this->file = file;
-                    this->keySize_ = keyFieldSize;
+                    this->versions_[bucket] = version;
+                    this->keySize_[bucket] = keyFieldSize;
 
                     for (unsigned int i = 0; i < (size - 8); i += 8)
                     {
@@ -148,7 +138,7 @@ namespace Casc
                             lengthFieldSize,
                             segmentBits);
 
-                        files.insert({ ref.key(), ref });
+                        files_.insert({ ref.key(), ref });
 
                         dataHash = lookup3(bytes, dataHash);
                     }
@@ -162,70 +152,27 @@ namespace Casc
                 }
 
                 /**
-                 * Bumps the version number.
+                 * Write the file list to an .idx file.
                  */
-                void updateVersion(int version)
+                void write(std::ofstream &stream, uint32_t bucket)
                 {
-                    fs::path p(path_);
-
-                    auto parent = p.parent_path();
-
-                    std::stringstream ss;
-                    conv_type conv;
-
-                    ss << std::setw(2) << std::setfill('0') << std::hex << file;
-                    ss << std::setw(8) << std::setfill('0') << std::hex << version;
-                    ss << ".idx";
-
-                    parent.append(conv.to_bytes({ fs::path::preferred_separator }));
-                    parent.append(ss.str());
-
-                    path_ = parent.string();
-                }
-
-                /**
-                 * Gets a file record.
-                 */
-                template <typename KeyIt>
-                Parsers::Binary::Reference find(KeyIt first, KeyIt last) const
-                {
-                    auto result = files.find({ first, last });
-
-                    if (result == files.end())
-                    {
-                        throw Exceptions::KeyDoesNotExistException(Hex(first, last).string());
-                    }
-
-                    return result->second;
-                }
-
-                /**
-                 * Inserts a file record.
-                 */
-                template <typename KeyIt>
-                bool insert(KeyIt first, KeyIt last, Parsers::Binary::Reference &loc)
-                {
-                    if (bucket(first, last) == file)
-                    {
-                        files[{first, last}] = loc;
-
-                        return true;
-                    }
-
-                    return false;
-                }
-
-                /**
-                 * Write the index to file.
-                 */
-                void write(std::ofstream &stream)
-                {
-                    using namespace Hash;
+                    using namespace Functions;
+                    using namespace Functions::Hash;
 
                     std::vector<char> v(24);
 
+                    std::vector<Parsers::Binary::Reference> files;
+
+                    for (auto &file : this->files_)
+                    {
+                        if (findBucket(file.first.begin(), file.first.begin() + 9U) == bucket)
+                        {
+                            files.push_back(file.second);
+                        }
+                    }
+
                     auto version = Endian::write<IO::EndianType::Little, uint16_t>(7U);
-                    auto file = Endian::write<IO::EndianType::Little, uint16_t>(this->file);
+                    auto file = Endian::write<IO::EndianType::Little, uint16_t>(bucket);
                     auto lengthSize = Endian::write<IO::EndianType::Little, uint8_t>(4U);
                     auto locationSize = Endian::write<IO::EndianType::Little, uint8_t>(5U);
                     auto keySize = Endian::write<IO::EndianType::Little, uint8_t>(9U);
@@ -258,26 +205,26 @@ namespace Casc
                     auto hashPos = stream.tellp();
                     stream.seekp(4, std::ios_base::cur);
 
-                    std::vector<std::pair<std::vector<char>, Parsers::Binary::Reference>> refs(files.begin(), files.end());
-
-                    std::sort(refs.begin(), refs.end(), [](
-                        std::pair<std::vector<char>, Parsers::Binary::Reference> &a,
-                        std::pair<std::vector<char>, Parsers::Binary::Reference> &b)
+                    std::sort(files.begin(), files.end(), [](
+                        Parsers::Binary::Reference &a,
+                        Parsers::Binary::Reference &b)
                     {
-                        for (auto i = 0U; i < a.first.size(); ++i)
+                        for (auto i = 0U; i < a.key().size(); ++i)
                         {
-                            if (*reinterpret_cast<unsigned char*>(&a.first[i]) != *reinterpret_cast<unsigned char*>(&b.first[i]))
+                            if (*reinterpret_cast<const unsigned char*>(&a.key()[i]) !=
+                                *reinterpret_cast<const unsigned char*>(&b.key()[i]))
                             {
-                                return *reinterpret_cast<unsigned char*>(&b.first[i]) > *reinterpret_cast<unsigned char*>(&a.first[i]);
+                                return *reinterpret_cast<const unsigned char*>(&b.key()[i]) >
+                                    *reinterpret_cast<const unsigned char*>(&a.key()[i]);
                             }
                         }
 
-                        return b.first > a.first;
+                        return b.key() > a.key();
                     });
 
-                    for (auto &file : refs)
+                    for (auto &file : files)
                     {
-                        auto bytes = file.second.serialize(9, 5, 4, 30);
+                        auto bytes = file.serialize(9, 5, 4, 30);
                         hash = lookup3(bytes, hash);
 
                         stream.write(bytes.data(), bytes.size());
@@ -294,14 +241,145 @@ namespace Casc
                     stream.write("\0", 1);
                 }
 
+            public:
+                /**
+                 * Default constructor
+                 */
+                Index() { }
+
+                /**
+                 * Constructor.
+                 */
+                Index(const std::string path, const std::map<uint32_t, uint32_t> &versions)
+                    : path_(path), versions_(versions)
+                {
+                    parse(path, versions);
+                }
+
+                /**
+                 * Copy constructor.
+                 */
+                Index(const Index &) = default;
+
+                /**
+                 * Move constructor.
+                 */
+                Index(Index &&) = default;
+
+                /**
+                * Copy operator.
+                */
+                Index &operator= (const Index &) = default;
+
+                /**
+                 * Move operator.
+                 */
+                Index &operator= (Index &&) = default;
+
+                /**
+                 * Destructor
+                 */
+                virtual ~Index() = default;
+
+                /**
+                 * Gets a file record.
+                 */
+                template <typename KeyIt>
+                Parsers::Binary::Reference find(KeyIt first, KeyIt last) const
+                {
+                    auto result = files_.find({ first, last });
+
+                    if (result == files_.end())
+                    {
+                        throw Exceptions::KeyDoesNotExistException(Hex(first, last).string());
+                    }
+
+                    return result->second;
+                }
+
+                /**
+                 * Inserts a file record.
+                 */
+                template <typename KeyIt>
+                void insert(KeyIt first, KeyIt last, Parsers::Binary::Reference &loc)
+                {
+                    files_[{first, last}] = loc;
+                }
+
+                /**
+                 * Parses the .idx files.
+                 */
+                void parse(const std::string path, const std::map<uint32_t, uint32_t> &versions)
+                {
+                    path_ = path;
+                    versions_ = versions;
+
+                    for (auto it = versions.begin(); it != versions.end(); ++it)
+                    {
+                        std::stringstream ss;
+
+                        ss << path << PathSeparator;
+                        ss << std::setw(2) << std::setfill('0') << std::hex << it->first;
+                        ss << std::setw(8) << std::setfill('0') << std::hex << it->second;
+                        ss << ".idx";
+
+                        if (!fs::exists(ss.str()))
+                        {
+                            throw Exceptions::FileNotFoundException(ss.str());
+                        }
+
+                        parse(ss.str());
+                    }
+                }
+
+                /**
+                 * Writes the file list back to the .idx files.
+                 */
+                void write()
+                {
+                    for (auto it = versions_.begin(); it != versions_.end(); ++it)
+                    {
+                        std::stringstream ss;
+
+                        ss << path_ << PathSeparator;
+                        ss << std::setw(2) << std::setfill('0') << std::hex << it->first;
+                        ss << std::setw(8) << std::setfill('0') << std::hex << it->second;
+                        ss << ".idx";
+
+                        if (!fs::exists(ss.str()))
+                        {
+                            throw Exceptions::FileNotFoundException(ss.str());
+                        }
+
+                        std::ofstream out;
+                        out.open(ss.str(), std::ios_base::out | std::ios_base::binary);
+                        write(out, it->first);
+                        out.close();
+                    }
+                }
+
+                /**
+                 * The path of the .idx files.
+                 */
                 const std::string &path() const
                 {
                     return path_;
                 }
 
-                const size_t &keySize() const
+                /**
+                 * The key size for the given bucket.
+                 */
+                size_t keySize(uint32_t bucket) const
                 {
-                    return keySize_;
+                    return keySize_.at(bucket);
+                }
+
+                /**
+                 * The bucket count.
+                 */
+                size_t bucketCount() const
+                {
+                    return versions_.size();
                 }
             };
         }

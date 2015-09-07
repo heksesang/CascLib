@@ -25,10 +25,12 @@
 #include <cctype>
 #include <fstream>
 #include <iterator>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "../Common.hpp"
 #include "../Exceptions.hpp"
 
 #include "../lookup3.hpp"
@@ -63,6 +65,44 @@ namespace Casc
 
             result = value == ' ' || value == '\t' || value == '\v' || value == '\r' || value == '\f' || value == '\n';
             return result;
+        }
+
+        inline std::string createPath(const std::string base,
+            const std::string data, IO::DataFolders folder, const std::string filename)
+        {
+            std::stringstream out;
+            out << base << PathSeparator << data << PathSeparator;
+            
+            switch (folder)
+            {
+            case IO::DataFolders::Config:
+                out << "config";
+                if (!filename.empty())
+                {
+                    out << PathSeparator << filename.substr(0, 2)
+                        << PathSeparator << filename.substr(2, 2);
+                }
+                break;
+
+            case IO::DataFolders::Data:
+                out << "data";
+                break;
+
+            case IO::DataFolders::Indices:
+                out << "indices";
+                break;
+
+            case IO::DataFolders::Patch:
+                out << "patch";
+                break;
+            }
+
+            if (!filename.empty())
+            {
+                out << PathSeparator << filename;
+            }
+
+            return out.str();
         }
 
         namespace Endian

@@ -60,9 +60,6 @@
     <ClInclude Include="Casc\Exceptions.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\Filesystem\RootHandler.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\Container.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
@@ -127,6 +124,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Casc\IO\Impl\DefaultHandler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Filesystem\Handler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Filesystem\Root.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\StreamAllocator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\DataFolders.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

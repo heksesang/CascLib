@@ -107,15 +107,14 @@ namespace Casc
             // Currently buffered range
             BufferInfo currentBuffer;
 
-            // The available chunks.
+            // The available blocks.
             std::vector<ChunkInfo> chunks;
 
-            // Chunk handlers
+            // Block handlers
             std::map<char, std::shared_ptr<Handler>> handlers;
 
             /**
              * Read the header for the current file.
-             * This sets up all necessary chunk data for directly reading decompressed data.
              */
             void readHeader()
             {
@@ -257,10 +256,6 @@ namespace Casc
 
             /**
             * Finds the chunk that corresponds to the given virtual offset.
-            *
-            * @param offset	the virtual offset of the decompressed data.
-            * @param out		reference to the output variable where the chunk will be written.
-            * @return			true on success, false on failure.
             */
             bool find(off_type offset, ChunkInfo &out)
             {
@@ -292,9 +287,6 @@ namespace Casc
 
             /**
             * Seeks within the current buffer.
-            *
-            * @param offset the offset to seek to.
-            * @param dir    the seek direction.
             */
             pos_type seekbuf(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
             {
@@ -321,9 +313,6 @@ namespace Casc
 
             /**
             * Seeks relatively within the file.
-            *
-            * @param offset the offset to seek to.
-            * @param dir    the seek direction.
             */
             pos_type seekrel(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
             {
@@ -337,9 +326,6 @@ namespace Casc
 
             /**
             * Seeks absolutely within the file.
-            *
-            * @param offset the offset to seek to.
-            * @param dir    the seek direction.
             */
             pos_type seekabs(off_type offset, std::ios_base::seekdir dir = std::ios_base::beg)
             {
@@ -358,9 +344,6 @@ namespace Casc
 
             /**
             * Seeks within the file.
-            *
-            * @param offset the offset to seek to.
-            * @param dir    the seek direction.
             */
             pos_type seek(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
             {
@@ -376,8 +359,6 @@ namespace Casc
 
             /**
             * Read the decompressed data from the current chunk into the buffer.
-            *
-            * @param offset    the offset into the chunk to start reading.
             */
             pos_type buffer(off_type offset)
             {
@@ -413,7 +394,7 @@ namespace Casc
 
                     // Call the handler for the compression mode.
                     std::filebuf::seekpos(this->offset + chunk.offset + 1);
-                    auto data = handlers[mode]->read(*this, offset - chunk.begin, chunk.size - 1, count, chunkSize);
+                    auto data = handlers[mode]->decode(*this, offset - chunk.begin, chunk.size - 1, count, chunkSize);
                     std::memcpy(out.get() + pos, data.get(), count);
 
                     if (chunks.size() == 1 && chunkSize != 0)
@@ -537,20 +518,10 @@ namespace Casc
             /**
              * Default constructor.
              */
-            Buffer()
-                : out(std::make_unique<char[]>(BufferSize)),
+            Buffer() :
+                out(std::make_unique<char[]>(BufferSize)),
                 temp(std::make_unique<char[]>(BufferSize))
             {
-                registerHandler<Impl::DefaultHandler>();
-            }
-
-            /**
-             * Constructor with handler initialization.
-             */
-            Buffer(std::vector<std::shared_ptr<Handler>> handlers)
-                : Buffer()
-            {
-                registerHandlers(handlers);
             }
 
             /**
@@ -571,12 +542,9 @@ namespace Casc
                 this->close();
             }
 
-            void registerHandlers(std::vector<std::shared_ptr<Handler>> handlers)
-            {
-                for (std::shared_ptr<Handler> handler : handlers)
-                    this->handlers[handler->mode()] = std::shared_ptr<Handler>(handler);
-            }
-
+            /**
+             * Registers block handlers.
+             */
             template <typename T>
             void registerHandler()
             {
@@ -586,8 +554,6 @@ namespace Casc
 
             /**
              * Opens a file from the currently opened CASC file.
-             *
-             * @param offset	the offset where the file starts.
              */
             void open(size_t offset)
             {
@@ -620,9 +586,6 @@ namespace Casc
 
             /**
              * Opens a file in a CASC file.
-             *
-             * @param filename	the filename of the CASC file.
-             * @param offset	the offset where the file starts.
              */
             void open(const std::string filename, size_t offset)
             {

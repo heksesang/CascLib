@@ -49,16 +49,23 @@ namespace Casc
                 size_t size_ = 0;
 
             public:
-                Reference()
-                {
-                }
+                /**
+                 * Default constructor.
+                 */
+                Reference() { }
 
+                /**
+                 * Constructor.
+                 */
                 template <typename KeyIt>
                 Reference(KeyIt first, KeyIt last, size_t file, size_t offset, size_t length)
                     : key_(first, last), file_(file), offset_(offset), size_(length)
                 {
                 }
 
+                /**
+                 * Constructor.
+                 */
                 template <typename InputIt>
                 Reference(InputIt first, InputIt last,
                     size_t keySize, size_t locationSize, size_t lengthSize, size_t segmentBits)
@@ -100,26 +107,66 @@ namespace Casc
                     this->size_ = size;
                 }
 
+                /**
+                 * Copy constructor.
+                 */
+                Reference(const Reference &) = default;
+
+                /**
+                 * Move constructor.
+                 */
+                Reference(Reference &&) = default;
+
+                /**
+                 * Copy operator.
+                 */
+                Reference &operator= (const Reference &) = default;
+
+                /**
+                 * Move operator.
+                 */
+                Reference &operator= (Reference &&) = default;
+
+                /**
+                 * Destructor
+                 */
+                virtual ~Reference() = default;
+
+                /**
+                 * The key.
+                 */
                 const std::vector<char> &key() const
                 {
                     return key_;
                 }
 
+                /**
+                 * The file number.
+                 */
                 size_t file() const
                 {
                     return file_;
                 }
 
+                /**
+                 * The offset.
+                 */
                 size_t offset() const
                 {
                     return offset_;
                 }
 
+                /**
+                 * The size.
+                 */
                 size_t size() const
                 {
                     return size_;
                 }
 
+                /**
+                 * Serializes the object to a binary structure.
+                 */
                 std::vector<char> serialize(size_t keySize, size_t locationSize,
                     size_t lengthSize, size_t segmentBits) const
                 {

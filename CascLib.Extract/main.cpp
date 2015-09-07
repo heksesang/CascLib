@@ -22,10 +22,7 @@ int main(int argc, char* argv[])
 
     try
     {
-        auto container = std::make_unique<Casc::Container>(argv[1], "Data",
-            std::vector<std::shared_ptr<Casc::IO::Handler>>{
-                std::shared_ptr<Casc::IO::Handler>(new Casc::IO::Impl::ZlibHandler())
-        });
+        auto container = std::make_unique<Casc::Container>(argv[1], "Data");
 
         try
         {
@@ -41,7 +38,7 @@ int main(int argc, char* argv[])
             }
             else if (strcmp(argv[2], "filename") == 0)
             {
-                file = container->openFileByName(argv[3]);
+                return -1;
             }
             else
             {

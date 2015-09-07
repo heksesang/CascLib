@@ -25,6 +25,8 @@
 #include "../../Common.hpp"
 #include "../../Exceptions.hpp"
 
+#include "Index.hpp"
+
 namespace Casc
 {
     namespace Parsers
@@ -43,9 +45,6 @@ namespace Casc
             public:
                 /**
                  * Find the file key for the given hash.
-                 *
-                 * @param hash      the MD5 hash of the file content.
-                 * @return          the key in hex format.
                  */
                 std::vector<Hex> find(const std::string hash) const
                 {
@@ -72,12 +71,6 @@ namespace Casc
 
                 /**
                  * Reads data from a stream and puts it in a struct.
-                 *
-                 * @param T     the type of the struct.
-                 * @param input the input stream.
-                 * @param value the output object to write the data to.
-                 * @param big   true if big endian.
-                 * @return      the data.
                  */
                 template <IO::EndianType Endian = IO::EndianType::Little, typename T>
                 const T &read(T &value) const
@@ -142,6 +135,9 @@ namespace Casc
                 // The encoding profiles
                 std::vector<std::vector<Text::EncodingBlock>> profiles;
 
+                /**
+                 * Search the table for a given hash.
+                 */
                 std::vector<Hex> searchTable(Hex target, const std::vector<ChunkHead> &heads, std::streamsize offset, size_t hashSize) const
                 {
                     std::vector<Hex> keys;
@@ -202,72 +198,9 @@ namespace Casc
                     return keys;
                 }
 
-            public:
                 /**
-                 * Default constructor.
-                 */
-                Encoding()
-                    : chunksOffsetA(0), chunksOffsetB(0)
-                {
-
-                }
-
-                /**
-                 * Constructor.
-                 *
-                 * @param stream    pointer to the stream.
-                 */
-                Encoding(std::shared_ptr<std::istream> stream)
-                    : Encoding()
-                {
-                    parse(stream);
-                }
-
-                /**
-                 * Constructor.
-                 *
-                 * @param path      path to the encoding file.
-                 */
-                Encoding(std::string path)
-                    : Encoding()
-                {
-                    parse(path);
-                }
-
-                /**
-                 * Move constructor.
-                 */
-                Encoding(Encoding &&) = default;
-
-                /**
-                 * Move operator.
-                 */
-                Encoding &operator= (Encoding &&) = default;
-
-                /**
-                 * Destructor.
-                 */
-                virtual ~Encoding()
-                {
-                }
-
-                /**
-                 * Parse an encoding file.
-                 *
-                 * @param path      path to the encoding file.
-                 */
-                void parse(std::string path)
-                {
-                    std::unique_ptr<std::istream> fs =
-                        std::make_unique<std::ifstream>(path, std::ios_base::in | std::ios_base::binary);
-                    parse(std::move(fs));
-                }
-
-                /**
-                 * Parse an encoding file.
-                 *
-                 * @param stream    pointer to the stream.
-                 */
+                * Parse an encoding file.
+                */
                 void parse(std::shared_ptr<std::istream> stream)
                 {
                     this->stream = stream;
@@ -338,6 +271,45 @@ namespace Casc
 
                     checkForErrors();
                 }
+
+            public:
+                /**
+                 * Constructor.
+                 */
+                Encoding(Hex hash, std::shared_ptr<Parsers::Binary::Index> index,
+                         std::shared_ptr<IO::StreamAllocator> allocator)
+                    : chunksOffsetA(0), chunksOffsetB(0)
+                {
+                    auto ref = index->find(hash.begin(), hash.begin() + 9);
+                    auto stream = allocator->allocate<false>(ref);
+
+                    parse(stream);
+                }
+
+                /**
+                * Copy constructor.
+                */
+                Encoding(const Encoding &) = default;
+
+                /**
+                 * Move constructor.
+                 */
+                Encoding(Encoding &&) = default;
+
+                /**
+                * Copy operator.
+                */
+                Encoding &operator= (const Encoding &) = default;
+
+                /**
+                 * Move operator.
+                 */
+                Encoding &operator= (Encoding &&) = default;
+
+                /**
+                 * Destructor.
+                 */
+                virtual ~Encoding() = default;
 
                 /**
                 * Inserts a file record.

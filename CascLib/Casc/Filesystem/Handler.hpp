@@ -39,7 +39,7 @@ namespace Casc
          *
          * TODO: Finish implementation, need different handling per game.
          */
-        class RootHandler
+        class Handler
         {
         public:
             /**
@@ -87,7 +87,7 @@ namespace Casc
             /**
              * Default constructor.
              */
-            RootHandler(std::shared_ptr<Container> container)
+            Handler(std::shared_ptr<Container> container)
                 : container(container)
             {
 
@@ -96,17 +96,17 @@ namespace Casc
             /**
              * Move constructor.
              */
-            RootHandler(RootHandler &&) = default;
+            Handler(Handler &&) = default;
 
             /**
             * Move operator.
             */
-            RootHandler &operator= (RootHandler &&) = default;
+            Handler &operator= (Handler &&) = default;
 
             /**
              * Destructor.
              */
-            virtual ~RootHandler() = default;
+            virtual ~Handler() = default;
 
             /**
              * The file magic of the root file.

@@ -35,6 +35,8 @@ struct deletable_facet : Facet
     ~deletable_facet() {}
 };
 
+typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
+
 // Define boost or std <filesystem> header
 #ifdef _MSC_VER
 #include <experimental/filesystem>
@@ -49,6 +51,8 @@ namespace Casc
 #else
     namespace fs = boost::filesystem;
 #endif
+
+    const std::string PathSeparator = conv_type().to_bytes({ fs::path::preferred_separator });
 }
 
 // Forward declarations
@@ -73,7 +77,8 @@ namespace Casc
 
     namespace Filesystem
     {
-        class RootHandler;
+        class Handler;
+        class Root;
     }
 
     namespace IO
@@ -88,16 +93,17 @@ namespace Casc
         class Buffer;
         template <bool Writeable>
         class Stream;
+        class StreamAllocator;
     }
 
     namespace Parsers
     {
         namespace Binary
         {
-            class Shmem;
             class Encoding;
             class Index;
             class Reference;
+            class ShadowMemory;
         }
 
         namespace Text
@@ -112,6 +118,7 @@ namespace Casc
 }
 
 // Enums
+#include "IO/DataFolders.hpp"
 #include "IO/EncodingMode.hpp"
 #include "IO/EndianType.hpp"
 

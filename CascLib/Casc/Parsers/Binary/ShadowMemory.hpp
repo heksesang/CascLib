@@ -50,6 +50,9 @@ namespace Casc
             class ShadowMemory
             {
             public:
+                /**
+                 * Finds free space and reserves it.
+                 */
                 Reference reserveSpace(uint32_t size)
                 {
                     uint32_t available = 0;
@@ -94,6 +97,7 @@ namespace Casc
                                     it->offset() - size);
                             }
 
+                            write();
 
                             return result;
                         }
@@ -103,8 +107,6 @@ namespace Casc
                 }
 
             private:
-                typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
-
                 static const int EntriesPerBlock = 1090U;
                 static const int BlockSize = EntriesPerBlock * 5U;
 
@@ -136,9 +138,7 @@ namespace Casc
                 std::vector<Reference> freeSpaceOffset_;
 
                 /**
-                 * Reads a chunk of type BlockType::WriteableMemory.
-                 *
-                 * @param file the file stream to read the data from.
+                 * Reads a block of type BlockType::WriteableMemory.
                  */
                 void readFreeSpace(std::ifstream &file)
                 {
@@ -172,10 +172,7 @@ namespace Casc
                 }
 
                 /**
-                 * Reads a chunk of type BlockType::Header.
-                 *
-                 * @param file the file stream to read the data from.
-                 * @param base the path of the base directory.
+                 * Reads a block of type BlockType::Header.
                  */
                 void readHeader(std::ifstream &file)
                 {
@@ -261,9 +258,7 @@ namespace Casc
                 }
 
                 /**
-                 * Reads a SHMEM file.
-                 *
-                 * @param path the path of the SHMEM file.
+                 * Reads a shadow memory file.
                  */
                 void readFile(std::string path)
                 {
@@ -287,11 +282,17 @@ namespace Casc
                     file.close();
                 }
 
+                /**
+                 * Calculates how many blocks are needed for entries.
+                 */
                 size_t calcBlockCount(size_t count) const
                 {
                     return (count % 1090) == 0 ? count / 1090 : 1 + count / 1090;
                 }
 
+                /**
+                 * Writes the free space data.
+                 */
                 void writeFreeSpace(std::ofstream &str) const
                 {
                     uint32_t freeSpaceCount = freeSpaceLength_.size();
@@ -337,6 +338,9 @@ namespace Casc
                     }
                 }
 
+                /**
+                 * Writes the header data.
+                 */
                 void writeHeader(std::ofstream &str) const
                 {
                     uint32_t versionCount = versions_.size();
@@ -378,8 +382,10 @@ namespace Casc
                     }
                 }
 
-            public:
-                void writeFile() const
+                /**
+                 * Writes to file.
+                 */
+                void write() const
                 {
                     std::ofstream file;
                     std::string path = path_;
@@ -391,17 +397,7 @@ namespace Casc
 
             public:
                 /**
-                 * Default constructor.
-                 */
-                ShadowMemory()
-                {
-                }
-
-                /**
                  * Constructor.
-                 *
-                 * @param path the path of the SHMEM file.
-                 * @param base the path of the base directory.
                  */
                 ShadowMemory(std::string path)
                     : path_(path)
@@ -417,9 +413,7 @@ namespace Casc
                 }
 
                 /**
-                 * Parses a SHMEM file.
-                 *
-                 * @param path the path of the SHMEM file.
+                 * Parses a shadow memory file.
                  */
                 void parse(std::string path)
                 {
@@ -429,8 +423,6 @@ namespace Casc
 
                 /**
                  * Gets the directory where the data files are stored.
-                 *
-                 * @return the directory path.
                  */
                 const std::string &path() const
                 {
@@ -438,9 +430,7 @@ namespace Casc
                 }
 
                 /**
-                 * Gets the IDX file versions.
-                 *
-                 * @return the list of version numbers.
+                 * Gets the .idx file versions.
                  */
                 const std::map<uint32_t, uint32_t> &versions() const
                 {

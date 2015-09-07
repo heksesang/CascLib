@@ -19,9 +19,10 @@
 
 #pragma once
 
-#include <type_traits>
 #include <iostream>
 #include <memory>
+#include <type_traits>
+#include <typeinfo>
 
 #include "../Common.hpp"
 
@@ -33,11 +34,11 @@ namespace Casc
     {
         /**
          * A stream that uses the IO::Buffer as the underlying buffer.
-         * The class provides methods to easily control the underlying buffer.
          */
         template <bool Writeable>
         class Stream : public std::conditional<Writeable, std::ostream, std::istream>::type
         {
+            // Typedefs
             typedef std::filebuf write_buf_type;
             typedef IO::Buffer read_buf_type;
 #ifdef _MSC_VER_
@@ -54,8 +55,17 @@ namespace Casc
             // The underlying buffer.
             base_buf_type* buffer;
 
-            // Chunk handlers
-            std::map<char, std::shared_ptr<Handler>> handlers;
+            /**
+             * Registers block handlers.
+             */
+            template <typename T>
+            void registerHandler()
+            {
+                if (typeid(*this->rdbuf()) == typeid(Buffer))
+                {
+                    reinterpret_cast<Buffer*>(this->rdbuf())->registerHandler<T>();
+                }
+            }
 
         public:
             /**
@@ -65,25 +75,15 @@ namespace Casc
                 : buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
                 base_type(new buf_type())
             {
-                registerHandler<Impl::DefaultHandler>();
-            }
-
-            Stream(std::vector<std::shared_ptr<Handler>> handlers)
-                : Stream()
-            {
-                registerHandlers(handlers);
+                registerHandler<IO::Impl::DefaultHandler>();
+                registerHandler<IO::Impl::ZlibHandler>();
             }
 
             /**
              * Constructor.
-             *
-             * @param filename	the filename of the CASC file.
-             * @param offset	the offset where the file starts.
-             * @param handlers  the chunk handlers.
              */
-            Stream(const std::string filename, size_t offset,
-                std::vector<std::shared_ptr<Handler>> handlers = {})
-                : Stream(handlers)
+            Stream(const std::string filename, size_t offset)
+                : Stream()
             {
                 open(filename, offset);
             }
@@ -111,8 +111,6 @@ namespace Casc
 
             /**
              * Opens a file from the currently opened CASC file.
-             *
-             * @param offset	the offset where the file starts.
              */
             void open(size_t offset)
             {
@@ -133,9 +131,6 @@ namespace Casc
 
             /**
              * Opens a file in a CASC file.
-             *
-             * @param filename	the filename of the CASC file.
-             * @param offset	the offset where the file starts.
              */
             void open(const char *filename, size_t offset)
             {
@@ -157,9 +152,6 @@ namespace Casc
 
             /**
              * Opens a file in a CASC file.
-             *
-             * @param filename	the filename of the CASC file.
-             * @param offset	the offset where the file starts.
              */
             void open(const std::string filename, size_t offset)
             {
@@ -176,35 +168,10 @@ namespace Casc
 
             /**
              * Checks if the buffer is open.
-             *
-             * @return true if the buffer is open, false if the buffer is closed.
              */
             bool is_open() const
             {
                 return buffer->is_open();
-            }
-
-            void registerHandlers(std::vector<std::shared_ptr<Handler>> handlers)
-            {
-                if (!Writeable)
-                {
-                    for (std::shared_ptr<Handler> handler : handlers)
-                        this->handlers[handler->mode()] = handler;
-
-                    reinterpret_cast<read_buf_type*>(this->rdbuf())->registerHandlers(handlers);
-                }
-            }
-
-            template <typename T>
-            void registerHandler()
-            {
-                if (!Writeable)
-                {
-                    Handler* handler = new T;
-                    this->handlers[handler->mode()] = std::shared_ptr<Handler>(handler);
-
-                    reinterpret_cast<read_buf_type*>(this->rdbuf())->registerHandlers({ this->handlers[handler->mode()] });
-                }
             }
         };
     }

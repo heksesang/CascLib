@@ -38,9 +38,10 @@
 
 #include "md5.hpp"
 
-#include "Filesystem/RootHandler.hpp"
+#include "Filesystem/Root.hpp"
 #include "IO/Handler.hpp"
 #include "IO/Stream.hpp"
+#include "IO/StreamAllocator.hpp"
 #include "Parsers/Text/BuildInfo.hpp"
 #include "Parsers/Text/Configuration.hpp"
 #include "Parsers/Text/EncodingBlock.hpp"
@@ -62,7 +63,6 @@ namespace Casc
     {
     private:
         typedef std::pair<Parsers::Text::EncodingBlock, std::vector<char>> descriptor_type;
-        typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
 
         template <typename SrcContainer, typename DestContainer>
         size_t copyToVector(const SrcContainer &src, DestContainer &dest, size_t offset) const
@@ -123,14 +123,14 @@ namespace Casc
         {
             std::vector<descriptor_type> chunks;
 
-            auto offset = 0U;
+            /*auto offset = 0U;
             for (auto &block : blocks)
             {
                 stream.seekg(offset, std::ios_base::beg);
                 chunks.emplace_back(block,
-                    blteHandlers.at(block.mode())->write(stream, block.size()));
+                    handlers.at(block.mode())->encode(stream, block.size()));
                 offset += block.size();
-            }
+            }*/
 
             return std::move(chunks);
         }
@@ -166,37 +166,21 @@ namespace Casc
     public:
         std::shared_ptr<IO::Stream<false>> openFileByKey(const std::string key) const
         {
-            return openStream<false>(findFileLocation(key));
+            return allocator->allocate<false>(findFileLocation(key));
         }
 
         std::shared_ptr<IO::Stream<false>> openFileByHash(const std::string hash) const
         {
-            return openFileByKey(encoding_->find(hash).at(0).string());
-        }
-
-        std::shared_ptr<IO::Stream<false>> openFileByName(const std::string name) const
-        {
-            auto root = openFileByHash(this->buildConfig()["root"].front());
-
-            std::array<char, 4> magic;
-            root->read(&magic[0], 4);
-            root->seekg(0, std::ios_base::beg);
-
-            return openFileByKey(
-                encoding_->find(
-                    rootHandlers.at(
-                        Functions::Endian::read<IO::EndianType::Little, uint32_t>(magic.begin(), magic.end())
-                    )->findHash(name)).at(0).string());
+            return openFileByKey(encoding->find(hash).at(0).string());
         }
 
         Parsers::Binary::Reference write(std::istream &stream, std::vector<Parsers::Text::EncodingBlock> &blocks)
         {
             auto arr = createData(stream, blocks);
             
-            auto loc = shmem_.reserveSpace(arr.size());
-            shmem_.writeFile();
+            auto loc = shadowMemory.reserveSpace(arr.size());
             
-            auto out = openStream<true>(loc);
+            auto out = allocator->allocate<true>(loc);
             out->write(arr.data(), arr.size());
             out->close();
 
@@ -205,140 +189,73 @@ namespace Casc
 
             loc = Parsers::Binary::Reference(key.begin(), key.begin() + 9, loc.file(), loc.offset(), loc.size());
 
-            auto bucket = Parsers::Binary::Index::bucket(key.begin(), key.begin() + 9);
-            indices_[bucket].insert(key.begin(), key.begin() + 9, loc);
-
-            std::ofstream indexFs;
-            indexFs.open(indices_[bucket].path(), std::ios_base::out | std::ios_base::binary);
-            indices_[bucket].write(indexFs);
-            indexFs.close();
+            index->insert(key.begin(), key.begin() + 9, loc);
+            index->write();
 
             return loc;
-        }
-
-        template <typename T>
-        void registerHandler()
-        {
-            IO::Handler* handler = new T;
-            this->blteHandlers[handler->mode()] = std::shared_ptr<IO::Handler>(handler);
-        }
-
-        void registerHandlers(std::vector<std::shared_ptr<IO::Handler>> handlers)
-        {
-            for (std::shared_ptr<IO::Handler> handler : handlers)
-                this->blteHandlers[handler->mode()] = handler;
-        }
-
-        void registerHandlers(std::vector<std::shared_ptr<Filesystem::RootHandler>> handlers)
-        {
-            for (std::shared_ptr<Filesystem::RootHandler> handler : handlers)
-                this->rootHandlers[handler->signature()] = handler;
         }
 
     private:
         static const int BlteSignature = 0x45544C42;
         static const int DataHeaderSize = 30U;
 
-        // The path separator for this system.
-        const std::string PathSeparator;
-
         // The path of the game directory.
-        std::string path_;
+        std::string path;
 
         // The relative path of the data directory.
-        std::string dataPath_;
+        std::string dataPath;
 
         // The build info.
-        Parsers::Text::BuildInfo buildInfo_;
+        Parsers::Text::BuildInfo buildInfo;
 
         // The build configuration.
-        Parsers::Text::Configuration buildConfig_;
+        Parsers::Text::Configuration buildConfig;
 
         // The CDN configuration.
-        Parsers::Text::Configuration cdnConfig_;
+        Parsers::Text::Configuration cdnConfig;
 
-        // The SHMEM.
-        Parsers::Binary::ShadowMemory shmem_;
+        // The shadow memory.
+        Parsers::Binary::ShadowMemory shadowMemory;
 
         // The file indices.
-        std::vector<Parsers::Binary::Index> indices_;
+        std::shared_ptr<Parsers::Binary::Index> index;
+
+        // The stream allocator.
+        std::shared_ptr<IO::StreamAllocator> allocator;
 
         // The encoding file.
-        std::unique_ptr<Parsers::Binary::Encoding> encoding_;
+        std::shared_ptr<Parsers::Binary::Encoding> encoding;
 
-        // Chunk handlers
-        std::map<char, std::shared_ptr<IO::Handler>> blteHandlers;
-
-        // Chunk handlers
-        std::map<uint32_t, std::shared_ptr<Filesystem::RootHandler>> rootHandlers;
+        // Filesystem root.
+        std::shared_ptr<Filesystem::Root> root;
 
         /**
          * Finds the location of a file.
-         *
-         * @param key   the key of the file.
          */
-        Parsers::Binary::Reference findFileLocation(const std::string key) const
+        Parsers::Binary::Reference findFileLocation(const Hex key) const
         {
-            auto bytes = Hex(key).data();
-
-            for (auto index : indices_)
-            {
-                try
-                {
-                    return index.find(bytes.begin(), bytes.begin() + 9);
-                }
-                catch (Exceptions::KeyDoesNotExistException&)
-                {
-                    continue;
-                }
-            }
-
-            throw Exceptions::KeyDoesNotExistException(key);
-        }
-
-        /**
-         * Opens a stream at a given location.
-         *
-         * @param loc	the location of the data to stream.
-         * @return		a stream object.
-         */
-        template <bool Writeable>
-        std::shared_ptr<IO::Stream<Writeable>> openStream(Parsers::Binary::Reference loc) const
-        {
-            std::stringstream ss;
-            conv_type conv;
-
-            ss << shmem_.path() << conv.to_bytes(std::wstring{ fs::path::preferred_separator }) << "data." << std::setw(3) << std::setfill('0') << loc.file();
-
-            return std::make_shared<IO::Stream<Writeable>>(
-                ss.str(), loc.offset(),
-                mapToVector(this->blteHandlers));
+            return index->find(key.begin(), key.begin() + 9);
         }
 
     public:
         /**
-         * Default constructor.
-         */
-        Container()
-            : PathSeparator(conv_type().to_bytes({ fs::path::preferred_separator }))
-        {
-            registerHandler<IO::Impl::DefaultHandler>();
-        }
-
-        /**
          * Constructor.
-         *
-         * @param path	    the path of the game directory.
-         * @param dataPath	the relative path to the data directory.
          */
-        Container(const std::string path, const std::string dataPath,
-            std::vector<std::shared_ptr<IO::Handler>> blteHandlers = {},
-            std::vector<std::shared_ptr<Filesystem::RootHandler>> rootHandlers = {})
-            : Container()
+        Container(const std::string path, const std::string dataPath) :
+            buildInfo(path + ".build.info"),
+            buildConfig(Functions::createPath(
+                path, dataPath, IO::DataFolders::Config, buildInfo.build(0).at("Build Key"))),
+            cdnConfig(Functions::createPath(
+                path, dataPath, IO::DataFolders::Config, buildInfo.build(0).at("CDN Key"))),
+            shadowMemory(Functions::createPath(
+                path, dataPath, IO::DataFolders::Data, "shmem")),
+            index(new Parsers::Binary::Index(Functions::createPath(
+                path, dataPath, IO::DataFolders::Data, ""), shadowMemory.versions())),
+            allocator(new IO::StreamAllocator(
+                Functions::createPath(path, dataPath, IO::DataFolders::Data, ""))),
+            encoding(new Parsers::Binary::Encoding(buildConfig["encoding"].back(), index, allocator)),
+            root(new Filesystem::Root(buildConfig["root"].front(), encoding, index, allocator))
         {
-            registerHandlers(blteHandlers);
-            registerHandlers(rootHandlers);
-            load(path,  dataPath);
         }
 
         /**
@@ -354,101 +271,6 @@ namespace Casc
         /**
          * Destructor.
          */
-        virtual ~Container()
-        {
-        }
-
-        /**
-         * Loads a CASC archive into this container.
-         *
-         * @param path	    the path of the game directory.
-         * @param dataPath	the relative path to the data directory.
-         */
-        void load(const std::string path, const std::string dataPath)
-        {
-            path_ = path;
-            dataPath_ = dataPath;
-            buildInfo_.parse(path + ".build.info");
-
-            auto buildConfigHash = buildInfo_.build(0).at("Build Key");
-            auto cdnConfigHash = buildInfo_.build(0).at("CDN Key");
-
-            std::stringstream buildConfig;
-            buildConfig << path_ << PathSeparator << dataPath_
-                << PathSeparator << "config"
-                << PathSeparator << buildConfigHash.substr(0, 2)
-                << PathSeparator << buildConfigHash.substr(2, 2)
-                << PathSeparator << buildConfigHash;
-
-            std::stringstream cdnConfig;
-            cdnConfig << path_ << PathSeparator << dataPath_
-                << PathSeparator << "config"
-                << PathSeparator << cdnConfigHash.substr(0, 2)
-                << PathSeparator << cdnConfigHash.substr(2, 2)
-                << PathSeparator << cdnConfigHash;
-            
-            std::stringstream shadowMemory;
-            shadowMemory << path_ << PathSeparator << dataPath_
-                << PathSeparator << "data"
-                << PathSeparator << "shmem";
-
-            buildConfig_.parse(buildConfig.str());
-            cdnConfig_.parse(cdnConfig.str());
-            shmem_.parse(shadowMemory.str());
-
-            for (size_t i = 0; i < shmem_.versions().size(); ++i)
-            {
-                std::stringstream ss;
-
-                ss << shmem_.path() << PathSeparator;
-                ss << std::setw(2) << std::setfill('0') << std::hex << i;
-                ss << std::setw(8) << std::setfill('0') << std::hex << shmem_.versions().at(i);
-                ss << ".idx";
-
-                if (!fs::exists(ss.str()))
-                {
-                    throw Exceptions::FileNotFoundException(ss.str());
-                }
-
-                indices_.push_back(ss.str());
-
-                /*std::ofstream fs;
-                fs.open(ss.str(), std::ios_base::out | std::ios_base::binary);
-                indices_.at(i).write(fs);
-                fs.close();*/
-            }
-
-            encoding_ = std::make_unique<Parsers::Binary::Encoding>(openFileByKey(buildConfig_["encoding"].back()));
-        }
-
-        const std::string &path() const
-        {
-            return path_;
-        }
-
-        const Parsers::Text::BuildInfo &buildInfo() const
-        {
-            return buildInfo_;
-        }
-
-        const Parsers::Text::Configuration &buildConfig() const
-        {
-            return buildConfig_;
-        }
-
-        const Parsers::Text::Configuration &cdnConfig() const
-        {
-            return cdnConfig_;
-        }
-
-        const Parsers::Binary::ShadowMemory &shmem() const
-        {
-            return shmem_;
-        }
-
-        const Parsers::Binary::Encoding &encoding() const
-        {
-            return *encoding_;
-        }
+        virtual ~Container() = default;
     };
 }

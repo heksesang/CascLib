@@ -36,7 +36,7 @@ namespace Casc
         namespace Text
         {
             /**
-            * Class for parsing CASC .build.info files.
+            * Parser for CASC .build.info files.
             */
             class BuildInfo
             {
@@ -64,16 +64,7 @@ namespace Casc
 
             public:
                 /**
-                * Default constructor.
-                */
-                BuildInfo()
-                {
-                }
-
-                /**
                  * Constructor.
-                 *
-                 * @param path	the path of the .build.info file.
                  */
                 BuildInfo(const std::string path)
                 {
@@ -89,9 +80,6 @@ namespace Casc
 
                 /**
                 * Gets the values for a build from the last parsed .build.info file.
-                *
-                * @param build	the index of the build to get values for.
-                * @return		the values.
                 */
                 const std::map<std::string, std::string> &build(int index) const
                 {
@@ -100,8 +88,6 @@ namespace Casc
 
                 /**
                  * Gets the number of values stored from the last parsed .build.info file.
-                 *
-                 * @return	the number of values stored.
                  */
                 int size() const
                 {
@@ -110,8 +96,6 @@ namespace Casc
 
                 /**
                  * Clears old values and parses a .build.info file.
-                 *
-                 * @param path	the path of the .build.info file.
                  */
                 void parse(const std::string path)
                 {

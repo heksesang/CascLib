@@ -37,7 +37,7 @@ namespace Casc
             using namespace Casc::Functions;
 
             /**
-             * Class for parsing CASC configuration files.
+             * Parser for CASC configuration files.
              */
             class Configuration
             {
@@ -59,16 +59,7 @@ namespace Casc
 
             public:
                 /**
-                 * Default constructor.
-                 */
-                Configuration()
-                {
-                }
-
-                /**
                  * Constructor.
-                 *
-                 * @param path	the path of the configuration file.
                  */
                 Configuration(const std::string path)
                 {
@@ -85,9 +76,6 @@ namespace Casc
 
                 /**
                  * Gets the value for a key.
-                 *
-                 * @param key	the key to use for the lookup.
-                 * @return		the value.
                  */
                 const std::vector<std::string> &operator[] (const std::string key) const
                 {
@@ -96,8 +84,6 @@ namespace Casc
 
                 /**
                  * Clears old values and parses a configuration file.
-                 *
-                 * @param path	the path of the configuration file.
                  */
                 void parse(const std::string path)
                 {

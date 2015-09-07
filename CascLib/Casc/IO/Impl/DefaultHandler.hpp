@@ -43,7 +43,7 @@ namespace Casc
                     return EncodingMode::None;
                 }
 
-                std::unique_ptr<char[]> read(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize, std::filebuf::off_type &chunkSize) override
+                std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize, std::filebuf::off_type &chunkSize) override
                 {
                     auto out = std::make_unique<char[]>(outSize);
 
@@ -58,7 +58,7 @@ namespace Casc
                     return nullptr;
                 }
 
-                std::vector<char> write(std::istream &stream, size_t inSize) const override
+                std::vector<char> encode(std::istream &stream, size_t inSize) const override
                 {
                     std::vector<char> v(inSize + 1, '\0');
                     v[0] = mode();
