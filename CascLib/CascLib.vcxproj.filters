@@ -72,9 +72,6 @@
     <ClInclude Include="Casc\IO\Stream.hpp">
       <Filter>Header Files\Types</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\IO\Buffer.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\Exceptions\KeyDoesNotExistException.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -136,6 +133,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Casc\IO\DataFolders.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\ReadBuffer.hpp">
+      <Filter>Header Files\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\WriteBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

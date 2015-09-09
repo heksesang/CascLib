@@ -26,26 +26,23 @@
 
 #include "../Common.hpp"
 
-#include "Buffer.hpp"
+#include "ReadBuffer.hpp"
+#include "WriteBuffer.hpp"
 
 namespace Casc
 {
     namespace IO
     {
         /**
-         * A stream that uses the IO::Buffer as the underlying buffer.
+         * A stream that uses the Buffer as the underlying buffer.
          */
         template <bool Writeable>
         class Stream : public std::conditional<Writeable, std::ostream, std::istream>::type
         {
             // Typedefs
-            typedef std::filebuf write_buf_type;
-            typedef IO::Buffer read_buf_type;
-#ifdef _MSC_VER_
-            typedef std::common_type<write_buf_type, read_buf_type>::type base_buf_type;
-#else
+            typedef WriteBuffer write_buf_type;
+            typedef ReadBuffer read_buf_type;
             typedef std::filebuf base_buf_type;
-#endif
 
             typedef typename std::conditional<Writeable,
                 std::ostream, std::istream>::type base_type;
@@ -53,7 +50,10 @@ namespace Casc
                 write_buf_type, read_buf_type>::type buf_type;
 
             // The underlying buffer.
-            base_buf_type* buffer;
+            std::unique_ptr<base_buf_type> buffer;
+
+            // The base path of the CASC archive.
+            std::string basePath;
 
             /**
              * Registers block handlers.
@@ -61,31 +61,30 @@ namespace Casc
             template <typename T>
             void registerHandler()
             {
-                if (typeid(*this->rdbuf()) == typeid(Buffer))
+                if (Writeable)
                 {
-                    reinterpret_cast<Buffer*>(this->rdbuf())->registerHandler<T>();
+                    reinterpret_cast<write_buf_type*>(this->rdbuf())->registerHandler<T>();
+                }
+                else
+                {
+                    reinterpret_cast<read_buf_type*>(this->rdbuf())->registerHandler<T>();
                 }
             }
 
         public:
             /**
-             * Default constructor.
-             */
-            Stream()
-                : buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
-                base_type(new buf_type())
-            {
-                registerHandler<IO::Impl::DefaultHandler>();
-                registerHandler<IO::Impl::ZlibHandler>();
-            }
-
-            /**
              * Constructor.
              */
-            Stream(const std::string filename, size_t offset)
-                : Stream()
+            Stream(const std::string basePath, const std::string filename = "", size_t offset = 0) :
+                buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
+                basePath(basePath),
+                base_type(new buf_type(basePath))
             {
-                open(filename, offset);
+                registerHandler<Impl::DefaultHandler>();
+                registerHandler<Impl::ZlibHandler>();
+
+                if (!filename.empty())
+                    open(filename, offset);
             }
 
             /**
@@ -96,13 +95,7 @@ namespace Casc
             /**
              * Destructor.
              */
-            virtual ~Stream() noexcept override
-            {
-                if (is_open())
-                {
-                    close();
-                }
-            }
+            virtual ~Stream() = default;
 
             /**
              * Move operator.
@@ -116,7 +109,7 @@ namespace Casc
             {
                 if (Writeable)
                 {
-                    auto buf = reinterpret_cast<write_buf_type*>(buffer);
+                    auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
                     if (buf->pubseekoff(offset, std::ios_base::beg, std::ios_base::out) != (std::streampos)offset)
                     {
                         throw Exceptions::IOException("Failed to open CASC archive for writing at given position.");
@@ -124,7 +117,7 @@ namespace Casc
                 }
                 else
                 {
-                    auto buf = reinterpret_cast<read_buf_type*>(buffer);
+                    auto buf = reinterpret_cast<read_buf_type*>(buffer.get());
                     buf->open(offset);
                 }
             }
@@ -136,7 +129,7 @@ namespace Casc
             {
                 if (Writeable)
                 {
-                    auto buf = reinterpret_cast<write_buf_type*>(buffer);
+                    auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
                     buf->open(filename, std::ios_base::out | std::ios_base::in | std::ios_base::binary);
                     if (buf->pubseekoff(offset, std::ios_base::beg, std::ios_base::out) != (std::streampos)offset)
                     {
@@ -145,7 +138,7 @@ namespace Casc
                 }
                 else
                 {
-                    auto buf = reinterpret_cast<read_buf_type*>(buffer);
+                    auto buf = reinterpret_cast<read_buf_type*>(buffer.get());
                     buf->open(filename, offset);
                 }
             }
@@ -161,9 +154,23 @@ namespace Casc
             /**
              * Closes the currently opened CASC file.
              */
-            void close()
+            template <bool Writeable = Writeable>
+            typename std::enable_if<Writeable>::type
+            close(Parsers::Binary::Reference &ref, std::string &encodingProfile)
             {
-                buffer->close();
+                if (Writeable)
+                {
+                    auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
+                    buf->close(ref, encodingProfile);
+                }
+                this->rdbuf((buffer = std::make_unique<buf_type>(basePath)).get());
+            }
+
+            template <bool Writeable = Writeable>
+            typename std::enable_if<!Writeable>::type
+            close()
+            {
+                this->rdbuf((buffer = std::make_unique<buf_type>(basePath)).get());
             }
 
             /**
@@ -172,6 +179,18 @@ namespace Casc
             bool is_open() const
             {
                 return buffer->is_open();
+            }
+
+            /**
+             * Sets the encoding mode for writeable streams.
+             */
+            void setMode(IO::EncodingMode mode)
+            {
+                if (Writeable)
+                {
+                    auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
+                    buf->setMode(mode);
+                }
             }
         };
     }

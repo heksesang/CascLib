@@ -32,10 +32,7 @@ namespace Casc
     namespace IO
     {
         /**
-         * Base class for block handlers.
-         *
-         * Classes derived from this can be used to implement
-         * different compression algorithms or encryptions.
+         * Base block handler.
          */
         class Handler
         {
@@ -43,23 +40,19 @@ namespace Casc
             virtual ~Handler() { }
 
             /**
-             * The compression mode this handler should be registered for.
+             * The encoding mode of the handler.
              */
             virtual EncodingMode mode() const = 0;
 
             /**
-             * Reads and processes data from the file buffer and returns the result.
-             *
-             * @param buf		The file buffer to read data from.
-             * @param offset	The offset to read at.
-             * @param inSize	The number of bytes to read from the stream.
-             * @param outSize	The number of bytes to return.
-             *
-             * @return A pointer to the byte array.
+             * Decodes data from the filebuf and returns the result.
              */
             virtual std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize, std::filebuf::off_type &chunkSize) = 0;
 
-            virtual std::vector<char> encode(std::istream &stream, size_t inSize) const = 0;
+            /**
+             * Encodes data from the stream and returns the result.
+             */
+            virtual std::vector<char> encode(std::vector<char> input) const = 0;
         };
     }
 }

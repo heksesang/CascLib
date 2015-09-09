@@ -58,11 +58,11 @@ namespace Casc
                     return nullptr;
                 }
 
-                std::vector<char> encode(std::istream &stream, size_t inSize) const override
+                std::vector<char> encode(std::vector<char> input) const override
                 {
-                    std::vector<char> v(inSize + 1, '\0');
+                    std::vector<char> v(input.size() + 1, '\0');
+                    std::memcpy(v.data() + 1, input.data(), input.size());
                     v[0] = mode();
-                    stream.read(&v[1], inSize);
 
                     return std::move(v);
                 }

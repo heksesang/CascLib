@@ -174,25 +174,17 @@ namespace Casc
             return openFileByKey(encoding->find(hash).at(0).string());
         }
 
-        Parsers::Binary::Reference write(std::istream &stream, std::vector<Parsers::Text::EncodingBlock> &blocks)
+        std::shared_ptr<IO::Stream<true>> write()
         {
-            auto arr = createData(stream, blocks);
-            
-            auto loc = shadowMemory.reserveSpace(arr.size());
-            
-            auto out = allocator->allocate<true>(loc);
-            out->write(arr.data(), arr.size());
-            out->close();
+            return allocator->allocate<true>();
 
-            std::array<char, 16> key;
+            /*std::array<char, 16> key;
             std::reverse_copy(arr.begin(), arr.begin() + 16, key.begin());
 
             loc = Parsers::Binary::Reference(key.begin(), key.begin() + 9, loc.file(), loc.offset(), loc.size());
 
             index->insert(key.begin(), key.begin() + 9, loc);
-            index->write();
-
-            return loc;
+            index->write();*/
         }
 
     private:

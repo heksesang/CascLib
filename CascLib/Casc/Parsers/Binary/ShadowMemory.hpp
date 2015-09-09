@@ -37,6 +37,8 @@
 
 #include "../../Common.hpp"
 
+#include "Reference.hpp"
+
 namespace Casc
 {
     namespace Parsers
@@ -97,7 +99,7 @@ namespace Casc
                                     it->offset() - size);
                             }
 
-                            write();
+                            //write();
 
                             return result;
                         }
@@ -142,7 +144,7 @@ namespace Casc
                  */
                 void readFreeSpace(std::ifstream &file)
                 {
-                    using namespace Endian;
+                    using namespace Functions::Endian;
                     uint32_t writeableMemoryCount;
                     file >> writeableMemoryCount;
 
@@ -262,7 +264,7 @@ namespace Casc
                  */
                 void readFile(std::string path)
                 {
-                    using namespace Endian;
+                    using namespace Functions::Endian;
                     std::ifstream file;
                     file.open(path, std::ios_base::in | std::ios_base::binary);
 

@@ -71,21 +71,21 @@ namespace Casc
                     return std::unique_ptr<char[]>(reinterpret_cast<char*>(resizedOut));
                 }
 
-                std::vector<char> encode(std::istream &stream, size_t inSize) const override
+                std::vector<char> encode(std::vector<char> input) const override
                 {
-                    std::vector<char> v(inSize + 1, '\0');
-                    v[0] = mode();
-                    stream.read(&v[1], inSize);
-
                     ZDeflateStream zstream(this->CompressionLevel);
-                    zstream.write(reinterpret_cast<ZStreamBase::char_t*>(&v[0]), inSize);
+                    zstream.write(reinterpret_cast<ZStreamBase::char_t*>(input.data()), input.size());
 
                     char* buf;
                     size_t bufSize;
 
                     zstream.readAll(reinterpret_cast<ZStreamBase::char_t**>(&buf), bufSize);
 
-                    return std::vector<char>(buf, buf + bufSize);
+                    std::vector<char> v(bufSize + 1, '\0');
+                    std::memcpy(v.data() + 1, buf, bufSize);
+                    v[0] = mode();
+
+                    return std::move(v);
                 }
 
             public:

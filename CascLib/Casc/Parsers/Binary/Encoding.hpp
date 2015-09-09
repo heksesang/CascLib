@@ -276,7 +276,7 @@ namespace Casc
                 /**
                  * Constructor.
                  */
-                Encoding(Hex hash, std::shared_ptr<Parsers::Binary::Index> index,
+                Encoding(Hex hash, std::shared_ptr<Index> index,
                          std::shared_ptr<IO::StreamAllocator> allocator)
                     : chunksOffsetA(0), chunksOffsetB(0)
                 {

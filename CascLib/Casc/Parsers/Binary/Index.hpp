@@ -44,7 +44,7 @@ namespace Casc
             {
             private:
                 // The files listed in the index.
-                std::map<std::vector<char>, Parsers::Binary::Reference> files_;
+                std::map<std::vector<char>, Reference> files_;
 
                 // The versions of the .idx files.
                 std::map<uint32_t, uint32_t> versions_;
@@ -131,7 +131,7 @@ namespace Casc
                         std::array<char, 18> bytes{};
                         fs.read(bytes.data(), 18);
 
-                        Parsers::Binary::Reference ref(
+                        Reference ref(
                             bytes.begin(), bytes.end(),
                             keyFieldSize,
                             locationFieldSize,
@@ -161,7 +161,7 @@ namespace Casc
 
                     std::vector<char> v(24);
 
-                    std::vector<Parsers::Binary::Reference> files;
+                    std::vector<Reference> files;
 
                     for (auto &file : this->files_)
                     {
@@ -206,8 +206,8 @@ namespace Casc
                     stream.seekp(4, std::ios_base::cur);
 
                     std::sort(files.begin(), files.end(), [](
-                        Parsers::Binary::Reference &a,
-                        Parsers::Binary::Reference &b)
+                        Reference &a,
+                        Reference &b)
                     {
                         for (auto i = 0U; i < a.key().size(); ++i)
                         {
@@ -285,7 +285,7 @@ namespace Casc
                  * Gets a file record.
                  */
                 template <typename KeyIt>
-                Parsers::Binary::Reference find(KeyIt first, KeyIt last) const
+                Reference find(KeyIt first, KeyIt last) const
                 {
                     auto result = files_.find({ first, last });
 
@@ -301,7 +301,7 @@ namespace Casc
                  * Inserts a file record.
                  */
                 template <typename KeyIt>
-                void insert(KeyIt first, KeyIt last, Parsers::Binary::Reference &loc)
+                void insert(KeyIt first, KeyIt last, Reference &loc)
                 {
                     files_[{first, last}] = loc;
                 }

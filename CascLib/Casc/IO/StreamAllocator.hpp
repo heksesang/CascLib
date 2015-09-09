@@ -33,24 +33,32 @@ namespace Casc
     {
         class StreamAllocator
         {
-            std::string path;
+            std::string basePath;
 
         public:
-            StreamAllocator(const std::string path)
-                : path(path)
+            StreamAllocator(const std::string basePath)
+                : basePath(basePath)
             {
 
             }
 
             template <bool Writeable>
-            std::shared_ptr<IO::Stream<Writeable>> allocate(const Parsers::Binary::Reference &ref) const
+            typename std::enable_if<!Writeable, std::shared_ptr<Stream<Writeable>>>::type
+                allocate(const Parsers::Binary::Reference &ref) const
             {
                 std::stringstream ss;
 
-                ss << path << PathSeparator
+                ss << basePath << PathSeparator
                    << "data." << std::setw(3) << std::setfill('0') << ref.file();
 
-                return std::make_shared<IO::Stream<Writeable>>(ss.str(), ref.offset());
+                return std::make_shared<Stream<Writeable>>(basePath, ss.str(), ref.offset());
+            }
+
+            template <bool Writeable>
+            typename std::enable_if<Writeable, std::shared_ptr<Stream<Writeable>>>::type
+                 allocate() const
+            {
+                return std::make_shared<Stream<Writeable>>(basePath);
             }
         };
     }

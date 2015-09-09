@@ -148,13 +148,18 @@ namespace CascLibTest
             unsigned char hexData[10] = {
                 0xDE, 0xAD, 0xBE, 0xEF, 0x3D, 0x60, 0x0D, 0xF0, 0x0D, 0x00
             };
+            char* data = reinterpret_cast<char*>(hexData);
 
-            std::string data((char*)hexData, 10);
 
-            std::stringstream ss(data);
-            ss.seekg(0);
+            Parsers::Binary::Reference ref;
+            std::string encodingProfile;
 
-            auto loc = container->write(ss, std::vector<Parsers::Text::EncodingBlock>{ Parsers::Text::EncodingBlock((size_t)10, false, IO::EncodingMode::None, {}) });
+            auto out = container->write();
+
+            out->write(data, 5);
+            out->setMode(IO::EncodingMode::Zlib);
+            out->write(data + 5, 5);
+            out->close(ref, encodingProfile);
         }
 
 	};

@@ -135,6 +135,10 @@ public:
 	ZDeflateStream(int compression_level/*=Z_DEFAULT_COMPRESSION*/) :
 		compression_level_(compression_level)
 	{
+        z_stream_.zalloc = Z_NULL;
+        z_stream_.zfree = Z_NULL;
+        z_stream_.opaque = Z_NULL;
+
 		int ret = deflateInit(&z_stream_, compression_level_);
 
 		if (ret != Z_OK)

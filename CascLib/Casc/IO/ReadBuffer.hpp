@@ -44,7 +44,7 @@ namespace Casc
          * A buffer which can be used to read compressed data from CASC file.
          * When used with a stream, the stream will be able to transparently output decompressed data.
          */
-        class Buffer : public std::filebuf
+        class ReadBuffer : public std::filebuf
         {
         private:
             const uint32_t BlteSignature = 0x45544C42;
@@ -111,7 +111,7 @@ namespace Casc
             std::vector<ChunkInfo> chunks;
 
             // Block handlers
-            std::map<char, std::shared_ptr<Handler>> handlers;
+            std::map<IO::EncodingMode, std::shared_ptr<Handler>> handlers;
 
             /**
              * Read the header for the current file.
@@ -128,7 +128,7 @@ namespace Casc
                 std::array<uint8_t, 16> checksum;
                 std::copy(header, header + 16, checksum.begin());
                 std::reverse(checksum.begin(), checksum.end());
-                auto size = read<IO::EndianType::Little, uint32_t>(header + 0x10);
+                auto size = read<EndianType::Little, uint32_t>(header + 0x10);
 
                 // Checking the hash of the header.
                 MD5 headerHasher;
@@ -139,12 +139,12 @@ namespace Casc
                 uint32_t signature;
 
                 std::filebuf::xsgetn(header2, 0x08);
-                if ((signature = read<IO::EndianType::Little, uint32_t>(header2)) != BlteSignature)
+                if ((signature = read<EndianType::Little, uint32_t>(header2)) != BlteSignature)
                 {
                     throw Exceptions::InvalidSignatureException(signature, 0x45544C42);
                 }
 
-                auto readBytes = read<IO::EndianType::Big, uint32_t>(header2 + 0x04);
+                auto readBytes = read<EndianType::Big, uint32_t>(header2 + 0x04);
 
                 // Add the first 8 bytes of the header.
                 headerHasher.update(header2, 8);
@@ -165,17 +165,17 @@ namespace Casc
                     // Parse the header
                     auto pos = bytes.get();
 
-                    auto flags = read<IO::EndianType::Big, uint16_t>(pos);
+                    auto flags = read<EndianType::Big, uint16_t>(pos);
                     pos += sizeof(uint16_t);
-                    auto chunkCount = read<IO::EndianType::Big, uint16_t>(pos);
+                    auto chunkCount = read<EndianType::Big, uint16_t>(pos);
                     pos += sizeof(uint16_t);
 
                     for (int i = 0; i < chunkCount; ++i)
                     {
-                        auto compressedSize = read<IO::EndianType::Big, uint32_t>(pos);
+                        auto compressedSize = read<EndianType::Big, uint32_t>(pos);
                         pos += sizeof(uint32_t);
 
-                        auto decompressedSize = read<IO::EndianType::Big, uint32_t>(pos);
+                        auto decompressedSize = read<EndianType::Big, uint32_t>(pos);
                         pos += sizeof(uint32_t);
 
                         std::array<uint8_t, 16> checksum;
@@ -518,7 +518,7 @@ namespace Casc
             /**
              * Default constructor.
              */
-            Buffer() :
+            ReadBuffer(const std::string basePath) :
                 out(std::make_unique<char[]>(BufferSize)),
                 temp(std::make_unique<char[]>(BufferSize))
             {
@@ -527,20 +527,17 @@ namespace Casc
             /**
              * Move constructor.
              */
-            Buffer(Buffer &&) = default;
+            ReadBuffer(ReadBuffer &&) = default;
 
             /**
              * Move operator.
              */
-            Buffer &operator= (Buffer &&) = default;
+            ReadBuffer &operator= (ReadBuffer &&) = default;
 
             /**
              * Destructor.
              */
-            virtual ~Buffer() override
-            {
-                this->close();
-            }
+            virtual ~ReadBuffer() = default;
 
             /**
              * Registers block handlers.
