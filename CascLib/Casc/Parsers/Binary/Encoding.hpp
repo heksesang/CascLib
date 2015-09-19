@@ -20,12 +20,17 @@
 #pragma once
 
 #include <fstream>
+#include <map>
 #include <string>
+#include <vector>
+#include <unordered_map>
+
+#include <omp.h>
 
 #include "../../Common.hpp"
 #include "../../Exceptions.hpp"
 
-#include "Index.hpp"
+#include "../../Parsers/Binary/Reference.hpp"
 
 namespace Casc
 {
@@ -46,17 +51,47 @@ namespace Casc
                 /**
                  * Find the file key for the given hash.
                  */
-                std::vector<Hex> find(const std::string hash) const
+                std::vector<Hex> find(const Hex hash) const
                 {
-                    Hex target(hash);
-                    std::vector<Hex> keys;
+                    auto index = -1;
+                    Hex checksum;
 
-                    if ((keys = searchTable(target, chunkHeadsA, chunksOffsetA, hashSizeA)).empty())
+                    for (auto i = 0U; i < headersA.size(); ++i)
                     {
-                        throw Exceptions::HashDoesNotExistException(hash);
+                        if (headersA[i].first <= hash)
+                        {
+                            index = headersA.size() - 1 - i;
+                            checksum = headersA[i].second;
+                            break;
+                        }
                     }
 
-                    return keys;
+                    if (index == -1)
+                    {
+                        throw Exceptions::HashDoesNotExistException(hash.string());
+                    }
+
+                    auto begin = tableA.begin() + EntrySize * index;
+                    auto end = begin + EntrySize;
+
+                    Hex actual(md5(begin, end));
+
+                    if (actual != checksum)
+                    {
+                        throw Exceptions::InvalidHashException(lookup3(checksum, 0), lookup3(actual, 0), "");
+                    }
+
+                    auto files = parseEntry(begin, end, hashSizeA);
+
+                    for (auto it = files.begin(); it != files.end(); ++it)
+                    {
+                        if (it->hash == hash)
+                        {
+                            return it->keys;
+                        }
+                    }
+                    
+                    throw Exceptions::HashDoesNotExistException(hash.string());
                 }
 
             private:
@@ -64,16 +99,40 @@ namespace Casc
                 static const unsigned int HeaderSize = 22U;
 
                 // The size of each chunk body (second block for each table).
-                static const unsigned int ChunkBodySize = 4096U;
+                static const unsigned int EntrySize = 4096U;
 
-                // The encoding file stream.
-                std::shared_ptr<std::istream> stream;
+                struct FileInfo
+                {
+                    Hex hash;
+                    size_t size;
+                    std::vector<Hex> keys;
+                };
+
+                std::unordered_map<uint32_t, FileInfo> fileInfo;
+                std::vector<std::pair<Hex, Hex>> headersA;
+                std::vector<char> tableA;
+                size_t hashSizeA;
+
+                struct EncodedFileInfo
+                {
+                    Hex hash;
+                    size_t size;
+                    std::string profile;
+                };
+
+                std::unordered_map<uint32_t, EncodedFileInfo> encodedFileInfo;
+                std::vector<std::pair<Hex, Hex>> headersB;
+                std::vector<char> tableB;
+                size_t hashSizeB;
+
+                // The encoding profiles
+                std::vector<std::string> profiles;
 
                 /**
-                 * Reads data from a stream and puts it in a struct.
-                 */
+                * Reads data from a stream and puts it in a struct.
+                */
                 template <IO::EndianType Endian = IO::EndianType::Little, typename T>
-                const T &read(T &value) const
+                const T &read(std::shared_ptr<std::istream> stream, T &value) const
                 {
                     char b[sizeof(T)];
                     stream->read(b, sizeof(T));
@@ -82,120 +141,84 @@ namespace Casc
                 }
 
                 /**
-                 * Throws if the fail or bad bit are set on the stream.
+                 * Parse an entry in the table.
                  */
-                void checkForErrors() const
+                template <typename InputIt>
+                std::vector<FileInfo> parseEntry(const InputIt begin, const InputIt end, size_t hashSize) const
                 {
-                    if (stream->fail())
+                    std::vector<FileInfo> files;
+
+                    for (auto it = begin; it < end;)
                     {
-                        throw Exceptions::IOException("Stream is in an invalid state.");
+                        auto keyCount =
+                            Endian::read<IO::EndianType::Little, uint16_t>(it);
+                        it += sizeof(keyCount);
+
+                        if (keyCount == 0)
+                            break;
+
+                        auto fileSize =
+                            Endian::read<IO::EndianType::Big, uint32_t>(it);
+                        it += sizeof(fileSize);
+
+                        std::vector<char> checksum(hashSize);
+                        std::copy(it, it + hashSize, checksum.begin());
+                        it += hashSize;
+
+                        std::vector<Hex> keys;
+
+                        for (auto i = 0U; i < keyCount; ++i)
+                        {
+                            std::vector<char> key(hashSize);
+                            std::copy(it, it + hashSize, key.begin());
+                            it += hashSize;
+
+                            keys.push_back(key);
+                        }
+
+                        files.emplace_back(FileInfo{ checksum, fileSize, keys });
                     }
+
+                    return files;
                 }
 
-#pragma pack(push, 1)
-                struct ChunkHead
-                {
-                    std::array<uint8_t, 16> first;
-                    std::array<uint8_t, 16> hash;
-                };
-
-                class ChunkBody
-                {
-                public:
-                    ChunkBody(size_t hashSize)
-                        : hash(hashSize), keys(1, std::vector<char>(hashSize))
-                    {
-
-                    }
-
-                    uint32_t fileSize;
-                    std::vector<char> hash;
-                    std::vector<std::vector<char>> keys;
-                };
-#pragma pack(pop)
-
-                // The size of the hashes in table A.
-                size_t hashSizeA;
-
-                // The size of the hashes in table B.
-                size_t hashSizeB;
-
-                // The headers for the chunks in table A.
-                std::vector<ChunkHead> chunkHeadsA;
-
-                // The headers for the chunks in table B.
-                std::vector<ChunkHead> chunkHeadsB;
-
-                // The offset of the chunks in table A.
-                std::streamsize chunksOffsetA;
-
-                // The offset of the chunks in table B.
-                std::streamsize chunksOffsetB;
-
-                // The encoding profiles
-                std::vector<std::vector<Text::EncodingBlock>> profiles;
-
                 /**
-                 * Search the table for a given hash.
+                 * Parse an entry in the table.
                  */
-                std::vector<Hex> searchTable(Hex target, const std::vector<ChunkHead> &heads, std::streamsize offset, size_t hashSize) const
+                template <typename InputIt>
+                std::vector<EncodedFileInfo> parseEncodedEntry(InputIt begin, InputIt end, size_t hashSize) const
                 {
-                    std::vector<Hex> keys;
+                    std::vector<EncodedFileInfo> files;
 
-                    for (unsigned int i = 0; keys.empty() && i < heads.size(); ++i)
+                    for (auto it = begin; it < end;)
                     {
-                        Hex first(heads.at(i).first);
+                        std::vector<char> checksum(hashSize);
+                        std::copy(it, it + hashSize, checksum.begin());
+                        it += hashSize;
 
-                        if (target > first)
+                        auto profileIndex =
+                            Endian::read<IO::EndianType::Big, int32_t>(it);
+                        it += sizeof(profileIndex);
+
+                        ++it;
+
+                        auto fileSize =
+                            Endian::read<IO::EndianType::Big, uint32_t>(it);
+                        it += sizeof(fileSize);
+
+                        auto &profile = profiles[profileIndex];
+                        
+                        if (profileIndex >= 0)
                         {
-                            stream->seekg(offset + ChunkBodySize * (heads.size() - 1 - i), std::ios_base::beg);
-
-                            std::array<char, 4096> data;
-                            stream->read(data.data(), 4096);
-
-                            Hex expected(heads.at(i).hash);
-                            Hex actual(md5(data));
-
-                            if (actual != expected)
-                            {
-                                throw Exceptions::InvalidHashException(lookup3(expected, 0), lookup3(actual, 0), "");
-                            }
-
-                            for (auto it = data.begin(), end = data.end(); keys.empty() && it < end;)
-                            {
-                                auto keyCount =
-                                    Endian::read<IO::EndianType::Little, uint16_t>(it);
-                                it += sizeof(keyCount);
-
-                                if (keyCount == 0)
-                                    break;
-
-                                auto fileSize =
-                                    Endian::read<IO::EndianType::Big, uint32_t>(it);
-                                it += sizeof(fileSize);
-
-                                std::vector<char> hash(hashSizeA);
-                                std::copy(it, it + hashSizeA, hash.begin());
-                                it += hashSizeA;
-
-                                Hex current(hash);
-
-                                for (auto i = 0U; i < keyCount; ++i)
-                                {
-                                    std::vector<char> key(hashSizeA);
-                                    std::copy(it, it + hashSizeA, key.begin());
-                                    it += hashSizeA;
-
-                                    if (target == current)
-                                    {
-                                        keys.emplace_back(key);
-                                    }
-                                }
-                            }
+                            files.emplace_back(EncodedFileInfo{ checksum, fileSize, profiles[profileIndex] });
+                        }
+                        else
+                        {
+                            files.emplace_back(EncodedFileInfo{ checksum, fileSize, "" });
                         }
                     }
 
-                    return keys;
+                    return files;
                 }
 
                 /**
@@ -203,87 +226,98 @@ namespace Casc
                 */
                 void parse(std::shared_ptr<std::istream> stream)
                 {
-                    this->stream = stream;
-
                     uint16_t signature;
-                    if (read(signature) != 0x4E45)
+                    read<IO::EndianType::Little>(stream, signature);
+
+                    if (signature != 0x4E45)
                     {
                         throw Exceptions::InvalidSignatureException(signature, 0x4E45);
                     }
 
-                    this->stream->seekg(1, std::ios_base::cur);
+                    // Header
+
+                    stream->seekg(1, std::ios_base::cur); // Skip unknown
 
                     uint8_t hashSizeA;
+                    this->hashSizeA = read<IO::EndianType::Little, uint8_t>(stream, hashSizeA);
+
                     uint8_t hashSizeB;
+                    this->hashSizeB = read<IO::EndianType::Little, uint8_t>(stream, hashSizeB);
 
-                    this->hashSizeA = read<IO::EndianType::Little, uint8_t>(hashSizeA);
-                    this->hashSizeB = read<IO::EndianType::Little, uint8_t>(hashSizeB);
-
-                    this->stream->seekg(4, std::ios_base::cur);
+                    stream->seekg(4, std::ios_base::cur); // Skip flags
 
                     uint32_t tableSizeA;
-                    uint32_t tableSizeB;
+                    read<IO::EndianType::Big>(stream, tableSizeA);
 
-                    read<IO::EndianType::Big>(tableSizeA);
-                    read<IO::EndianType::Big>(tableSizeB);
+                    uint32_t tableSizeB;
+                    read<IO::EndianType::Big>(stream, tableSizeB);
+
+                    stream->seekg(1, std::ios_base::cur); // Skip unknown
+
+                    // Encoding profiles for table B
 
                     uint32_t stringTableSize;
+                    read<IO::EndianType::Big>(stream, stringTableSize);
 
-                    this->stream->seekg(1, std::ios_base::cur);
-
-                    read<IO::EndianType::Big>(stringTableSize);
-
-                    while (this->stream->tellg() < (HeaderSize + stringTableSize - 1))
+                    while (stream->tellg() < (HeaderSize + stringTableSize - 1))
                     {
                         std::string profile;
-                        std::getline(*this->stream, profile, '\0');
+                        std::getline(*stream, profile, '\0');
 
-                        profiles.emplace_back(Text::EncodingBlock::parse(profile));
+                        profiles.emplace_back(profile);
                     }
 
-                    for (unsigned int i = 0; i < tableSizeA; ++i)
+                    // Table A
+                    for (auto i = 0; i < (int)tableSizeA; ++i)
                     {
-                        ChunkHead head;
-                        this->stream->read(reinterpret_cast<char*>(&head), sizeof(ChunkHead));
+                        std::vector<char> hash(hashSizeA);
+                        std::vector<char> checksum(hashSizeA);
 
-                        chunkHeadsA.push_back(head);
+                        stream->read(hash.data(), hashSizeA);
+                        stream->read(checksum.data(), hashSizeA);
+
+                        headersA.emplace_back(std::make_pair(hash, checksum));
                     }
 
-                    std::reverse(chunkHeadsA.begin(), chunkHeadsA.end());
+                    std::reverse(headersA.begin(), headersA.end());
 
-                    chunksOffsetA = HeaderSize + stringTableSize + tableSizeA * sizeof(ChunkHead);
+                    tableA.resize(EntrySize * tableSizeA);
+                    stream->read(tableA.data(), tableA.size());
 
-                    this->stream->seekg(tableSizeA * ChunkBodySize, std::ios_base::cur);
+                    // Table B
 
-                    for (unsigned int i = 0; i < tableSizeB; ++i)
+                    for (auto i = 0; i < (int)tableSizeB; ++i)
                     {
-                        ChunkHead head;
-                        this->stream->read(reinterpret_cast<char*>(&head), sizeof(ChunkHead));
+                        std::vector<char> hash(hashSizeA);
+                        std::vector<char> checksum(hashSizeA);
 
-                        chunkHeadsB.push_back(head);
+                        stream->read(hash.data(), hashSizeA);
+                        stream->read(checksum.data(), hashSizeA);
+
+                        headersB.emplace_back(std::make_pair(hash, checksum));
                     }
 
-                    std::reverse(chunkHeadsB.begin(), chunkHeadsB.end());
+                    std::reverse(headersB.begin(), headersB.end());
 
-                    chunksOffsetB = HeaderSize + stringTableSize +
-                        tableSizeA * sizeof(ChunkHead) + tableSizeA * ChunkBodySize +
-                        tableSizeB * sizeof(ChunkHead);
+                    tableB.resize(EntrySize * tableSizeB);
+                    stream->read(tableB.data(), tableB.size());
 
-                    checkForErrors();
+                    // Encoding profile for this file
+
+                    std::string profile;
+                    std::getline(*stream, profile, '\0');
+
+                    profiles.emplace_back(profile);
                 }
 
             public:
                 /**
                  * Constructor.
                  */
-                Encoding(Hex hash, std::shared_ptr<Index> index,
+                Encoding(Parsers::Binary::Reference ref,
                          std::shared_ptr<IO::StreamAllocator> allocator)
-                    : chunksOffsetA(0), chunksOffsetB(0)
                 {
-                    auto ref = index->find(hash.begin(), hash.begin() + 9);
-                    auto stream = allocator->allocate<false>(ref);
-
-                    parse(stream);
+                    parse(allocator->allocate<false>(ref));
                 }
 
                 /**
@@ -314,100 +348,8 @@ namespace Casc
                 /**
                 * Inserts a file record.
                 */
-                std::vector<char> insert(const std::string hash, const std::string key, size_t fileSize) const
+                void insert(Hex hash, Hex key, size_t fileSize)
                 {
-                    std::vector<char> v(22 + chunkHeadsA.size() * (hashSizeA * 2 + 4096) +
-                        chunkHeadsB.size() * (hashSizeB * 2 + 4096));
-
-                    std::map<Hex, ChunkBody> bodies;
-
-                    size_t count = 0U;
-                    for (auto i = 0U; i < chunkHeadsA.size(); ++i)
-                    {
-                        stream->seekg(chunksOffsetA + ChunkBodySize * i, std::ios_base::beg);
-
-                        std::array<char, 4096> data;
-                        stream->read(data.data(), 4096);
-
-                        for (auto it = data.begin(), end = data.end(); it < end;)
-                        {
-                            ChunkBody body(hashSizeA);
-
-                            auto keyCount =
-                                Endian::read<IO::EndianType::Little, uint16_t>(it);
-                            it += sizeof(keyCount);
-
-                            body.keys.resize(keyCount, std::vector<char>(hashSizeA));
-
-                            if (keyCount == 0)
-                                break;
-
-                            body.fileSize =
-                                Endian::read<IO::EndianType::Big, uint32_t>(it);
-                            it += sizeof(fileSize);
-
-                            std::copy(it, it + hashSizeA, body.hash.begin());
-                            it += hashSizeA;
-
-                            for (auto i = 0U; i < keyCount; ++i)
-                            {
-                                std::copy(it, it + hashSizeA, body.keys[i].begin());
-                                it += hashSizeA;
-                            }
-
-                            bodies.insert({ Hex(body.hash), body });
-                        }
-                    }
-
-                    /*for (auto i = 0U; i < chunkHeadsB.size(); ++i)
-                    {
-                        stream->seekg(chunksOffsetB + ChunkBodySize * i, std::ios_base::beg);
-
-                        std::array<char, 4096> data;
-                        stream->read(data.data(), 4096);
-
-                        for (auto it = data.begin(), end = data.end(); it < end;)
-                        {
-                            ChunkBody body(hashSizeB);
-
-                            auto keyCount =
-                                Endian::read<IO::EndianType::Little, uint16_t>(it);
-                            it += sizeof(keyCount);
-
-                            body.keys.resize(keyCount, std::vector<char>(hashSizeB));
-
-                            if (keyCount == 0)
-                                break;
-
-                            body.fileSize =
-                                Endian::read<IO::EndianType::Little, uint32_t>(it);
-                            it += sizeof(fileSize);
-
-                            std::copy(it, it + hashSizeB, body.hash.begin());
-                            it += hashSizeB;
-
-                            for (auto i = 0U; i < keyCount; ++i)
-                            {
-                                std::copy(it, it + hashSizeB, body.keys[i].begin());
-                                it += hashSizeB;
-                            }
-
-                            bodies.insert({ Hex(body.hash), body });
-                        }
-                    }*/
-
-                    auto magic = write<IO::EndianType::Little, uint16_t>(0x4E45);
-                    auto unk1 = write<IO::EndianType::Big, uint8_t>(1);
-                    auto checksumSizeA = write<IO::EndianType::Big, uint8_t>(16);
-                    auto checksumSizeB = write<IO::EndianType::Big, uint8_t>(16);
-                    auto flagsA = write<IO::EndianType::Big, uint16_t>(4);
-                    auto flagsB = write<IO::EndianType::Big, uint16_t>(4);
-                    auto countA = write<IO::EndianType::Big, uint32_t>(chunkHeadsA.size());
-                    auto countB = write<IO::EndianType::Big, uint32_t>(chunkHeadsB.size());
-                    auto unk2 = write<IO::EndianType::Big, uint8_t>(0);
-                    auto stringBlockSize = write<IO::EndianType::Big, uint32_t>(0);
-
-                    return v;
                 }
             };
         }

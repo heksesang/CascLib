@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <type_traits>
@@ -26,6 +27,7 @@
 
 #include "../Common.hpp"
 
+#include "../Parsers/Binary/Reference.hpp"
 #include "ReadBuffer.hpp"
 #include "WriteBuffer.hpp"
 
@@ -39,6 +41,11 @@ namespace Casc
         template <bool Writeable>
         class Stream : public std::conditional<Writeable, std::ostream, std::istream>::type
         {
+        public:
+            typedef std::function<void(Hex&, Parsers::Binary::Reference&)> index_inserter;
+            typedef std::function<void(Hex&, Hex&, size_t&)> encoding_inserter;
+
+        private:
             // Typedefs
             typedef WriteBuffer write_buf_type;
             typedef ReadBuffer read_buf_type;
@@ -54,6 +61,12 @@ namespace Casc
 
             // The base path of the CASC archive.
             std::string basePath;
+
+            // The index table.
+            index_inserter index;
+            
+            // The encoding table.
+            encoding_inserter encoding;
 
             /**
              * Registers block handlers.
@@ -71,40 +84,9 @@ namespace Casc
                 }
             }
 
-        public:
             /**
-             * Constructor.
-             */
-            Stream(const std::string basePath, const std::string filename = "", size_t offset = 0) :
-                buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
-                basePath(basePath),
-                base_type(new buf_type(basePath))
-            {
-                registerHandler<Impl::DefaultHandler>();
-                registerHandler<Impl::ZlibHandler>();
-
-                if (!filename.empty())
-                    open(filename, offset);
-            }
-
-            /**
-            * Move constructor.
+            * Opens a file from the currently opened CASC file.
             */
-            Stream(Stream &&) = default;
-
-            /**
-             * Destructor.
-             */
-            virtual ~Stream() = default;
-
-            /**
-             * Move operator.
-             */
-            Stream &operator= (Stream &&) = default;
-
-            /**
-             * Opens a file from the currently opened CASC file.
-             */
             void open(size_t offset)
             {
                 if (Writeable)
@@ -123,8 +105,8 @@ namespace Casc
             }
 
             /**
-             * Opens a file in a CASC file.
-             */
+            * Opens a file in a CASC file.
+            */
             void open(const char *filename, size_t offset)
             {
                 if (Writeable)
@@ -144,32 +126,81 @@ namespace Casc
             }
 
             /**
-             * Opens a file in a CASC file.
-             */
+            * Opens a file in a CASC file.
+            */
             void open(const std::string filename, size_t offset)
             {
                 open(filename.c_str(), offset);
             }
 
+        public:
+            /**
+             * Constructor.
+             */
+            template <bool ReadConstructible = !Writeable,
+                typename std::enable_if<ReadConstructible>::type* = nullptr>
+            Stream(const std::string filename, size_t offset) :
+                buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
+                base_type(new buf_type())
+            {
+                registerHandler<Impl::DefaultHandler>();
+                registerHandler<Impl::ZlibHandler>();
+
+                open(filename, offset);
+            }
+
+            template <bool WriteConstructible = Writeable,
+                typename std::enable_if<WriteConstructible>::type* = nullptr>
+            Stream(const std::string basePath,
+                   index_inserter index,
+                   encoding_inserter encoding) :
+                buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
+                basePath(basePath),
+                base_type(new buf_type(basePath)),
+                index(index),
+                encoding(encoding)
+            {
+                registerHandler<Impl::DefaultHandler>();
+                registerHandler<Impl::ZlibHandler>();
+            }
+
+
+            /**
+            * Move constructor.
+            */
+            Stream(Stream &&) = default;
+
+            /**
+             * Destructor.
+             */
+            virtual ~Stream() = default;
+
+            /**
+             * Move operator.
+             */
+            Stream &operator= (Stream &&) = default;
+
             /**
              * Closes the currently opened CASC file.
              */
-            template <bool Writeable = Writeable>
-            typename std::enable_if<Writeable>::type
-            close(Parsers::Binary::Reference &ref, std::string &encodingProfile)
+            void close()
             {
                 if (Writeable)
                 {
-                    auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
-                    buf->close(ref, encodingProfile);
-                }
-                this->rdbuf((buffer = std::make_unique<buf_type>(basePath)).get());
-            }
+                    Parsers::Binary::Reference ref;
+                    std::string encodingProfile;
+                    Hex hash;
+                    size_t size;
 
-            template <bool Writeable = Writeable>
-            typename std::enable_if<!Writeable>::type
-            close()
-            {
+                    auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
+                    buf->close(ref, encodingProfile, hash, size);
+
+                    /*if (index
+                        index(ref.key(), ref);*/
+
+                    /*if (encoding)
+                        encoding(hash, ref.key(), size);*/
+                }
                 this->rdbuf((buffer = std::make_unique<buf_type>(basePath)).get());
             }
 

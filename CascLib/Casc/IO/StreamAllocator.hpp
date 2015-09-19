@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <sstream>
 
@@ -50,15 +51,16 @@ namespace Casc
 
                 ss << basePath << PathSeparator
                    << "data." << std::setw(3) << std::setfill('0') << ref.file();
-
-                return std::make_shared<Stream<Writeable>>(basePath, ss.str(), ref.offset());
+                
+                return std::make_shared<Stream<Writeable>>(ss.str(), ref.offset());
             }
 
             template <bool Writeable>
             typename std::enable_if<Writeable, std::shared_ptr<Stream<Writeable>>>::type
-                 allocate() const
+                 allocate(typename Stream<Writeable>::index_inserter index,
+                          typename Stream<Writeable>::encoding_inserter encoding) const
             {
-                return std::make_shared<Stream<Writeable>>(basePath);
+                return std::make_shared<Stream<Writeable>>(basePath, index, encoding);
             }
         };
     }

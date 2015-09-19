@@ -64,105 +64,6 @@ namespace Casc
     private:
         typedef std::pair<Parsers::Text::EncodingBlock, std::vector<char>> descriptor_type;
 
-        template <typename SrcContainer, typename DestContainer>
-        size_t copyToVector(const SrcContainer &src, DestContainer &dest, size_t offset) const
-        {
-            std::copy(std::begin(src), std::end(src), std::begin(dest) + offset);
-            return offset + (std::end(src) - std::begin(src));
-        }
-
-        std::vector<char> createDataHeader(const std::vector<char> &blteHeader, const std::vector<descriptor_type> &blocks) const
-        {
-            auto blteHeaderSize = blteHeader.size();
-            auto dataSize = DataHeaderSize + blteHeader.size() +
-                std::accumulate(blocks.begin(), blocks.end(), 0,
-                    [](uint32_t value, descriptor_type block) { return value + block.second.size(); });
-
-            std::vector<char> header(DataHeaderSize, '\0');
-
-            auto hash = Hex(md5(blteHeader)).data();
-            
-            copyToVector(hash, header, 0);
-            copyToVector(Functions::Endian::write<IO::EndianType::Little, uint32_t>(dataSize), header, 16);
-
-            return std::move(header);
-        }
-
-        std::vector<char> createBlteHeader(const std::vector<descriptor_type> &blocks) const
-        {
-            auto dataSize = std::accumulate(blocks.begin(), blocks.end(), 0,
-                [](uint32_t value, descriptor_type block) { return value + block.second.size(); });
-            
-            auto headerSize = 8 + 8 + 24 * blocks.size();
-
-            size_t pos = 0;
-
-            std::vector<char> header(headerSize, '\0');
-
-            *reinterpret_cast<uint32_t*>(&header[pos]) = BlteSignature;
-            pos += sizeof(uint32_t);
-
-            pos = copyToVector(Functions::Endian::write<IO::EndianType::Big, uint32_t>(headerSize), header, pos);
-            pos = copyToVector(Functions::Endian::write<IO::EndianType::Big, uint16_t>(0xF00), header, pos);
-            pos = copyToVector(Functions::Endian::write<IO::EndianType::Big, uint16_t>((uint16_t)blocks.size()), header, pos);
-
-            for (auto &block : blocks)
-            {
-                pos = copyToVector(Functions::Endian::write<IO::EndianType::Big, uint32_t>((uint16_t)block.second.size()), header, pos);
-                pos = copyToVector(Functions::Endian::write<IO::EndianType::Big, uint32_t>((uint16_t)block.first.size()), header, pos);
-                
-                auto hash = Hex(md5(block.second)).data();
-
-                pos = copyToVector(hash, header, pos);
-            }
-
-            return std::move(header);
-        }
-
-        std::vector<descriptor_type> createChunkData(std::istream &stream, const std::vector<Parsers::Text::EncodingBlock> &blocks) const
-        {
-            std::vector<descriptor_type> chunks;
-
-            /*auto offset = 0U;
-            for (auto &block : blocks)
-            {
-                stream.seekg(offset, std::ios_base::beg);
-                chunks.emplace_back(block,
-                    handlers.at(block.mode())->encode(stream, block.size()));
-                offset += block.size();
-            }*/
-
-            return std::move(chunks);
-        }
-
-        std::vector<char> createData(std::istream &stream, const std::vector<Parsers::Text::EncodingBlock> &blocks) const
-        {
-            auto chunks = createChunkData(stream, blocks);
-            auto blteHeader = createBlteHeader(chunks);
-            auto dataHeader = createDataHeader(blteHeader, chunks);
-
-            auto dataSize = dataHeader.size() + blteHeader.size() +
-                std::accumulate(chunks.begin(), chunks.end(), 0,
-                    [](uint32_t value, descriptor_type block) { return value + block.second.size(); });
-
-            std::vector<char> data(dataSize, '\0');
-            auto iter = data.begin();
-            
-            std::copy(dataHeader.begin(), dataHeader.end(), iter);
-            iter += dataHeader.size();
-
-            std::copy(blteHeader.begin(), blteHeader.end(), iter);
-            iter += blteHeader.size();
-
-            for (auto &chunk : chunks)
-            {
-                std::copy(chunk.second.begin(), chunk.second.end(), iter);
-                iter += chunk.second.size();
-            }
-
-            return std::move(data);
-        }
-
     public:
         std::shared_ptr<IO::Stream<false>> openFileByKey(const std::string key) const
         {
@@ -176,15 +77,14 @@ namespace Casc
 
         std::shared_ptr<IO::Stream<true>> write()
         {
-            return allocator->allocate<true>();
+            IO::Stream<true>::index_inserter index_inserter =
+                std::bind(&Parsers::Binary::Index::insert,
+                    index, std::placeholders::_1, std::placeholders::_2);
+            IO::Stream<true>::encoding_inserter encoding_inserter =
+                std::bind(&Parsers::Binary::Encoding::insert,
+                    encoding, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 
-            /*std::array<char, 16> key;
-            std::reverse_copy(arr.begin(), arr.begin() + 16, key.begin());
-
-            loc = Parsers::Binary::Reference(key.begin(), key.begin() + 9, loc.file(), loc.offset(), loc.size());
-
-            index->insert(key.begin(), key.begin() + 9, loc);
-            index->write();*/
+            return allocator->allocate<true>(index_inserter, encoding_inserter);
         }
 
     private:
@@ -245,7 +145,7 @@ namespace Casc
                 path, dataPath, IO::DataFolders::Data, ""), shadowMemory.versions())),
             allocator(new IO::StreamAllocator(
                 Functions::createPath(path, dataPath, IO::DataFolders::Data, ""))),
-            encoding(new Parsers::Binary::Encoding(buildConfig["encoding"].back(), index, allocator)),
+            encoding(new Parsers::Binary::Encoding(index->find(Hex(buildConfig["encoding"].back().substr(0, 18U))), allocator)),
             root(new Filesystem::Root(buildConfig["root"].front(), encoding, index, allocator))
         {
         }

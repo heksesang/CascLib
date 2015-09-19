@@ -63,7 +63,7 @@ namespace Casc
 
             for (auto it = first; it != last; ++it)
             {
-                ss << std::setw(2) << *it;
+                ss << std::setw(2) << (int)*it;
             }
 
             this->str = ss.str();
@@ -84,12 +84,12 @@ namespace Casc
             }
         }
 
-        const std::vector<uint8_t> &data()
+        char* data()
         {
-            return bytes;
+            return reinterpret_cast<char*>(bytes.data());
         }
 
-        const std::string &string()
+        const std::string &string() const
         {
             return str;
         }
@@ -99,9 +99,19 @@ namespace Casc
             return bytes.cbegin();
         }
 
+        decltype(auto) begin()
+        {
+            return bytes.begin();
+        }
+
         decltype(auto) end() const noexcept
         {
             return bytes.cend();
+        }
+
+        decltype(auto) end()
+        {
+            return bytes.end();
         }
 
         decltype(auto) size() const noexcept
@@ -136,12 +146,12 @@ namespace Casc
 
         bool operator <=(const Hex &b) const
         {
-            return b.str <= str;
+            return str <= b.str;
         }
 
         bool operator >=(const Hex &b) const
         {
-            return b.str >= str;
+            return str >= b.str;
         }
     };
 }

@@ -90,7 +90,8 @@ namespace Casc
         }
 
         class Handler;
-        class Buffer;
+        class ReadBuffer;
+        class WriteBuffer;
         template <bool Writeable>
         class Stream;
         class StreamAllocator;
@@ -226,22 +227,12 @@ namespace Casc
 namespace std
 {
     template <>
-    class std::hash<std::array<uint8_t, 9>>
+    class std::hash<Casc::Hex>
     {
     public:
-        size_t operator()(const std::array<uint8_t, 9> &key) const
+        size_t operator()(const Casc::Hex &key) const
         {
-            return Casc::Functions::Hash::lookup3(key, 0);
-        }
-    };
-
-    template <>
-    class std::hash<::std::vector<char>>
-    {
-    public:
-        size_t operator()(const std::vector<char> &key) const
-        {
-            return Casc::Functions::Hash::lookup3(key, 0);
+            return Casc::Functions::Hash::lookup3(key.begin(), key.end(), 0);
         }
     };
 }

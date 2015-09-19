@@ -108,11 +108,11 @@ namespace Casc
         namespace Endian
         {
             template <IO::EndianType Type, typename T, typename InputIt>
-            inline T read(InputIt first, InputIt last = InputIt(nullptr))
+            inline T read(InputIt first, InputIt last = InputIt())
             {
                 using namespace Casc::Exceptions;
 
-                if (last == InputIt(nullptr))
+                if (last == InputIt())
                 {
                     last = first + sizeof(T);
                 }
@@ -125,8 +125,8 @@ namespace Casc
                 T output{};
                 auto it = first;
 
-                typedef typename std::make_unsigned<typename std::iterator_traits<InputIt>::value_type>::type* unsigned_ptr;
-                typedef typename std::make_signed<typename std::iterator_traits<InputIt>::value_type>::type* signed_ptr;
+                typedef const typename std::make_unsigned<typename std::iterator_traits<InputIt>::value_type>::type* unsigned_ptr;
+                typedef const typename std::make_signed<typename std::iterator_traits<InputIt>::value_type>::type* signed_ptr;
                     
                 switch (Type)
                 {
@@ -200,6 +200,12 @@ namespace Casc
             inline std::string md5(const Container &input)
             {
                 return MD5(input).hexdigest();
+            }
+
+            template <typename InputIt>
+            inline std::string md5(InputIt begin, InputIt end)
+            {
+                return MD5(begin, end).hexdigest();
             }
 
             template <typename Container>

@@ -150,16 +150,12 @@ namespace CascLibTest
             };
             char* data = reinterpret_cast<char*>(hexData);
 
-
-            Parsers::Binary::Reference ref;
-            std::string encodingProfile;
-
             auto out = container->write();
 
             out->write(data, 5);
             out->setMode(IO::EncodingMode::Zlib);
             out->write(data + 5, 5);
-            out->close(ref, encodingProfile);
+            out->close();
         }
 
 	};

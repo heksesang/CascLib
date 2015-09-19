@@ -61,6 +61,12 @@ namespace Casc
             // Is the data being written to file now?
             bool writing;
 
+            // MD5 hasher for the uncompressed data.
+            MD5 hasher;
+
+            // The size of the data.
+            size_t size;
+
             /**
              * Encodes the current buffer content with the handler of the current mode.
              */
@@ -72,13 +78,15 @@ namespace Casc
                     buffer.resize(pptr() - pbase());
                     auto encoded = handlers[mode]->encode(buffer);
 
+                    hasher.update(buffer);
+
                     // Write to block table.
                     auto pos = blockTable.size();
 
                     blockTable.resize(blockTable.size() + 24);
                     auto encodedSize = Functions::Endian::write<IO::EndianType::Big, uint32_t>(encoded.size());
                     auto size = Functions::Endian::write<IO::EndianType::Big, uint32_t>(buffer.size());
-                    auto checksum = Hex(Functions::Hash::md5(encoded)).data();
+                    auto checksum = Hex(Functions::Hash::md5(encoded));
 
                     std::memcpy(blockTable.data() + pos, encodedSize.data(), encodedSize.size());
                     pos += encodedSize.size();
@@ -91,6 +99,8 @@ namespace Casc
                     {
                         throw Exceptions::IOException("Too many blocks in BLTE encoded file.");
                     }
+
+                    this->size += buffer.size();
 
                     // Write data.
                     this->encoded.resize(this->encoded.size() + encoded.size());
@@ -197,7 +207,7 @@ namespace Casc
             /**
              * Closes the buffer.
              */
-            void close(Parsers::Binary::Reference &ref, std::string &encodingProfile)
+            void close(Parsers::Binary::Reference &ref, std::string &encodingProfile, Hex &hash, size_t &size)
             {
                 // Enable writing-to-file flag.
                 writing = true;
@@ -216,16 +226,26 @@ namespace Casc
                     << "data." << std::setw(3) << std::setfill('0') << ref.file();
 
                 std::filebuf::open("I:\\test.011", std::ios_base::out | std::ios_base::in | std::ios_base::binary);
-                //std::filebuf::seekoff(ref.offset(), std::ios_base::beg, std::ios_base::out);
+                //std::filebuf::seekoff(ref.offset() + 30, std::ios_base::beg, std::ios_base::out);
+                std::filebuf::seekoff(30, std::ios_base::beg, std::ios_base::out);
+                
+                MD5 headerHasher;
 
                 auto signature = Functions::Endian::write<IO::EndianType::Little>(Signature);
                 std::filebuf::xsputn(signature.data(), signature.size());
+
+                headerHasher.update(signature.data(), signature.size());
                 
                 if (this->blockCount > 0)
                 {
                     auto headerSize = Functions::Endian::write<IO::EndianType::Big, uint32_t>(12 + blockTable.size());
                     auto flags = Functions::Endian::write<IO::EndianType::Big, uint16_t>(15);
                     auto blockCount = Functions::Endian::write<IO::EndianType::Big, uint16_t>((uint16_t)this->blockCount);
+
+                    headerHasher.update(headerSize.data(), headerSize.size());
+                    headerHasher.update(flags.data(), flags.size());
+                    headerHasher.update(blockCount.data(), blockCount.size());
+                    headerHasher.update(blockTable);
 
                     std::filebuf::xsputn(headerSize.data(), headerSize.size());
                     std::filebuf::xsputn(flags.data(), flags.size());
@@ -234,13 +254,38 @@ namespace Casc
                 }
                 else
                 {
-                    for (int i = 0; i < sizeof(uint32_t); ++i)
-                    {
-                        std::filebuf::sputc('\0');
-                    }
+                    auto headerSize = Functions::Endian::write<IO::EndianType::Big, uint32_t>(0);
+                    std::filebuf::xsputn(headerSize.data(), headerSize.size());
+
+                    headerHasher.update(headerSize.data(), headerSize.size());
+                    headerHasher.update(encoded);
                 }
                 std::filebuf::xsputn(encoded.data(), encoded.size());
+
+                hasher.finalize();
+                hash = hasher.hexdigest();
+
+                headerHasher.finalize();
+                Hex dataHash = headerHasher.hexdigest();
+
+                ref = Parsers::Binary::Reference(
+                    dataHash.begin(), dataHash.end(), ref.file(), ref.offset(), ref.size());
+
+                std::reverse(dataHash.begin(), dataHash.end());
+
+                auto dataSize = Functions::Endian::write<IO::EndianType::Little, uint32_t>(
+                    (size_t)std::filebuf::pubseekoff(0, std::ios_base::cur, std::ios_base::out));
+                /*auto dataSize = Functions::Endian::write<IO::EndianType::Little, uint32_t>(
+                    (size_t)std::filebuf::pubseekoff(0, std::ios_base::cur, std::ios_base::out).seekpos() - ref.offset());*/
+
+                //std::filebuf::seekoff(ref.offset(), std::ios_base::beg, std::ios_base::out);
+                std::filebuf::seekoff(0, std::ios_base::beg, std::ios_base::out);
+                std::filebuf::xsputn(dataHash.data(), dataHash.size());
+                std::filebuf::xsputn(dataSize.data(), dataSize.size());
+                
                 std::filebuf::close();
+
+                size = this->size;
             }
         };
     }

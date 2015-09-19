@@ -98,6 +98,13 @@ public:
         update(input.data(), input.size());
         finalize();
     }
+    template <typename InputIt>
+    MD5(InputIt begin, InputIt end)
+    {
+        init();
+        update(&*begin, end - begin);
+        finalize();
+    }
     MD5(std::ifstream &stream, size_type length)
     {
         init();

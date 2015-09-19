@@ -23,7 +23,9 @@
 #include <functional>
 #include <fstream>
 #include <map>
+#include <omp.h>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "../../Common.hpp"
@@ -44,7 +46,7 @@ namespace Casc
             {
             private:
                 // The files listed in the index.
-                std::map<std::vector<char>, Reference> files_;
+                std::unordered_map<uint32_t, Reference> files_;
 
                 // The versions of the .idx files.
                 std::map<uint32_t, uint32_t> versions_;
@@ -74,10 +76,11 @@ namespace Casc
                 /**
                  * Parses an .idx file.
                  */
-                void parse(const std::string &path)
+                std::vector<Reference> parse(const std::string &path)
                 {
                     using namespace Functions::Endian;
                     using namespace Functions::Hash;
+
                     std::ifstream fs;
                     fs.open(path, std::ios_base::in | std::ios_base::binary);
 
@@ -126,21 +129,25 @@ namespace Casc
                     fs >> le >> hash;
 
                     std::pair<uint32_t, uint32_t> dataHash{ 0, 0 };
+                    std::vector<char> data(size);
+
+                    fs.read(data.data(), data.size());
+
+                    std::vector<Reference> files(size / 18);
+                    files.reserve(size / 18);
+
                     for (auto i = 0U; i < (size / 18); ++i)
                     {
-                        std::array<char, 18> bytes{};
-                        fs.read(bytes.data(), 18);
+                        auto begin = data.begin() + 18 * i;
+                        auto end = begin + 18;
 
-                        Reference ref(
-                            bytes.begin(), bytes.end(),
+                        files.emplace_back(begin, end,
                             keyFieldSize,
                             locationFieldSize,
                             lengthFieldSize,
                             segmentBits);
 
-                        files_.insert({ ref.key(), ref });
-
-                        dataHash = lookup3(bytes, dataHash);
+                        dataHash = lookup3(begin, end, dataHash);
                     }
 
                     if (hash != dataHash.first)
@@ -149,6 +156,8 @@ namespace Casc
                     }
 
                     fs.seekg(0x1000 - ((8 + size) % 0x1000), std::ios_base::cur);
+
+                    return files;
                 }
 
                 /**
@@ -165,7 +174,7 @@ namespace Casc
 
                     for (auto &file : this->files_)
                     {
-                        if (findBucket(file.first.begin(), file.first.begin() + 9U) == bucket)
+                        if (findBucket(file.second.key().begin(), file.second.key().begin() + 9U) == bucket)
                         {
                             files.push_back(file.second);
                         }
@@ -287,7 +296,7 @@ namespace Casc
                 template <typename KeyIt>
                 Reference find(KeyIt first, KeyIt last) const
                 {
-                    auto result = files_.find({ first, last });
+                    auto result = files_.find(Functions::Hash::lookup3(first, last, 0));
 
                     if (result == files_.end())
                     {
@@ -298,12 +307,20 @@ namespace Casc
                 }
 
                 /**
+                * Gets a file record.
+                */
+                template <typename Container>
+                Reference find(Container container) const
+                {
+                    return find(std::begin(container), std::end(container));
+                }
+
+                /**
                  * Inserts a file record.
                  */
-                template <typename KeyIt>
-                void insert(KeyIt first, KeyIt last, Reference &loc)
+                void insert(Hex key, Reference &loc)
                 {
-                    files_[{first, last}] = loc;
+                    files_[Functions::Hash::lookup3(key, 0)] = loc;
                 }
 
                 /**
@@ -314,13 +331,17 @@ namespace Casc
                     path_ = path;
                     versions_ = versions;
 
-                    for (auto it = versions.begin(); it != versions.end(); ++it)
+                    omp_lock_t lock;
+                    omp_init_lock(&lock);
+
+                    #pragma omp parallel for num_threads(16)
+                    for (auto i = 0; i < (int)versions.size(); ++i)
                     {
                         std::stringstream ss;
 
                         ss << path << PathSeparator;
-                        ss << std::setw(2) << std::setfill('0') << std::hex << it->first;
-                        ss << std::setw(8) << std::setfill('0') << std::hex << it->second;
+                        ss << std::setw(2) << std::setfill('0') << std::hex << i;
+                        ss << std::setw(8) << std::setfill('0') << std::hex << versions.at(i);
                         ss << ".idx";
 
                         if (!fs::exists(ss.str()))
@@ -328,7 +349,13 @@ namespace Casc
                             throw Exceptions::FileNotFoundException(ss.str());
                         }
 
-                        parse(ss.str());
+                        auto files = parse(ss.str());
+                        omp_set_lock(&lock);
+                        for (auto it = files.begin(); it != files.end(); ++it)
+                        {
+                            files_.insert({ Functions::Hash::lookup3(it->key(), 0), *it });
+                        }
+                        omp_unset_lock(&lock);
                     }
                 }
 

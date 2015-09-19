@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
                 return -1;
             }
         }
-        catch (Casc::Exceptions::KeyDoesNotExistException ex)
+        catch (Casc::Exceptions::KeyDoesNotExistException &ex)
         {
             std::stringstream ss;
             
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
             std::cout << ss.str() << std::endl;
             return -1;
         }
-        catch (Casc::Exceptions::HashDoesNotExistException ex)
+        catch (Casc::Exceptions::HashDoesNotExistException &ex)
         {
             std::stringstream ss;
 
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
             std::cout << ss.str() << std::endl;
             return -1;
         }
-        catch (Casc::Exceptions::FilenameDoesNotExistException ex)
+        catch (Casc::Exceptions::FilenameDoesNotExistException &ex)
         {
             std::stringstream ss;
 
@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
             return -1;
         }
     }
-    catch (Casc::Exceptions::CascException ex)
+    catch (Casc::Exceptions::CascException &ex)
     {
         std::stringstream ss;
 

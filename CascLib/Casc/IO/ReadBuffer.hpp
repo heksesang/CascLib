@@ -47,7 +47,7 @@ namespace Casc
         class ReadBuffer : public std::filebuf
         {
         private:
-            const uint32_t BlteSignature = 0x45544C42;
+            const uint32_t Signature = 0x45544C42;
             const size_t BufferSize = 4096U;
 
             struct BufferInfo
@@ -139,7 +139,7 @@ namespace Casc
                 uint32_t signature;
 
                 std::filebuf::xsgetn(header2, 0x08);
-                if ((signature = read<EndianType::Little, uint32_t>(header2)) != BlteSignature)
+                if ((signature = read<EndianType::Little, uint32_t>(header2)) != Signature)
                 {
                     throw Exceptions::InvalidSignatureException(signature, 0x45544C42);
                 }
@@ -518,7 +518,7 @@ namespace Casc
             /**
              * Default constructor.
              */
-            ReadBuffer(const std::string basePath) :
+            ReadBuffer() :
                 out(std::make_unique<char[]>(BufferSize)),
                 temp(std::make_unique<char[]>(BufferSize))
             {
