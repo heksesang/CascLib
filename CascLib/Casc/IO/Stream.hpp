@@ -42,8 +42,7 @@ namespace Casc
         class Stream : public std::conditional<Writeable, std::ostream, std::istream>::type
         {
         public:
-            typedef std::function<void(Hex&, Parsers::Binary::Reference&)> index_inserter;
-            typedef std::function<void(Hex&, Hex&, size_t&)> encoding_inserter;
+            typedef std::function<void(Parsers::Binary::Reference, Hex, size_t)> insert_func;
 
         private:
             // Typedefs
@@ -63,10 +62,7 @@ namespace Casc
             std::string basePath;
 
             // The index table.
-            index_inserter index;
-            
-            // The encoding table.
-            encoding_inserter encoding;
+            insert_func inserter;
 
             /**
              * Registers block handlers.
@@ -85,8 +81,8 @@ namespace Casc
             }
 
             /**
-            * Opens a file from the currently opened CASC file.
-            */
+             * Opens a file from the currently opened CASC file.
+             */
             void open(size_t offset)
             {
                 if (Writeable)
@@ -105,8 +101,8 @@ namespace Casc
             }
 
             /**
-            * Opens a file in a CASC file.
-            */
+             * Opens a file in a CASC file.
+             */
             void open(const char *filename, size_t offset)
             {
                 if (Writeable)
@@ -126,8 +122,8 @@ namespace Casc
             }
 
             /**
-            * Opens a file in a CASC file.
-            */
+             * Opens a file in a CASC file.
+             */
             void open(const std::string filename, size_t offset)
             {
                 open(filename.c_str(), offset);
@@ -152,13 +148,11 @@ namespace Casc
             template <bool WriteConstructible = Writeable,
                 typename std::enable_if<WriteConstructible>::type* = nullptr>
             Stream(const std::string basePath,
-                   index_inserter index,
-                   encoding_inserter encoding) :
+                   insert_func inserter) :
                 buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
                 basePath(basePath),
                 base_type(new buf_type(basePath)),
-                index(index),
-                encoding(encoding)
+                inserter(inserter)
             {
                 registerHandler<Impl::DefaultHandler>();
                 registerHandler<Impl::ZlibHandler>();
@@ -195,11 +189,8 @@ namespace Casc
                     auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
                     buf->close(ref, encodingProfile, hash, size);
 
-                    /*if (index
-                        index(ref.key(), ref);*/
-
-                    /*if (encoding)
-                        encoding(hash, ref.key(), size);*/
+                    if (inserter)
+                        inserter(ref, hash, size);
                 }
                 this->rdbuf((buffer = std::make_unique<buf_type>(basePath)).get());
             }

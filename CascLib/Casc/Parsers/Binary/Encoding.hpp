@@ -106,9 +106,10 @@ namespace Casc
                     Hex hash;
                     size_t size;
                     std::vector<Hex> keys;
+
+                    static const FileInfo empty;
                 };
 
-                std::unordered_map<uint32_t, FileInfo> fileInfo;
                 std::vector<std::pair<Hex, Hex>> headersA;
                 std::vector<char> tableA;
                 size_t hashSizeA;
@@ -120,7 +121,6 @@ namespace Casc
                     std::string profile;
                 };
 
-                std::unordered_map<uint32_t, EncodedFileInfo> encodedFileInfo;
                 std::vector<std::pair<Hex, Hex>> headersB;
                 std::vector<char> tableB;
                 size_t hashSizeB;
@@ -161,22 +161,18 @@ namespace Casc
                             Endian::read<IO::EndianType::Big, uint32_t>(it);
                         it += sizeof(fileSize);
 
-                        std::vector<char> checksum(hashSize);
-                        std::copy(it, it + hashSize, checksum.begin());
+                        auto checksumIt = it;
                         it += hashSize;
 
                         std::vector<Hex> keys;
 
                         for (auto i = 0U; i < keyCount; ++i)
                         {
-                            std::vector<char> key(hashSize);
-                            std::copy(it, it + hashSize, key.begin());
+                            keys.emplace_back(it, it + hashSize);
                             it += hashSize;
-
-                            keys.push_back(key);
                         }
 
-                        files.emplace_back(FileInfo{ checksum, fileSize, keys });
+                        files.emplace_back(FileInfo{ { checksumIt, checksumIt + hashSize }, fileSize, keys });
                     }
 
                     return files;
@@ -192,8 +188,7 @@ namespace Casc
 
                     for (auto it = begin; it < end;)
                     {
-                        std::vector<char> checksum(hashSize);
-                        std::copy(it, it + hashSize, checksum.begin());
+                        auto checksumIt = it;
                         it += hashSize;
 
                         auto profileIndex =
@@ -210,11 +205,11 @@ namespace Casc
                         
                         if (profileIndex >= 0)
                         {
-                            files.emplace_back(EncodedFileInfo{ checksum, fileSize, profiles[profileIndex] });
+                            files.emplace_back(EncodedFileInfo{ { checksumIt, checksumIt + hashSize }, fileSize, profile });
                         }
                         else
                         {
-                            files.emplace_back(EncodedFileInfo{ checksum, fileSize, "" });
+                            files.emplace_back(EncodedFileInfo{ { checksumIt, checksumIt + hashSize }, fileSize, "" });
                         }
                     }
 
@@ -268,7 +263,7 @@ namespace Casc
                     }
 
                     // Table A
-                    for (auto i = 0; i < (int)tableSizeA; ++i)
+                    for (auto i = 0U; i < tableSizeA; ++i)
                     {
                         std::vector<char> hash(hashSizeA);
                         std::vector<char> checksum(hashSizeA);
@@ -286,7 +281,7 @@ namespace Casc
 
                     // Table B
 
-                    for (auto i = 0; i < (int)tableSizeB; ++i)
+                    for (auto i = 0U; i < tableSizeB; ++i)
                     {
                         std::vector<char> hash(hashSizeA);
                         std::vector<char> checksum(hashSizeA);
@@ -346,10 +341,83 @@ namespace Casc
                 virtual ~Encoding() = default;
 
                 /**
-                * Inserts a file record.
-                */
+                 * Inserts a file record.
+                 */
                 void insert(Hex hash, Hex key, size_t fileSize)
                 {
+                    /*auto index = -1;
+                    Hex checksum;
+
+                    for (auto i = 0U; i < headersA.size(); ++i)
+                    {
+                        if (headersA[i].first <= hash)
+                        {
+                            index = headersA.size() - 1 - i;
+                            checksum = headersA[i].second;
+                            break;
+                        }
+                    }*/
+
+                    std::vector<FileInfo> files;
+
+                    for (auto index = 0U; index < headersA.size(); ++index)
+                    {
+                        auto size = 0;
+                        auto begin = tableA.begin() + EntrySize * index;
+                        auto end = begin + EntrySize;
+
+                        for (auto it = begin; it < end;)
+                        {
+                            auto keyCount =
+                                Endian::read<IO::EndianType::Little, uint16_t>(it);
+                            it += sizeof(keyCount);
+
+                            if (keyCount == 0)
+                            {
+                                size = it - begin - 4 - sizeof(keyCount);
+                                break;
+                            }
+
+                            auto fileSize =
+                                Endian::read<IO::EndianType::Big, uint32_t>(it);
+                            it += sizeof(fileSize);
+
+                            auto checksumIt = it;
+                            it += hashSizeA;
+
+                            std::vector<Hex> keys;
+
+                            for (auto i = 0U; i < keyCount; ++i)
+                            {
+                                keys.emplace_back(it, it + hashSizeA);
+                                it += hashSizeA;
+                            }
+
+                            files.emplace_back(FileInfo{ { checksumIt, checksumIt + hashSizeA }, fileSize, keys });
+                        }
+                    }
+
+                    auto byteCount = 0;
+                    for (auto &file : files)
+                    {
+
+                    }
+                }
+
+                /**
+                 * Write the data to a stream.
+                 */
+                void write(std::shared_ptr<std::ofstream> stream)
+                {
+                    stream->close();
+                }
+
+                /**
+                 * Write the data to a stream.
+                 */
+                void write(std::shared_ptr<IO::Stream<true>> stream)
+                {
+                    stream->close();
                 }
             };
         }

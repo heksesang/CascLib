@@ -60,10 +60,10 @@ namespace Casc
         {
             std::stringstream ss;
             ss << std::hex << std::setfill('0');
-
+            
             for (auto it = first; it != last; ++it)
             {
-                ss << std::setw(2) << (int)*it;
+                ss << std::setw(2) << (int)uint8_t(*it);
             }
 
             this->str = ss.str();

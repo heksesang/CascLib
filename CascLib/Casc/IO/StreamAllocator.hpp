@@ -57,10 +57,9 @@ namespace Casc
 
             template <bool Writeable>
             typename std::enable_if<Writeable, std::shared_ptr<Stream<Writeable>>>::type
-                 allocate(typename Stream<Writeable>::index_inserter index,
-                          typename Stream<Writeable>::encoding_inserter encoding) const
+                 allocate(typename Stream<Writeable>::insert_func inserter) const
             {
-                return std::make_shared<Stream<Writeable>>(basePath, index, encoding);
+                return std::make_shared<Stream<Writeable>>(basePath, inserter);
             }
         };
     }

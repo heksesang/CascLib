@@ -77,14 +77,11 @@ namespace Casc
 
         std::shared_ptr<IO::Stream<true>> write()
         {
-            IO::Stream<true>::index_inserter index_inserter =
-                std::bind(&Parsers::Binary::Index::insert,
-                    index, std::placeholders::_1, std::placeholders::_2);
-            IO::Stream<true>::encoding_inserter encoding_inserter =
-                std::bind(&Parsers::Binary::Encoding::insert,
-                    encoding, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+            IO::Stream<true>::insert_func inserter =
+                std::bind(&Container::insertFile,
+                    this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 
-            return allocator->allocate<true>(index_inserter, encoding_inserter);
+            return allocator->allocate<true>(inserter);
         }
 
     private:
@@ -127,6 +124,34 @@ namespace Casc
         Parsers::Binary::Reference findFileLocation(const Hex key) const
         {
             return index->find(key.begin(), key.begin() + 9);
+        }
+
+        void insertEncoding(Parsers::Binary::Reference ref)
+        {
+            if (index != nullptr)
+            {
+                index->insert(ref.key(), ref);
+            }
+        }
+
+        void insertFile(Parsers::Binary::Reference ref, Hex hash, size_t size)
+        {
+            if (index != nullptr)
+            {
+                index->insert(ref.key(), ref);
+            }
+
+            if (encoding != nullptr)
+            {
+                encoding->insert(hash, ref.key(), size);
+
+                /*IO::Stream<true>::insert_func inserter =
+                    std::bind(&Container::insertEncoding,
+                        this, std::placeholders::_1);
+
+                auto stream = allocator->allocate<true>(inserter);
+                encoding->write(stream);*/
+            }
         }
 
     public:

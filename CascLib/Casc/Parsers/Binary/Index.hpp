@@ -318,7 +318,7 @@ namespace Casc
                 /**
                  * Inserts a file record.
                  */
-                void insert(Hex key, Reference &loc)
+                void insert(const Hex key, const Reference loc)
                 {
                     files_[Functions::Hash::lookup3(key, 0)] = loc;
                 }
