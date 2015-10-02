@@ -155,7 +155,7 @@ namespace Casc
                         throw Exceptions::InvalidHashException(hash, dataHash.first, path);
                     }
 
-                    fs.seekg(0x1000 - ((8 + size) % 0x1000), std::ios_base::cur);
+                    fs.seekg(0xE000 - ((8 + size) % 0xD000), std::ios_base::cur);
 
                     return files;
                 }
@@ -240,7 +240,7 @@ namespace Casc
                     }
 
                     auto pos = stream.tellp();
-                    pos = pos + (0x10000 - pos % 0x10000 - 1);
+                    pos = pos + (0xE000 - pos % 0xD000 - 1);
 
                     auto dataHash = Endian::write<IO::EndianType::Little, uint32_t>(hash.first);
                     stream.seekp(hashPos);
