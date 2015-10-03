@@ -190,15 +190,15 @@ namespace Casc
                     auto end = Endian::write<IO::EndianType::Big, uint32_t>(0x40000000);
 
                     auto it = v.begin();
-
-                    std::copy(version.begin(), version.end(), it);
-                    std::copy(file.begin(), file.end(), it += version.size());
-                    std::copy(lengthSize.begin(), lengthSize.end(), it += file.size());
-                    std::copy(locationSize.begin(), locationSize.end(), it += lengthSize.size());
-                    std::copy(keySize.begin(), keySize.end(), it += locationSize.size());
-                    std::copy(segmentBits.begin(), segmentBits.end(), it += keySize.size());
-                    std::copy(start.begin(), start.end(), it += segmentBits.size());
-                    std::copy(end.begin(), end.end(), it += start.size());
+                    
+                    it = std::copy(version.begin(), version.end(), it);
+                    it = std::copy(file.begin(), file.end(), it);
+                    it = std::copy(lengthSize.begin(), lengthSize.end(), it);
+                    it = std::copy(locationSize.begin(), locationSize.end(), it);
+                    it = std::copy(keySize.begin(), keySize.end(), it);
+                    it = std::copy(segmentBits.begin(), segmentBits.end(), it);
+                    it = std::copy(start.begin(), start.end(), it);
+                    it = std::copy(end.begin(), end.end(), it);
 
                     auto headerSize = Endian::write<IO::EndianType::Little, uint32_t>(16U);
                     auto headerHash = Endian::write<IO::EndianType::Little, uint32_t>(lookup3(v.begin(), v.begin() + 16U, 0));
