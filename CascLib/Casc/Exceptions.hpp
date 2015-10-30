@@ -9,6 +9,7 @@
 #include "Exceptions/FileNotFoundException.hpp"
 #include "Exceptions/FilenameDoesNotExistException.hpp"
 #include "Exceptions/HashDoesNotExistException.hpp"
+#include "Exceptions/InvalidEncodingModeException.hpp"
 #include "Exceptions/InvalidHashException.hpp"
 #include "Exceptions/InvalidSignatureException.hpp"
 #include "Exceptions/KeyDoesNotExistException.hpp"

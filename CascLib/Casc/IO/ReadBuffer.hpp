@@ -316,7 +316,7 @@ namespace Casc
             */
             pos_type seekrel(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
             {
-                if (dir != std::ios_base::cur)
+                if (dir != std::ios_base::cur || offset == 0)
                 {
                     return pos();
                 }
@@ -392,6 +392,11 @@ namespace Casc
                     std::filebuf::seekpos(this->offset + chunk.offset, std::ios_base::in);
                     EncodingMode mode = (EncodingMode)std::filebuf::sbumpc();
 
+                    if (handlers.find(mode) == handlers.end())
+                    {
+                        throw Casc::Exceptions::InvalidEncodingModeException(mode);
+                    }
+
                     // Call the handler for the compression mode.
                     std::filebuf::seekpos(this->offset + chunk.offset + 1);
                     auto data = handlers[mode]->decode(*this, offset - chunk.begin, chunk.size - 1, count, chunkSize);
@@ -449,12 +454,13 @@ namespace Casc
             {
                 if (isInitialized && !isBuffering)
                 {
-                    if (seek(0) == pos_type(-1))
+                    if (seek(0) == pos_type(-1) || seek(0) == this->length)
                     {
                         setg(nullptr, nullptr, nullptr);
                         return traits_type::eof();
                     }
 
+                    buffer(pos());
                     return traits_type::to_int_type(out.get()[0]);
                 }
 
@@ -465,7 +471,7 @@ namespace Casc
             {
                 if (isInitialized && !isBuffering)
                 {
-                    if (seek(0) == pos_type(-1))
+                    if (seek(0) == pos_type(-1) || seek(0) == this->length)
                     {
                         setg(nullptr, nullptr, nullptr);
                         return traits_type::eof();
@@ -503,11 +509,16 @@ namespace Casc
                 {
                     do
                     {
+                        if (showmanyc() == 0)
+                        {
+                            buffer(pos());
+                        }
+
                         auto numRead = std::min<size_t>(
                             static_cast<size_t>(showmanyc()), static_cast<size_t>(count - copied));
                         std::memcpy(s + copied, gptr(), numRead);
                         copied += numRead;
-                        numRead == 0 ? seek(numRead) : seekbuf(numRead);
+                        seekbuf(numRead);
                     } while (copied < count && underflow() != traits_type::eof());
                 }
 

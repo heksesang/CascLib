@@ -259,6 +259,11 @@ namespace Casc
                         std::string profile;
                         std::getline(*stream, profile, '\0');
 
+                        if (stream->fail())
+                        {
+                            throw Exceptions::IOException("Stream faulted after getline()");
+                        }
+
                         profiles.emplace_back(profile);
                     }
 

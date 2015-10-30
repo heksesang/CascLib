@@ -225,6 +225,7 @@
   <ItemGroup>
     <ClInclude Include="Casc\Exceptions\FilesystemException.hpp" />
     <ClInclude Include="Casc\Exceptions\HashDoesNotExistException.hpp" />
+    <ClInclude Include="Casc\Exceptions\InvalidEncodingModeException.hpp" />
     <ClInclude Include="Casc\Exceptions\IOException.hpp" />
     <ClInclude Include="Casc\Exceptions\KeyDoesNotExistException.hpp" />
     <ClInclude Include="Casc\Filesystem\Root.hpp" />

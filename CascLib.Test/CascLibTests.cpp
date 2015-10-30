@@ -52,8 +52,8 @@ namespace CascLibTest
         TEST_METHOD(LoadContainer)
         {
             auto container = std::make_unique<Container>(
-                R"(I:\Diablo III\)",
-                "Data");
+                R"(I:\Overwatch\)",
+                R"(data\casc)");
         }
 
         TEST_METHOD(GetFileByKey)

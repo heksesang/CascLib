@@ -58,23 +58,6 @@ namespace Casc
 // Forward declarations
 namespace Casc
 {
-    namespace Exceptions
-    {
-        class CascException;
-        
-        class ParserException;
-        class FilesystemException;
-        class IOException;
-
-        class FileNotFoundException;
-        class FilenameDoesNotExistException;
-        class HashDoesNotExistException;
-        class InvalidHashException;
-        class InvalidSignatureException;
-        class KeyDoesNotExistException;
-        class ReserveSpaceException;
-    }
-
     namespace Filesystem
     {
         class Handler;
