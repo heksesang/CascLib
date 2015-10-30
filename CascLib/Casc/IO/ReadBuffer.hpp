@@ -321,6 +321,11 @@ namespace Casc
                     return pos();
                 }
 
+                if (offset <= showmanyc())
+                {
+                    return seekbuf(offset, dir);
+                }
+
                 return buffer(pos() + offset);
             }
 

@@ -59,15 +59,15 @@ namespace CascLibTest
         TEST_METHOD(GetFileByKey)
         {
             auto container = std::make_unique<Container>(
-                R"(I:\Diablo III\)",
-                "Data");
+                R"(I:\Overwatch\)",
+                R"(data\casc)");
 
-            Parsers::Text::BuildInfo buildInfo(R"(I:\Diablo III\.build.info)");
+            Parsers::Text::BuildInfo buildInfo(R"(I:\Overwatch\.build.info)");
 
             auto buildConfigHash = buildInfo.build(0).at("Build Key");
 
             std::stringstream buildConfig;
-            buildConfig << R"(I:\Diablo III\Data\config)"
+            buildConfig << R"(I:\Overwatch\data\casc\config)"
                 << "\\" << buildConfigHash.substr(0, 2)
                 << "\\" << buildConfigHash.substr(2, 2)
                 << "\\" << buildConfigHash;
@@ -85,7 +85,7 @@ namespace CascLibTest
             file->read(arr, size);
 
             std::fstream fs;
-            fs.open("enc.d3", std::ios_base::out | std::ios_base::binary);
+            fs.open("enc.ow", std::ios_base::out | std::ios_base::binary);
 
             fs.write(arr, size);
             fs.close();
@@ -96,15 +96,15 @@ namespace CascLibTest
 		TEST_METHOD(GetFileByHash)
 		{
             auto container = std::make_unique<Container>(
-                R"(I:\Diablo III\)",
-                "Data");
+                R"(I:\Overwatch\)",
+                R"(data\casc)");
 
-            Parsers::Text::BuildInfo buildInfo(R"(I:\Diablo III\.build.info)");
+            Parsers::Text::BuildInfo buildInfo(R"(I:\Overwatch\.build.info)");
 
             auto buildConfigHash = buildInfo.build(0).at("Build Key");
 
             std::stringstream buildConfig;
-            buildConfig << R"(I:\Diablo III\Data\config)"
+            buildConfig << R"(I:\Overwatch\data\casc\config)"
                 << "\\" << buildConfigHash.substr(0, 2)
                 << "\\" << buildConfigHash.substr(2, 2)
                 << "\\" << buildConfigHash;
@@ -131,7 +131,7 @@ namespace CascLibTest
 
             file->read(arr, size);
 
-            fs.open("root.d3", std::ios_base::out | std::ios_base::binary);
+            fs.open("root.ow", std::ios_base::out | std::ios_base::binary);
 
             fs.write(arr, size);
             fs.close();
