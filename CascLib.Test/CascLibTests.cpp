@@ -35,13 +35,10 @@ namespace CascLibTest
 
             auto buildConfigHash = buildInfo.build(0).at("Build Key");
 
-            std::stringstream buildConfig;
-            buildConfig << R"(I:\Diablo III\Data\config)"
-                << "\\" << buildConfigHash.substr(0, 2)
-                << "\\" << buildConfigHash.substr(2, 2)
-                << "\\" << buildConfigHash;
+            IO::StreamAllocator alloc(R"(I:\Diablo III\Data)");
 
-            Parsers::Text::Configuration configuration(buildConfig.str());
+            Parsers::Text::Configuration configuration(
+                alloc.config<true, false>(buildInfo.build(0).at("Build Key")));
         }
 
         TEST_METHOD(ReadShmem)
@@ -64,17 +61,12 @@ namespace CascLibTest
 
             Parsers::Text::BuildInfo buildInfo(R"(I:\Overwatch\.build.info)");
 
-            auto buildConfigHash = buildInfo.build(0).at("Build Key");
+            IO::StreamAllocator alloc(R"(I:\Overwatch\data\casc)");
 
-            std::stringstream buildConfig;
-            buildConfig << R"(I:\Overwatch\data\casc\config)"
-                << "\\" << buildConfigHash.substr(0, 2)
-                << "\\" << buildConfigHash.substr(2, 2)
-                << "\\" << buildConfigHash;
+            Parsers::Text::Configuration configuration(
+                alloc.config<true, false>(buildInfo.build(0).at("Build Key")));
 
-            Parsers::Text::Configuration configuration(buildConfig.str());
-
-            auto file = container->openFileByKey(configuration["encoding"].back());
+            auto file = container->openFileByKey(configuration["encoding"].back(), "");
 
             file->seekg(0, std::ios_base::end);
             auto size = file->tellg();
@@ -96,20 +88,15 @@ namespace CascLibTest
 		TEST_METHOD(GetFileByHash)
 		{
             auto container = std::make_unique<Container>(
-                R"(I:\Overwatch\)",
+                R"(I:\Overwatch)",
                 R"(data\casc)");
 
             Parsers::Text::BuildInfo buildInfo(R"(I:\Overwatch\.build.info)");
 
-            auto buildConfigHash = buildInfo.build(0).at("Build Key");
+            IO::StreamAllocator alloc(R"(I:\Overwatch\data\casc)");
 
-            std::stringstream buildConfig;
-            buildConfig << R"(I:\Overwatch\data\casc\config)"
-                << "\\" << buildConfigHash.substr(0, 2)
-                << "\\" << buildConfigHash.substr(2, 2)
-                << "\\" << buildConfigHash;
-
-            Parsers::Text::Configuration configuration(buildConfig.str());
+            Parsers::Text::Configuration configuration(
+                alloc.config<true, false>(buildInfo.build(0).at("Build Key")));
 
 			auto file = container->openFileByHash(configuration["root"].front());
             

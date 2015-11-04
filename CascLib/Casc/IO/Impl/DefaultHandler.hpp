@@ -43,7 +43,7 @@ namespace Casc
                     return EncodingMode::None;
                 }
 
-                std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize, std::filebuf::off_type &chunkSize) override
+                std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize) override
                 {
                     auto out = std::make_unique<char[]>(outSize);
 

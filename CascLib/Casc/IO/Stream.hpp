@@ -65,22 +65,6 @@ namespace Casc
             insert_func inserter;
 
             /**
-             * Registers block handlers.
-             */
-            template <typename T>
-            void registerHandler()
-            {
-                if (Writeable)
-                {
-                    reinterpret_cast<write_buf_type*>(this->rdbuf())->registerHandler<T>();
-                }
-                else
-                {
-                    reinterpret_cast<read_buf_type*>(this->rdbuf())->registerHandler<T>();
-                }
-            }
-
-            /**
              * Opens a file from the currently opened CASC file.
              */
             void open(size_t offset)
@@ -103,7 +87,7 @@ namespace Casc
             /**
              * Opens a file in a CASC file.
              */
-            void open(const char *filename, size_t offset)
+            void open(const char *filename, size_t offset, std::string parameters)
             {
                 if (Writeable)
                 {
@@ -117,16 +101,16 @@ namespace Casc
                 else
                 {
                     auto buf = reinterpret_cast<read_buf_type*>(buffer.get());
-                    buf->open(filename, offset);
+                    buf->open(filename, offset, parameters);
                 }
             }
 
             /**
              * Opens a file in a CASC file.
              */
-            void open(const std::string filename, size_t offset)
+            void open(const std::string filename, size_t offset, std::string parameters)
             {
-                open(filename.c_str(), offset);
+                open(filename.c_str(), offset, parameters);
             }
 
         public:
@@ -135,14 +119,11 @@ namespace Casc
              */
             template <bool ReadConstructible = !Writeable,
                 typename std::enable_if<ReadConstructible>::type* = nullptr>
-            Stream(const std::string filename, size_t offset) :
+            Stream(const std::string filename, size_t offset, std::string parameters) :
                 buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
                 base_type(new buf_type())
             {
-                registerHandler<Impl::DefaultHandler>();
-                registerHandler<Impl::ZlibHandler>();
-
-                open(filename, offset);
+                open(filename, offset, parameters);
             }
 
             template <bool WriteConstructible = Writeable,
@@ -154,8 +135,6 @@ namespace Casc
                 base_type(new buf_type(basePath)),
                 inserter(inserter)
             {
-                registerHandler<Impl::DefaultHandler>();
-                registerHandler<Impl::ZlibHandler>();
             }
 
 

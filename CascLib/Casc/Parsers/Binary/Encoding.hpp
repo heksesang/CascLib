@@ -48,10 +48,24 @@ namespace Casc
             class Encoding
             {
             public:
+                struct FileInfo
+                {
+                    Hex hash;
+                    size_t size;
+                    std::vector<Hex> keys;
+                };
+
+                struct EncodedFileInfo
+                {
+                    Hex key;
+                    size_t size;
+                    std::string params;
+                };
+
                 /**
-                 * Find the file key for the given hash.
+                 * Find the file info for a file hash.
                  */
-                std::vector<Hex> find(const Hex hash) const
+                FileInfo findFileInfo(Hex hash) const
                 {
                     auto index = -1;
                     Hex checksum;
@@ -87,11 +101,57 @@ namespace Casc
                     {
                         if (it->hash == hash)
                         {
-                            return it->keys;
+                            return *it;
                         }
                     }
                     
                     throw Exceptions::HashDoesNotExistException(hash.string());
+                }
+
+                /**
+                 * Find the encoding info for a file key.
+                 */
+                EncodedFileInfo findEncodedFileInfo(Hex key) const
+                {
+                    auto index = -1;
+                    Hex checksum;
+
+                    for (auto i = 0U; i < headersB.size(); ++i)
+                    {
+                        if (headersB[i].first <= key)
+                        {
+                            index = headersB.size() - 1 - i;
+                            checksum = headersB[i].second;
+                            break;
+                        }
+                    }
+
+                    if (index == -1)
+                    {
+                        throw Exceptions::KeyDoesNotExistException(key.string());
+                    }
+
+                    auto begin = tableB.begin() + EntrySize * index;
+                    auto end = begin + EntrySize;
+
+                    Hex actual(md5(begin, end));
+
+                    if (actual != checksum)
+                    {
+                        throw Exceptions::InvalidHashException(lookup3(checksum, 0), lookup3(actual, 0), "");
+                    }
+
+                    auto files = parseEncodedEntry(begin, end, hashSizeB);
+
+                    for (auto it = files.begin(); it != files.end(); ++it)
+                    {
+                        if (it->key == key)
+                        {
+                            return *it;
+                        }
+                    }
+
+                    throw Exceptions::KeyDoesNotExistException(key.string());
                 }
 
             private:
@@ -101,25 +161,9 @@ namespace Casc
                 // The size of each chunk body (second block for each table).
                 static const unsigned int EntrySize = 4096U;
 
-                struct FileInfo
-                {
-                    Hex hash;
-                    size_t size;
-                    std::vector<Hex> keys;
-
-                    static const FileInfo empty;
-                };
-
                 std::vector<std::pair<Hex, Hex>> headersA;
                 std::vector<char> tableA;
                 size_t hashSizeA;
-
-                struct EncodedFileInfo
-                {
-                    Hex hash;
-                    size_t size;
-                    std::string profile;
-                };
 
                 std::vector<std::pair<Hex, Hex>> headersB;
                 std::vector<char> tableB;
@@ -317,7 +361,37 @@ namespace Casc
                 Encoding(Parsers::Binary::Reference ref,
                          std::shared_ptr<IO::StreamAllocator> allocator)
                 {
-                    parse(allocator->allocate<false>(ref));
+                    // Get a file stream.
+                    auto fs = allocator->data<true, false>(ref.file());
+                    
+                    // Read size.
+                    fs->seekg(ref.offset() + 16, std::ios_base::beg);
+                    std::array<char, sizeof(uint32_t)> arr;
+                    fs->read(arr.data(), arr.size());
+                    auto size = Functions::Endian::read<IO::EndianType::Little, uint32_t>(arr.begin(), arr.end());
+
+                    // Read params.
+                    std::string params;
+                    std::vector<char> buf(size - 20);
+                    fs->read(buf.data(), buf.size());
+                    for (int i = size - 21; i >= 2; --i)
+                    {
+                        if (buf[i] == '\xDA' && buf[i - 1] == '\x78')
+                        {
+                            ZStreamBase::char_t* out = nullptr;
+                            size_t outSize = 0;
+
+                            auto inSize = size - 20 - i + 1;
+                            auto in = std::make_unique<ZStreamBase::char_t[]>(inSize);
+                            ZInflateStream(reinterpret_cast<ZStreamBase::char_t*>(
+                                buf.data() + i - 1), inSize).readAll(&out, outSize);
+                            params.assign(reinterpret_cast<char*>(out), outSize);
+                            break;
+                        }
+                    }
+
+                    // Parse CASC stream.
+                    parse(allocator->data<false>(ref, params));
                 }
 
                 /**

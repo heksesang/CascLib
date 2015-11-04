@@ -65,14 +65,16 @@ namespace Casc
         typedef std::pair<Parsers::Text::EncodingBlock, std::vector<char>> descriptor_type;
 
     public:
-        std::shared_ptr<IO::Stream<false>> openFileByKey(const std::string key) const
+        std::shared_ptr<IO::Stream<false>> openFileByKey(Hex key, std::string params) const
         {
-            return allocator->allocate<false>(findFileLocation(key));
+            return allocator->data<false>(findFileLocation(key), params);
         }
 
-        std::shared_ptr<IO::Stream<false>> openFileByHash(const std::string hash) const
+        std::shared_ptr<IO::Stream<false>> openFileByHash(std::string hash) const
         {
-            return openFileByKey(encoding->find(hash).at(0).string());
+            auto key = encoding->findFileInfo(hash).keys.at(0);
+            auto enc = encoding->findEncodedFileInfo(key);
+            return openFileByKey(enc.key, enc.params);
         }
 
         std::shared_ptr<IO::Stream<true>> write()
@@ -81,7 +83,7 @@ namespace Casc
                 std::bind(&Container::insertFile,
                     this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 
-            return allocator->allocate<true>(inserter);
+            return allocator->data<true>(inserter);
         }
 
     private:
@@ -93,6 +95,9 @@ namespace Casc
 
         // The relative path of the data directory.
         std::string dataPath;
+
+        // The stream allocator.
+        std::shared_ptr<IO::StreamAllocator> allocator;
 
         // The build info.
         Parsers::Text::BuildInfo buildInfo;
@@ -109,9 +114,6 @@ namespace Casc
         // The file indices.
         std::shared_ptr<Parsers::Binary::Index> index;
 
-        // The stream allocator.
-        std::shared_ptr<IO::StreamAllocator> allocator;
-
         // The encoding file.
         std::shared_ptr<Parsers::Binary::Encoding> encoding;
 
@@ -121,7 +123,7 @@ namespace Casc
         /**
          * Finds the location of a file.
          */
-        Parsers::Binary::Reference findFileLocation(const Hex key) const
+        Parsers::Binary::Reference findFileLocation(Hex key) const
         {
             return index->find(key.begin(), key.begin() + 9);
         }
@@ -143,7 +145,7 @@ namespace Casc
 
             if (encoding != nullptr)
             {
-                encoding->insert(hash, ref.key(), size);
+                //encoding->insert(hash, ref.key(), size);
 
                 /*IO::Stream<true>::insert_func inserter =
                     std::bind(&Container::insertEncoding,
@@ -159,18 +161,15 @@ namespace Casc
          * Constructor.
          */
         Container(const std::string path, const std::string dataPath) :
-            buildInfo(path + ".build.info"),
-            buildConfig(Functions::createPath(
-                path, dataPath, IO::DataFolders::Config, buildInfo.build(0).at("Build Key"))),
-            cdnConfig(Functions::createPath(
-                path, dataPath, IO::DataFolders::Config, buildInfo.build(0).at("CDN Key"))),
+            allocator(new IO::StreamAllocator(path + "\\" + dataPath)),
+            buildInfo(path + "\\.build.info"),
+            buildConfig(allocator->config<true, false>(buildInfo.build(0).at("Build Key"))),
+            cdnConfig(allocator->config<true, false>(buildInfo.build(0).at("CDN Key"))),
             shadowMemory(Functions::createPath(
                 path, dataPath, IO::DataFolders::Data, "shmem")),
-            index(new Parsers::Binary::Index(Functions::createPath(
-                path, dataPath, IO::DataFolders::Data, ""), shadowMemory.versions())),
-            allocator(new IO::StreamAllocator(
-                Functions::createPath(path, dataPath, IO::DataFolders::Data, ""))),
-            encoding(new Parsers::Binary::Encoding(index->find(Hex(buildConfig["encoding"].back().substr(0, 18U))), allocator)),
+            index(new Parsers::Binary::Index(shadowMemory.versions(), allocator)),
+            encoding(new Parsers::Binary::Encoding(
+                index->find(Hex(buildConfig["encoding"].back().substr(0, 18U))), allocator)),
             root(new Filesystem::Root(buildConfig["root"].front(), encoding, index, allocator))
         {
         }

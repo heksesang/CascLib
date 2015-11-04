@@ -51,9 +51,6 @@ namespace Casc
                 // The versions of the .idx files.
                 std::map<uint32_t, uint32_t> versions_;
 
-                // The path of the .idx files.
-                std::string path_;
-
                 // The size of the keys in the .idx files.
                 std::map<uint32_t, uint32_t> keySize_;
 
@@ -76,13 +73,10 @@ namespace Casc
                 /**
                  * Parses an .idx file.
                  */
-                std::vector<Reference> parse(const std::string &path)
+                std::vector<Reference> parse(std::ifstream& fs)
                 {
                     using namespace Functions::Endian;
                     using namespace Functions::Hash;
-
-                    std::ifstream fs;
-                    fs.open(path, std::ios_base::in | std::ios_base::binary);
 
                     uint32_t size;
                     uint32_t hash;
@@ -93,7 +87,7 @@ namespace Casc
                     uint32_t headerHash{ 0 };
                     if ((hash != (headerHash = lookup3(fs, size, 0))))
                     {
-                        throw Exceptions::InvalidHashException(hash, headerHash, path);
+                        throw Exceptions::InvalidHashException(hash, headerHash, "");
                     }
 
                     uint16_t version;
@@ -152,12 +146,30 @@ namespace Casc
 
                     if (hash != dataHash.first)
                     {
-                        throw Exceptions::InvalidHashException(hash, dataHash.first, path);
+                        throw Exceptions::InvalidHashException(hash, dataHash.first, "");
                     }
 
                     fs.seekg(0xE000 - ((8 + size) % 0xD000), std::ios_base::cur);
 
                     return files;
+                }
+
+                /**
+                 * Parses the .idx files.
+                 */
+                void parse(const std::map<uint32_t, uint32_t> &versions,
+                    std::shared_ptr<IO::StreamAllocator> allocator)
+                {
+                    versions_ = versions;
+
+                    for (auto i = 0; i < (int)versions.size(); ++i)
+                    {
+                        auto files = parse(*allocator->index<true, false>(i, versions.at(i)));
+                        for (auto it = files.begin(); it != files.end(); ++it)
+                        {
+                            files_.insert({ Functions::Hash::lookup3(it->key(), 0), *it });
+                        }
+                    }
                 }
 
                 /**
@@ -252,17 +264,13 @@ namespace Casc
 
             public:
                 /**
-                 * Default constructor
-                 */
-                Index() { }
-
-                /**
                  * Constructor.
                  */
-                Index(const std::string path, const std::map<uint32_t, uint32_t> &versions)
-                    : path_(path), versions_(versions)
+                Index(const std::map<uint32_t, uint32_t> &versions,
+                    std::shared_ptr<IO::StreamAllocator> allocator)
+                    : versions_(versions)
                 {
-                    parse(path, versions);
+                    parse(versions, allocator);
                 }
 
                 /**
@@ -324,42 +332,6 @@ namespace Casc
                 }
 
                 /**
-                 * Parses the .idx files.
-                 */
-                void parse(const std::string path, const std::map<uint32_t, uint32_t> &versions)
-                {
-                    path_ = path;
-                    versions_ = versions;
-
-                    omp_lock_t lock;
-                    omp_init_lock(&lock);
-
-                    #pragma omp parallel for num_threads(16)
-                    for (auto i = 0; i < (int)versions.size(); ++i)
-                    {
-                        std::stringstream ss;
-
-                        ss << path << PathSeparator;
-                        ss << std::setw(2) << std::setfill('0') << std::hex << i;
-                        ss << std::setw(8) << std::setfill('0') << std::hex << versions.at(i);
-                        ss << ".idx";
-
-                        if (!fs::exists(ss.str()))
-                        {
-                            throw Exceptions::FileNotFoundException(ss.str());
-                        }
-
-                        auto files = parse(ss.str());
-                        omp_set_lock(&lock);
-                        for (auto it = files.begin(); it != files.end(); ++it)
-                        {
-                            files_.insert({ Functions::Hash::lookup3(it->key(), 0), *it });
-                        }
-                        omp_unset_lock(&lock);
-                    }
-                }
-
-                /**
                  * Writes the file list back to the .idx files.
                  */
                 void write()
@@ -368,29 +340,15 @@ namespace Casc
                     {
                         std::stringstream ss;
 
-                        ss << path_ << PathSeparator;
                         ss << std::setw(2) << std::setfill('0') << std::hex << it->first;
                         ss << std::setw(8) << std::setfill('0') << std::hex << it->second;
                         ss << ".idx";
-
-                        if (!fs::exists(ss.str()))
-                        {
-                            throw Exceptions::FileNotFoundException(ss.str());
-                        }
 
                         std::ofstream out;
                         out.open(ss.str(), std::ios_base::out | std::ios_base::binary);
                         write(out, it->first);
                         out.close();
                     }
-                }
-
-                /**
-                 * The path of the .idx files.
-                 */
-                const std::string &path() const
-                {
-                    return path_;
                 }
 
                 /**

@@ -57,45 +57,12 @@ namespace Casc
                 // The parsed values.
                 std::map<std::string, std::vector<std::string>> values_;
 
-            public:
                 /**
-                 * Constructor.
-                 */
-                Configuration(const std::string path)
+                * Clears old values and parses a configuration file.
+                */
+                void parse(std::ifstream &fs)
                 {
-                    parse(path);
-                }
-
-                /**
-                 * Destructor.
-                 */
-                virtual ~Configuration()
-                {
-
-                }
-
-                /**
-                 * Gets the value for a key.
-                 */
-                const std::vector<std::string> &operator[] (const std::string key) const
-                {
-                    return values_.at(key);
-                }
-
-                /**
-                 * Clears old values and parses a configuration file.
-                 */
-                void parse(const std::string path)
-                {
-                    if (!fs::exists(path))
-                    {
-                        throw Exceptions::FileNotFoundException(path);
-                    }
-
                     values_.clear();
-
-                    std::ifstream fs;
-                    fs.open(path, std::ios_base::in);
 
                     char ch{};
                     char buffer[256]{};
@@ -161,6 +128,31 @@ namespace Casc
                     }
 
                     fs.close();
+                }
+
+            public:
+                /**
+                 * Constructor.
+                 */
+                Configuration(std::shared_ptr<std::ifstream> fs)
+                {
+                    parse(*fs);
+                }
+
+                /**
+                 * Destructor.
+                 */
+                virtual ~Configuration()
+                {
+
+                }
+
+                /**
+                 * Gets the value for a key.
+                 */
+                const std::vector<std::string> &operator[] (const std::string key) const
+                {
+                    return values_.at(key);
                 }
             };
         }

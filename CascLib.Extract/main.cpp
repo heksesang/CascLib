@@ -30,11 +30,11 @@ int main(int argc, char* argv[])
             
             if (strcmp(argv[2], "key") == 0)
             {
-                file = container->openFileByKey(argv[3]);
+                file = container->openFileByKey(std::string(argv[3]), "");
             }
             else if (strcmp(argv[2], "hash") == 0)
             {
-                file = container->openFileByHash(argv[3]);
+                file = container->openFileByHash(std::string(argv[3]));
             }
             else if (strcmp(argv[2], "filename") == 0)
             {

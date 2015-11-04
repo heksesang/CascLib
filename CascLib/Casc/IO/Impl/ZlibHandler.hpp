@@ -49,7 +49,7 @@ namespace Casc
                     return EncodingMode::Zlib;
                 }
 
-                std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize, std::filebuf::off_type &chunkSize) override
+                std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize) override
                 {
                     if (offset == 0 || avail_out - offset < outSize)
                     {
@@ -57,7 +57,6 @@ namespace Casc
                         if (buf.sgetn(reinterpret_cast<char*>(in.get()), inSize) == inSize)
                         {
                             ZInflateStream(in.get(), inSize).readAll(&out, avail_out);
-                            chunkSize = avail_out;
                         }
                         else
                         {

@@ -47,8 +47,9 @@ namespace Casc
         class ReadBuffer : public std::filebuf
         {
         private:
-            const uint32_t Signature = 0x45544C42;
-            const size_t BufferSize = 4096U;
+            static const uint32_t Signature = 0x45544C42;
+            static const size_t BufferSize = 4096U;
+            static const size_t DataHeaderSize = 30U;
 
             struct BufferInfo
             {
@@ -78,8 +79,14 @@ namespace Casc
                 // The size of the compressed data.
                 size_t size;
 
-                // Data is compressed.
-                /*bool compressed;*/
+                bool operator <(const ChunkInfo &b) const
+                {
+                    return this->begin < b.begin;
+                }
+                bool operator >(const ChunkInfo &b) const
+                {
+                    return this->begin > b.begin;
+                }
             };
 
             // True when the file is properly initialized.
@@ -107,23 +114,29 @@ namespace Casc
             // Currently buffered range
             BufferInfo currentBuffer;
 
-            // The available blocks.
-            std::vector<ChunkInfo> chunks;
-
-            // Block handlers
-            std::map<IO::EncodingMode, std::shared_ptr<Handler>> handlers;
+            // Chunk handlers
+            std::map<ChunkInfo, std::shared_ptr<Handler>> handlers;
 
             /**
-             * Read the header for the current file.
+             * Read the header for the current file, create handlers
+             * and confirm checksums.
              */
-            void readHeader()
+            void init(std::string parameters)
             {
                 using namespace Functions::Endian;
                 using namespace Functions::Hash;
 
+                EncodingMode encodingMode;
+                std::vector<std::string> params;
+
+                if (!parseParams(parameters, encodingMode, params) || encodingMode != EncodingMode::Blte)
+                {
+                    // TODO: Throw something?
+                }
+
                 // Read first header.
-                char header[0x1E];
-                std::filebuf::xsgetn(header, 0x1E);
+                char header[DataHeaderSize];
+                std::filebuf::xsgetn(header, DataHeaderSize);
 
                 std::array<uint8_t, 16> checksum;
                 std::copy(header, header + 16, checksum.begin());
@@ -134,43 +147,49 @@ namespace Casc
                 MD5 headerHasher;
 
                 // Read BLTE header.
-                char header2[0x08];
+                char header2[8];
 
                 uint32_t signature;
 
-                std::filebuf::xsgetn(header2, 0x08);
+                std::filebuf::xsgetn(header2, 8);
                 if ((signature = read<EndianType::Little, uint32_t>(header2)) != Signature)
                 {
                     throw Exceptions::InvalidSignatureException(signature, 0x45544C42);
                 }
 
-                auto readBytes = read<EndianType::Big, uint32_t>(header2 + 0x04);
+                auto blockTableSize = read<EndianType::Big, uint32_t>(header2 + 0x04) - 8;
 
                 // Add the first 8 bytes of the header.
                 headerHasher.update(header2, 8);
 
                 uint32_t bufferSize = 0;
 
-                if (readBytes > 0)
+                if (blockTableSize > 0)
                 {
-                    readBytes -= 0x08;
-
                     // Read rest of header.
-                    auto bytes = std::make_unique<char[]>(readBytes);
-                    std::filebuf::xsgetn(bytes.get(), readBytes);
+                    auto bytes = std::make_unique<char[]>(blockTableSize);
+                    std::filebuf::xsgetn(bytes.get(), blockTableSize);
 
                     // Update hasher with the rest of the header bytes.
-                    headerHasher.update(bytes.get(), readBytes);
+                    headerHasher.update(bytes.get(), blockTableSize);
 
                     // Parse the header
                     auto pos = bytes.get();
 
-                    auto flags = read<EndianType::Big, uint16_t>(pos);
-                    pos += sizeof(uint16_t);
-                    auto chunkCount = read<EndianType::Big, uint16_t>(pos);
-                    pos += sizeof(uint16_t);
+                    auto tableMarker = read<EndianType::Big, uint8_t>(pos);
+                    pos += sizeof(uint8_t);
 
-                    for (int i = 0; i < chunkCount; ++i)
+                    if (tableMarker != 0x0F)
+                    {
+                        throw Exceptions::IOException("Invalid block table format.");
+                    }
+
+                    auto blockCount = read<EndianType::Big, uint8_t>(pos) << 16 | read<EndianType::Big, uint16_t>(pos + sizeof(uint8_t));
+                    pos += sizeof(uint8_t) + sizeof(uint16_t);
+
+                    uint32_t offset = 0;
+
+                    for (int i = 0; i < blockCount; ++i)
                     {
                         auto compressedSize = read<EndianType::Big, uint32_t>(pos);
                         pos += sizeof(uint32_t);
@@ -186,13 +205,13 @@ namespace Casc
                         {
                             0,
                             decompressedSize,
-                            38 + readBytes,
+                            38 + blockTableSize,
                             compressedSize
                         };
 
-                        if (chunks.size() > 0)
+                        if (handlers.size() > 0)
                         {
-                            auto last = chunks.back();
+                            const ChunkInfo &last = handlers.rbegin()->first;
 
                             chunk.begin = last.end;
                             chunk.end = chunk.begin + decompressedSize;
@@ -217,19 +236,30 @@ namespace Casc
                                 "");
                         }
 
-                        chunks.push_back(chunk);
+                        if (handlers.find(chunk) == handlers.end())
+                        {
+                            handlers[chunk] = createHandler((EncodingMode)buf[0]);
+                        }
                     }
                 }
-                else
+                else if (params.size() > 0)
                 {
-                    chunks.push_back({
+                    EncodingMode chunkMode;
+                    std::vector<std::string> chunkParams;
+
+                    if (!parseParams(params[0], chunkMode, chunkParams))
+                    {
+                        // TODO: Throw something?
+                    }
+
+                    ChunkInfo chunk
+                    {
                         0,
                         size,
                         38,
                         size
-                    });
+                    };
 
-                    ChunkInfo &chunk = chunks.back();
                     auto blteSize = size_t(chunk.size - chunk.offset);
 
                     auto buf = std::make_unique<char[]>(blteSize);
@@ -238,6 +268,15 @@ namespace Casc
                     std::filebuf::xsgetn(buf.get(), blteSize);
 
                     headerHasher.update(buf.get(), blteSize);
+
+                    if (handlers.find(chunk) == handlers.end())
+                    {
+                        handlers[chunk] = createHandler((EncodingMode)buf[0]);
+                    }
+                }
+                else
+                {
+                    // TODO: Throw something?
                 }
 
                 // Finish the hash check of the header.
@@ -259,17 +298,11 @@ namespace Casc
             */
             bool find(off_type offset, ChunkInfo &out)
             {
-                for (auto &chunk : chunks)
+                for (auto &chunk : handlers)
                 {
-                    if (chunk.begin <= offset && chunk.end > offset)
+                    if (chunk.first.begin <= offset && chunk.first.end > offset)
                     {
-                        out = chunk;
-                        return true;
-                    }
-                    else if (chunk.begin <= offset && chunk.end >= offset &&
-                        chunks.back().begin == chunk.begin && chunks.back().end == chunk.end)
-                    {
-                        out = chunk;
+                        out = chunk.first;
                         return true;
                     }
                 }
@@ -373,7 +406,7 @@ namespace Casc
 
                 // Use smaller than configured buffer if near end-of-file.
                 size_t bufferSize = std::min<size_t>(BufferSize,
-                    static_cast<size_t>(chunks.back().end - offset));
+                    static_cast<size_t>(handlers.rbegin()->first.end - offset));
 
                 pos_type end = offset + bufferSize;
                 pos_type beg = offset;
@@ -389,28 +422,21 @@ namespace Casc
                         return pos_type(-1);
                     }
 
-                    off_type chunkSize = 0;
-
                     count = std::min<size_t>(static_cast<size_t>(chunk.end - offset), bufferSize);
 
                     // Read the compression mode.
                     std::filebuf::seekpos(this->offset + chunk.offset, std::ios_base::in);
                     EncodingMode mode = (EncodingMode)std::filebuf::sbumpc();
 
-                    if (handlers.find(mode) == handlers.end())
+                    if (handlers[chunk]->mode() != mode)
                     {
                         throw Casc::Exceptions::InvalidEncodingModeException(mode);
                     }
 
                     // Call the handler for the compression mode.
                     std::filebuf::seekpos(this->offset + chunk.offset + 1);
-                    auto data = handlers[mode]->decode(*this, offset - chunk.begin, chunk.size - 1, count, chunkSize);
+                    auto data = handlers[chunk]->decode(*this, offset - chunk.begin, chunk.size - 1, count);
                     std::memcpy(out.get() + pos, data.get(), count);
-
-                    if (chunks.size() == 1 && chunkSize != 0)
-                    {
-                        this->length = chunks.back().end = chunkSize;
-                    }
 
                     offset += count;
                     pos += count;
@@ -425,6 +451,240 @@ namespace Casc
                 isBuffering = false;
 
                 return this->pos();
+            }
+
+            /**
+             * Create the handler for an encoding mode.
+             */
+            std::shared_ptr<Handler> createHandler(EncodingMode mode) const
+            {
+                switch (mode)
+                {
+                case None:
+                    return std::shared_ptr<Handler>(new Impl::DefaultHandler());
+
+                case Zlib:
+                    return std::shared_ptr<Handler>(new Impl::ZlibHandler());
+
+                default:
+                    throw Exceptions::InvalidEncodingModeException(mode);
+                }
+            }
+
+            /**
+            * Checks if a value is whitespace.
+            */
+            inline bool isWhitespace(int value) const
+            {
+                bool result;
+
+                result = value == ' ' || value == '\t' || value == '\v' || value == '\r' || value == '\f' || value == '\n';
+                return result;
+            }
+
+            /**
+            * Parse params.
+            */
+            int parseParams(char *encodingProfile, char **encodingMode, char ***params, unsigned int *nParams) const
+            {
+                char *it;
+
+                for (it = encodingProfile; ; ++it)
+                {
+                    if (!isWhitespace(*it))
+                        break;
+                }
+
+                for (*encodingMode = it; *it; ++it)
+                {
+                    if (*it == ':' || isWhitespace(*it))
+                        break;
+                }
+
+                char *encodingModeEnd = it;
+
+                while (isWhitespace(*it))
+                {
+                    ++it;
+                }
+
+                if (*it != '\0')
+                {
+                    if (*it != ':')
+                        return 0;
+
+                    *encodingModeEnd = '\0';
+
+                    do
+                    {
+                        ++it;
+                    } while (isWhitespace(*it));
+
+                    if (*it == '{')
+                    {
+                        do
+                        {
+                            ++it;
+                        } while (isWhitespace(*it));
+
+                        *nParams = 1;
+
+                        if (!*it)
+                            return 0;
+
+                        char *paramsStart = it;
+
+                        int state = 1;
+                        do
+                        {
+                            if (!isWhitespace(*it))
+                            {
+                                if (!state)
+                                    return 0;
+
+                                if (*it == '{')
+                                {
+                                    state++;
+                                }
+                                else
+                                {
+                                    if (*it == '}')
+                                    {
+                                        --state;
+                                    }
+                                    else
+                                    {
+                                        if (*it == ',' && state == 1)
+                                            ++*nParams;
+                                    }
+                                }
+                            }
+                        } while (*++it);
+
+                        if (state)
+                            return 0;
+
+                        char **paramArray = (char **)new char[4 * (*nParams) | -((uint64_t)*nParams >> 30 != 0)];
+
+                        if (*params)
+                            delete [] *params;
+                        *params = paramArray;
+
+                        int paramIndex = 0;
+                        **params = paramsStart;
+                        for (int state = 1; *paramsStart; ++paramsStart)
+                        {
+                            if (*paramsStart != ' ' && *paramsStart != '\t' && *paramsStart != '\v' && *paramsStart != '\r' && *paramsStart != '\f' && *paramsStart != '\n')
+                            {
+                                if (!state)
+                                    return 0;
+
+                                if (*paramsStart == '{')
+                                {
+                                    ++state;
+                                }
+                                else if (*paramsStart == '}')
+                                {
+                                    --state;
+
+                                    if (!state)
+                                    {
+                                        char *paramsEnd;
+                                        for (paramsEnd = paramsStart; paramsEnd > (*params)[paramIndex]; --paramsEnd)
+                                        {
+                                            char ch = *(paramsEnd - 1);
+                                            if (ch != ' ' && ch != '\t' && ch != '\v' && ch != '\r' && ch != '\f' && ch != '\n')
+                                                break;
+                                        }
+                                        *paramsEnd = '\0';
+                                    }
+                                }
+                                else if (*paramsStart == ',' && state == 1)
+                                {
+                                    char *paramsEnd = paramsStart;
+                                    if (paramsStart > (*params)[paramIndex])
+                                    {
+                                        do
+                                        {
+                                            if (!isWhitespace(*(paramsEnd - 1)))
+                                                break;
+                                            --paramsEnd;
+                                        } while (paramsEnd > (*params)[paramIndex]);
+                                    }
+                                    *paramsEnd = '\0';
+                                    ++paramIndex;
+                                    for (; *paramsStart; ++paramsStart)
+                                    {
+                                        if (!isWhitespace(paramsStart[1]))
+                                            break;
+                                    }
+                                    (*params)[paramIndex] = paramsStart + 1;
+                                }
+                            }
+                        }
+
+                        if (paramIndex + 1 != *nParams)
+                            abort();
+                    }
+                    else
+                    {
+                        *nParams = 1;
+
+                        char **paramArray = (char **)new char[4];
+
+                        if (*params)
+                            delete [] *params;
+                        *params = paramArray;
+
+                        **params = it;
+
+                        for (it = &it[strlen(it)]; it > **params; --it)
+                        {
+                            char ch = *(it - 1);
+                            if (ch != ' ' && ch != '\t' && ch != '\v' && ch != '\r' && ch != '\f' && ch != '\n')
+                                break;
+                        }
+
+                        *it = '\0';
+                    }
+
+                    if (*nParams == 1 && !***params)
+                    {
+                        *nParams = 0;
+
+                        if (*params)
+                            delete [] *params;
+                        *params = 0;
+                    }
+                }
+                return 1;
+            }
+            
+            /**
+            * Parse params.
+            */
+            bool parseParams(std::string input, EncodingMode &mode, std::vector<std::string> &chunks) const
+            {
+                std::vector<char> temp(input.size() + 1, '\0');
+                std::memcpy(temp.data(), input.data(), input.size() + 1);
+
+                char *encodingMode = nullptr;
+                char **params = nullptr;
+                unsigned int nParams = 0;
+
+                if (!parseParams(temp.data(), &encodingMode, &params, &nParams))
+                {
+                    return false;
+                }
+
+                mode = (EncodingMode)*encodingMode;
+
+                for (auto i = 0U; i < nParams; ++i)
+                {
+                    chunks.push_back(params[i]);
+                }
+
+                return true;
             }
 
         protected:
@@ -541,6 +801,15 @@ namespace Casc
             }
 
             /**
+            * Constructor.
+            */
+            ReadBuffer(std::string parameters) :
+                out(std::make_unique<char[]>(BufferSize)),
+                temp(std::make_unique<char[]>(BufferSize))
+            {
+            }
+
+            /**
              * Move constructor.
              */
             ReadBuffer(ReadBuffer &&) = default;
@@ -556,19 +825,9 @@ namespace Casc
             virtual ~ReadBuffer() = default;
 
             /**
-             * Registers block handlers.
-             */
-            template <typename T>
-            void registerHandler()
-            {
-                Handler* handler = new T;
-                this->handlers[handler->mode()] = std::shared_ptr<Handler>(handler);
-            }
-
-            /**
              * Opens a file from the currently opened CASC file.
              */
-            void open(size_t offset)
+            void open(size_t offset, std::string parameters)
             {
                 this->isInitialized = false;
 
@@ -577,20 +836,20 @@ namespace Casc
                     throw Exceptions::IOException("Buffer is not open.");
                 }
 
-                chunks.clear();
+                handlers.clear();
 
                 this->offset = offset;
                 std::filebuf::seekpos(offset);
 
-                this->readHeader();
+                this->init(parameters);
 
                 this->currentBuffer.begin = 0;
                 this->currentBuffer.end = -1;
                 this->setg(nullptr, nullptr, nullptr);
 
-                if (chunks.size() > 0)
+                if (handlers.size() > 0)
                 {
-                    this->length = static_cast<size_t>(chunks.back().end);
+                    this->length = static_cast<size_t>(handlers.rbegin()->first.end);
                     seek(0);
                 }
 
@@ -607,7 +866,20 @@ namespace Casc
                     throw Exceptions::IOException("Couldn't open buffer.");
                 }
 
-                open(offset);
+                open(offset, "");
+            }
+
+            /**
+             * Opens a file in a CASC file.
+             */
+            void open(const std::string filename, size_t offset, std::string parameters)
+            {
+                if (std::filebuf::open(filename, std::ios_base::in | std::ios_base::binary) == nullptr)
+                {
+                    throw Exceptions::IOException("Couldn't open buffer.");
+                }
+
+                open(offset, parameters);
             }
 
             /**

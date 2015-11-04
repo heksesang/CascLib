@@ -47,7 +47,7 @@ namespace Casc
             /**
              * Decodes data from the filebuf and returns the result.
              */
-            virtual std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize, std::filebuf::off_type &chunkSize) = 0;
+            virtual std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize) = 0;
 
             /**
              * Encodes data from the stream and returns the result.

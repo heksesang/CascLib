@@ -34,30 +34,148 @@ namespace Casc
     {
         class StreamAllocator
         {
+        private:
+            /**
+            * The path of the CASC root folder.
+            */
             std::string basePath;
 
+            /**
+            * Create path to a file.
+            */
+            std::string createPath(IO::DataFolders folder, std::string filename) const
+            {
+                std::stringstream out;
+                out << basePath << PathSeparator;
+
+                switch (folder)
+                {
+                case IO::DataFolders::Config:
+                    out << "config";
+                    if (!filename.empty())
+                    {
+                        out << PathSeparator << filename.substr(0, 2)
+                            << PathSeparator << filename.substr(2, 2);
+                    }
+                    break;
+
+                case IO::DataFolders::Data:
+                    out << "data";
+                    break;
+
+                case IO::DataFolders::Indices:
+                    out << "indices";
+                    break;
+
+                case IO::DataFolders::Patch:
+                    out << "patch";
+                    break;
+                }
+
+                if (!filename.empty())
+                {
+                    out << PathSeparator << filename;
+                }
+
+                if (!fs::exists(out.str()))
+                {
+                    throw Exceptions::FileNotFoundException(out.str());
+                }
+
+                return out.str();
+            }
+
+            /**
+            * Create the stream for a path.
+            */
+            template <bool Writeable, typename TStream>
+            std::shared_ptr<TStream> allocate(std::string path) const
+            {
+                std::ios_base::openmode mode;
+
+                if (Writeable)
+                {
+                    mode = std::ios_base::out | std::ios_base::in | std::ios_base::binary;
+                }
+                else
+                {
+                    mode = std::ios_base::in | std::ios_base::binary;
+                }
+
+                return std::make_shared<TStream>(path, mode);
+            }
+
         public:
+            /**
+            * Constructor.
+            */
             StreamAllocator(const std::string basePath)
                 : basePath(basePath)
             {
 
             }
 
-            template <bool Writeable>
-            typename std::enable_if<!Writeable, std::shared_ptr<Stream<Writeable>>>::type
-                allocate(const Parsers::Binary::Reference &ref) const
+            /**
+            * Config
+            */
+            template <bool Readable, bool Writeable, typename TStream =
+                typename std::conditional<Readable && Writeable, std::fstream,
+                    typename std::conditional<Writeable, std::ofstream, std::ifstream >::type>::type >
+            std::shared_ptr<TStream> config(std::string hash)
+            {
+                return allocate<Writeable, TStream>(
+                    createPath(DataFolders::Config, hash));
+            }
+
+            /**
+            * Index
+            */
+            template <bool Readable, bool Writeable, typename TStream =
+                typename std::conditional<Readable && Writeable, std::fstream,
+                    typename std::conditional<Writeable, std::ofstream, std::ifstream >::type>::type >
+            std::shared_ptr<TStream> index(uint32_t bucket, uint32_t version)
             {
                 std::stringstream ss;
 
-                ss << basePath << PathSeparator
-                   << "data." << std::setw(3) << std::setfill('0') << ref.file();
-                
-                return std::make_shared<Stream<Writeable>>(ss.str(), ref.offset());
+                ss << std::setw(2) << std::setfill('0') << std::hex << bucket;
+                ss << std::setw(8) << std::setfill('0') << std::hex << version;
+                ss << ".idx";
+
+                return allocate<Writeable, TStream>(
+                    createPath(DataFolders::Data, ss.str()));
+            }
+
+            /**
+            * Data
+            */
+            template <bool Readable, bool Writeable, typename TStream =
+                typename std::conditional<Readable && Writeable, std::fstream,
+                    typename std::conditional<Writeable, std::ofstream, std::ifstream >::type>::type >
+            std::shared_ptr<TStream> data(uint32_t number) const
+            {
+                std::stringstream ss;
+
+                ss << "data." << std::setw(3) << std::setfill('0') << number;
+
+                return allocate<Writeable, TStream>(
+                    createPath(DataFolders::Data, ss.str()));
+            }
+
+            template <bool Writeable>
+            typename std::enable_if<!Writeable, std::shared_ptr<Stream<Writeable>>>::type
+                data(const Parsers::Binary::Reference &ref, std::string parameters = "") const
+            {
+                std::stringstream ss;
+
+                ss << "data." << std::setw(3) << std::setfill('0') << ref.file();
+
+                return std::make_shared<Stream<Writeable>>(
+                    createPath(DataFolders::Data, ss.str()), ref.offset(), parameters);
             }
 
             template <bool Writeable>
             typename std::enable_if<Writeable, std::shared_ptr<Stream<Writeable>>>::type
-                 allocate(typename Stream<Writeable>::insert_func inserter) const
+                data(typename Stream<Writeable>::insert_func inserter) const
             {
                 return std::make_shared<Stream<Writeable>>(basePath, inserter);
             }

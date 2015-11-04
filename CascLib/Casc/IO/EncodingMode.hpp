@@ -29,7 +29,8 @@ namespace Casc
         enum EncodingMode
         {
             None = 0x4E,
-            Zlib = 0x5A
+            Zlib = 0x5A,
+            Blte = 0x62
         };
     }
 }
