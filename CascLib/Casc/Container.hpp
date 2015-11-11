@@ -68,7 +68,6 @@ namespace Casc
 
         std::shared_ptr<IO::Stream> openFileByHash(std::string hash) const
         {
-            auto files = encoding->listFileInfo(0, 10);
             auto key = encoding->findFileInfo(hash).keys.at(0);
             auto enc = encoding->findEncodedFileInfo(key);
             return openFileByKey(enc.key, enc.params);
