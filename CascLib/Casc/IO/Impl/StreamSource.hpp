@@ -46,11 +46,6 @@ namespace Casc
                     begin(bounds.first), end(bounds.second) { }
 
                 /**
-                 * Destructor.
-                 */
-                using DataSource::~DataSource;
-
-                /**
                  * Gets a chunk of data.
                  */
                 std::vector<char> get(size_t offset, size_t count) override
@@ -73,6 +68,8 @@ namespace Casc
 
                     return v;
                 }
+
+                using DataSource::DataSource;
             };
         }
     }

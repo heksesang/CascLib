@@ -63,6 +63,8 @@ namespace Casc
 // Helpers
 #include "Hex.hpp"
 
+#include "IO/Endian.hpp"
+
 /**
 * Stream operators
 */
@@ -122,16 +124,14 @@ namespace Casc
     template <typename T>
     inline std::ofstream &operator<<(std::ofstream  &input, const T &value)
     {
-        using namespace Functions::Endian;
-
         if (input.iword(endian_index) == 0)
         {
-            input.write(write<IO::EndianType::Little>(value).data(), sizeof(T));
+            input.write(IO::Endian::write<IO::EndianType::Little>(value).data(), sizeof(T));
         }
 
         if (input.iword(endian_index) == 1)
         {
-            input.write(write<IO::EndianType::Big>(value).data(), sizeof(T));
+            input.write(IO::Endian::write<IO::EndianType::Big>(value).data(), sizeof(T));
         }
 
         return input;

@@ -43,6 +43,11 @@ namespace Casc
 
         public:
             /**
+            * Chunk metadata.
+            */
+            const Chunk chunk;
+
+            /**
              * Constructor.
              */
             class Handler(Chunk chunk, std::shared_ptr<DataSource> source)
@@ -88,11 +93,6 @@ namespace Casc
 
                 return hash == chunk.checksum;
             }
-            
-            /**
-             * Chunk metadata.
-             */
-            const Chunk chunk;
         };
     }
 }

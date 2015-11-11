@@ -203,6 +203,9 @@ namespace Casc
                 }
 
             private:
+                // The file signature.
+                static const uint16_t Signature = 0x4E45;
+
                 // The header size of an encoding file.
                 static const unsigned int HeaderSize = 22U;
 
@@ -334,7 +337,7 @@ namespace Casc
                     uint16_t signature;
                     read<IO::EndianType::Little>(stream, signature);
 
-                    if (signature != 0x4E45)
+                    if (signature != Signature)
                     {
                         throw Exceptions::InvalidSignatureException(signature, 0x4E45);
                     }

@@ -42,11 +42,6 @@ namespace Casc
                     : DataSource(DataSourceType::MemoryMapped), buf(bytes) { }
 
                 /**
-                 * Destructor.
-                 */
-                using DataSource::~DataSource;
-
-                /**
                  * Gets a chunk of data.
                  */
                 std::vector<char> get(size_t offset, size_t count) override
@@ -56,6 +51,8 @@ namespace Casc
 
                     return std::vector<char>(begin, end);
                 };
+
+                using DataSource::DataSource;
             };
         }
     }

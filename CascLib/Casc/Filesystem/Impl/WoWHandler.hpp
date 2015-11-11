@@ -47,40 +47,10 @@ namespace Casc
             * @param filename  the filename.
             * @return          the hash in hex format.
             */
-            virtual std::string findHash(std::string filename) const
+            std::string findHash(std::string filename) const override
             {
                 return "";
             };
-
-        protected:
-            /**
-            * Reads data from a stream and puts it in a struct.
-            *
-            * @param T     the type of the struct.
-            * @param input the input stream.
-            * @param value the output object to write the data to.
-            * @param big   true if big endian.
-            * @return      the data.
-            */
-            template <IO::EndianType Endian, typename T>
-            const T &read(std::ifstream &stream, T &value) const
-            {
-                char b[sizeof(T)];
-                stream.read(b, sizeof(T));
-
-                return value = Functions::Endian::read<Endian, T>(b, b + sizeof(T));
-            }
-
-            /**
-            * Throws if the fail or bad bit are set on the stream.
-            */
-            void checkForErrors(std::unique_ptr<std::istream>&& stream) const
-            {
-                if (stream->fail())
-                {
-                    throw Exceptions::IOException("Stream is in an invalid state.");
-                }
-            }
 
         public:
             /**
@@ -92,27 +62,14 @@ namespace Casc
             }
 
             /**
-            * Move constructor.
-            */
-            WoWHandler(WoWHandler &&) = default;
-
-            /**
-            * Move operator.
-            */
-            WoWHandler &operator= (WoWHandler &&) = default;
-
-            /**
-            * Destructor.
-            */
-            virtual ~WoWHandler() = default;
-
-            /**
             * The file magic of the root file.
             */
             static constexpr uint32_t Signature()
             {
-                return 0;
+                return 0x1967;
             }
+
+            using Handler::Handler;
         };
     }
 }
