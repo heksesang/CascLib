@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 
         try
         {
-            std::shared_ptr<Casc::IO::Stream<false>> file;
+            std::shared_ptr<Casc::IO::Stream> file;
             
             if (strcmp(argv[2], "key") == 0)
             {

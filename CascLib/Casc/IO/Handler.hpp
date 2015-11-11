@@ -50,7 +50,7 @@ namespace Casc
             /**
              * Constructor.
              */
-            class Handler(Chunk chunk, std::shared_ptr<DataSource> source)
+            Handler(Chunk chunk, std::shared_ptr<DataSource> source)
                 : chunk(chunk), source(source) { }
 
             /**
