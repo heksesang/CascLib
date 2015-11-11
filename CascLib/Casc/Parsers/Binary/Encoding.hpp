@@ -31,6 +31,8 @@
 #include "../../Exceptions.hpp"
 
 #include "../../Parsers/Binary/Reference.hpp"
+#include "../../IO/StreamAllocator.hpp"
+#include "../../IO/Endian.hpp"
 
 namespace Casc
 {
@@ -38,10 +40,6 @@ namespace Casc
     {
         namespace Binary
         {
-            using namespace Casc::Functions;
-            using namespace Casc::Functions::Endian;
-            using namespace Casc::Functions::Hash;
-
             /**
              * Maps file content MD5 hash to file key.
              */
@@ -85,17 +83,7 @@ namespace Casc
                         throw Exceptions::HashDoesNotExistException(hash.string());
                     }
 
-                    auto begin = tableA.begin() + EntrySize * index;
-                    auto end = begin + EntrySize;
-
-                    Hex actual(md5(begin, end));
-
-                    if (actual != checksum)
-                    {
-                        throw Exceptions::InvalidHashException(lookup3(checksum, 0), lookup3(actual, 0), "");
-                    }
-
-                    auto files = parseEntry(begin, end, hashSizeA);
+                    auto files = parseEntry(index, checksum);
 
                     for (auto it = files.begin(); it != files.end(); ++it)
                     {
@@ -131,17 +119,7 @@ namespace Casc
                         throw Exceptions::KeyDoesNotExistException(key.string());
                     }
 
-                    auto begin = tableB.begin() + EntrySize * index;
-                    auto end = begin + EntrySize;
-
-                    Hex actual(md5(begin, end));
-
-                    if (actual != checksum)
-                    {
-                        throw Exceptions::InvalidHashException(lookup3(checksum, 0), lookup3(actual, 0), "");
-                    }
-
-                    auto files = parseEncodedEntry(begin, end, hashSizeB);
+                    auto files = parseEncodedEntry(index, checksum);
 
                     for (auto it = files.begin(); it != files.end(); ++it)
                     {
@@ -152,6 +130,76 @@ namespace Casc
                     }
 
                     throw Exceptions::KeyDoesNotExistException(key.string());
+                }
+
+                /**
+                 * Get file info for a range of files.
+                 */
+                std::vector<FileInfo> listFileInfo(uint32_t offset, uint32_t count) const
+                {
+                    std::vector<FileInfo> list;
+
+                    while (list.size() < count)
+                    {
+                        auto remaining = count - list.size();
+
+                        auto index = -1;
+                        Hex checksum;
+
+                        if (offset < headersA.size())
+                        {
+                            index = headersA.size() - 1 - offset;
+                            checksum = headersA[offset].second;
+                        }
+                        else
+                        {
+                            break;
+                        }
+
+                        auto files = parseEntry(index, checksum);
+                        auto n = remaining < files.size() ? remaining : files.size();
+
+                        files.insert(list.end(), files.begin(), files.begin() + n);
+
+                        offset += n;
+                    }
+
+                    return list;
+                }
+
+                 /**
+                  * Get encoding info for a range of files.
+                  */
+                std::vector<EncodedFileInfo> listEncodedFileInfo(uint32_t offset, uint32_t count) const
+                {
+                    std::vector<EncodedFileInfo> list;
+
+                    while (list.size() < count)
+                    {
+                        auto remaining = list.size() - count;
+
+                        auto index = -1;
+                        Hex checksum;
+
+                        if (offset < headersB.size())
+                        {
+                            index = headersB.size() - 1 - offset;
+                            checksum = headersB[offset].second;
+                        }
+                        else
+                        {
+                            break;
+                        }
+
+                        auto files = parseEncodedEntry(index, headersB[index].second);
+                        auto count = remaining < files.size() ? remaining : files.size();
+
+                        files.insert(list.end(), files.begin(), files.begin() + count);
+
+                        offset += count;
+                    }
+
+                    return list;
                 }
 
             private:
@@ -181,42 +229,51 @@ namespace Casc
                     char b[sizeof(T)];
                     stream->read(b, sizeof(T));
 
-                    return value = Endian::read<Endian, T>(b);
+                    return value = IO::Endian::read<Endian, T>(b);
                 }
 
                 /**
                  * Parse an entry in the table.
                  */
-                template <typename InputIt>
-                std::vector<FileInfo> parseEntry(const InputIt begin, const InputIt end, size_t hashSize) const
+                std::vector<FileInfo> parseEntry(uint32_t index, Hex checksum) const
                 {
                     std::vector<FileInfo> files;
+
+                    auto begin = tableA.begin() + EntrySize * index;
+                    auto end = begin + EntrySize;
+
+                    Hex actual(md5(begin, end));
+
+                    if (actual != checksum)
+                    {
+                        throw Exceptions::InvalidHashException(Crypto::lookup3(checksum, 0), Crypto::lookup3(actual, 0), "");
+                    }
 
                     for (auto it = begin; it < end;)
                     {
                         auto keyCount =
-                            Endian::read<IO::EndianType::Little, uint16_t>(it);
+                            IO::Endian::read<IO::EndianType::Little, uint16_t>(it);
                         it += sizeof(keyCount);
 
                         if (keyCount == 0)
                             break;
 
                         auto fileSize =
-                            Endian::read<IO::EndianType::Big, uint32_t>(it);
+                            IO::Endian::read<IO::EndianType::Big, uint32_t>(it);
                         it += sizeof(fileSize);
 
                         auto checksumIt = it;
-                        it += hashSize;
+                        it += hashSizeA;
 
                         std::vector<Hex> keys;
 
                         for (auto i = 0U; i < keyCount; ++i)
                         {
-                            keys.emplace_back(it, it + hashSize);
-                            it += hashSize;
+                            keys.emplace_back(it, it + hashSizeA);
+                            it += hashSizeA;
                         }
 
-                        files.emplace_back(FileInfo{ { checksumIt, checksumIt + hashSize }, fileSize, keys });
+                        files.emplace_back(FileInfo{ { checksumIt, checksumIt + hashSizeA }, fileSize, keys });
                     }
 
                     return files;
@@ -225,35 +282,44 @@ namespace Casc
                 /**
                  * Parse an entry in the table.
                  */
-                template <typename InputIt>
-                std::vector<EncodedFileInfo> parseEncodedEntry(InputIt begin, InputIt end, size_t hashSize) const
+                std::vector<EncodedFileInfo> parseEncodedEntry(uint32_t index, Hex checksum) const
                 {
                     std::vector<EncodedFileInfo> files;
+
+                    auto begin = tableB.begin() + EntrySize * index;
+                    auto end = begin + EntrySize;
+
+                    Hex actual(md5(begin, end));
+
+                    if (actual != checksum)
+                    {
+                        throw Exceptions::InvalidHashException(Crypto::lookup3(checksum, 0), Crypto::lookup3(actual, 0), "");
+                    }
 
                     for (auto it = begin; it < end;)
                     {
                         auto checksumIt = it;
-                        it += hashSize;
+                        it += hashSizeB;
 
                         auto profileIndex =
-                            Endian::read<IO::EndianType::Big, int32_t>(it);
+                            IO::Endian::read<IO::EndianType::Big, int32_t>(it);
                         it += sizeof(profileIndex);
 
                         ++it;
 
                         auto fileSize =
-                            Endian::read<IO::EndianType::Big, uint32_t>(it);
+                            IO::Endian::read<IO::EndianType::Big, uint32_t>(it);
                         it += sizeof(fileSize);
 
                         auto &profile = profiles[profileIndex];
                         
                         if (profileIndex >= 0)
                         {
-                            files.emplace_back(EncodedFileInfo{ { checksumIt, checksumIt + hashSize }, fileSize, profile });
+                            files.emplace_back(EncodedFileInfo{ { checksumIt, checksumIt + hashSizeB }, fileSize, profile });
                         }
                         else
                         {
-                            files.emplace_back(EncodedFileInfo{ { checksumIt, checksumIt + hashSize }, fileSize, "" });
+                            files.emplace_back(EncodedFileInfo{ { checksumIt, checksumIt + hashSizeB }, fileSize, "" });
                         }
                     }
 
@@ -362,13 +428,13 @@ namespace Casc
                          std::shared_ptr<IO::StreamAllocator> allocator)
                 {
                     // Get a file stream.
-                    auto fs = allocator->data<true, false>(ref.file());
+                     auto fs = allocator->data<true, false>(ref.file());
                     
                     // Read size.
                     fs->seekg(ref.offset() + 16, std::ios_base::beg);
                     std::array<char, sizeof(uint32_t)> arr;
                     fs->read(arr.data(), arr.size());
-                    auto size = Functions::Endian::read<IO::EndianType::Little, uint32_t>(arr.begin(), arr.end());
+                    auto size = IO::Endian::read<IO::EndianType::Little, uint32_t>(arr.begin());
 
                     // Read params.
                     std::string params;
@@ -391,7 +457,7 @@ namespace Casc
                     }
 
                     // Parse CASC stream.
-                    parse(allocator->data<false>(ref, params));
+                    parse(allocator->data(ref));
                 }
 
                 /**
@@ -418,86 +484,6 @@ namespace Casc
                  * Destructor.
                  */
                 virtual ~Encoding() = default;
-
-                /**
-                 * Inserts a file record.
-                 */
-                void insert(Hex hash, Hex key, size_t fileSize)
-                {
-                    /*auto index = -1;
-                    Hex checksum;
-
-                    for (auto i = 0U; i < headersA.size(); ++i)
-                    {
-                        if (headersA[i].first <= hash)
-                        {
-                            index = headersA.size() - 1 - i;
-                            checksum = headersA[i].second;
-                            break;
-                        }
-                    }*/
-
-                    std::vector<FileInfo> files;
-
-                    for (auto index = 0U; index < headersA.size(); ++index)
-                    {
-                        auto size = 0;
-                        auto begin = tableA.begin() + EntrySize * index;
-                        auto end = begin + EntrySize;
-
-                        for (auto it = begin; it < end;)
-                        {
-                            auto keyCount =
-                                Endian::read<IO::EndianType::Little, uint16_t>(it);
-                            it += sizeof(keyCount);
-
-                            if (keyCount == 0)
-                            {
-                                size = it - begin - 4 - sizeof(keyCount);
-                                break;
-                            }
-
-                            auto fileSize =
-                                Endian::read<IO::EndianType::Big, uint32_t>(it);
-                            it += sizeof(fileSize);
-
-                            auto checksumIt = it;
-                            it += hashSizeA;
-
-                            std::vector<Hex> keys;
-
-                            for (auto i = 0U; i < keyCount; ++i)
-                            {
-                                keys.emplace_back(it, it + hashSizeA);
-                                it += hashSizeA;
-                            }
-
-                            files.emplace_back(FileInfo{ { checksumIt, checksumIt + hashSizeA }, fileSize, keys });
-                        }
-                    }
-
-                    auto byteCount = 0;
-                    for (auto &file : files)
-                    {
-
-                    }
-                }
-
-                /**
-                 * Write the data to a stream.
-                 */
-                void write(std::shared_ptr<std::ofstream> stream)
-                {
-                    stream->close();
-                }
-
-                /**
-                 * Write the data to a stream.
-                 */
-                void write(std::shared_ptr<IO::Stream<true>> stream)
-                {
-                    stream->close();
-                }
             };
         }
     }

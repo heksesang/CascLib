@@ -23,9 +23,9 @@
 #include <memory>
 
 #include "../../zlib.hpp"
-#include "../../Common.hpp"
+#include "../../md5.hpp"
 
-#include "../EncodingMode.hpp"
+#include "../../Exceptions.hpp"
 
 namespace Casc
 {
@@ -36,26 +36,17 @@ namespace Casc
             /**
              * Default handler. This reads data directly from the stream.
              */
-            class DefaultHandler : public Handler
+            class NoneHandler : public Handler
             {
+            public:
                 EncodingMode mode() const override
                 {
                     return EncodingMode::None;
                 }
 
-                std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize) override
+                std::vector<char> decode(size_t offset, size_t count) override
                 {
-                    auto out = std::make_unique<char[]>(outSize);
-
-                    if (offset > 0)
-                        buf.pubseekoff(offset, std::ios_base::cur);
-
-                    if (buf.sgetn(out.get(), outSize) == outSize)
-                    {
-                        return out;
-                    }
-
-                    return nullptr;
+                    return source->get(offset + 1, count);
                 }
 
                 std::vector<char> encode(std::vector<char> input) const override
@@ -66,6 +57,18 @@ namespace Casc
 
                     return std::move(v);
                 }
+
+                size_t logicalSize() override
+                {
+                    return chunk.size - 1;
+                }
+
+                void reset() override
+                {
+
+                }
+
+                using Handler::Handler;
             };
         }
     }

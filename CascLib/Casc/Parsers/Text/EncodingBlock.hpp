@@ -34,8 +34,6 @@ namespace Casc
     {
         namespace Text
         {
-            using namespace Casc::Functions;
-
             class EncodingBlock
             {
                 // The size of the block.
@@ -49,6 +47,14 @@ namespace Casc
 
                 // The encoder parameters for the block.
                 std::vector<std::string> params_;
+
+                static bool isWhitespace(int value)
+                {
+                    bool result;
+
+                    result = value == ' ' || value == '\t' || value == '\v' || value == '\r' || value == '\f' || value == '\n';
+                    return result;
+                }
 
                 static void parseEncodingProfile(char *encodingProfile, char **encodingMode, char ***params, unsigned int *nParams)
                 {

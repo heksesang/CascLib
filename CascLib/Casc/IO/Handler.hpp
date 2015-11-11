@@ -23,8 +23,10 @@
 #include <memory>
 
 #include "../zlib.hpp"
-#include "../Common.hpp"
+#include "../md5.hpp"
 
+#include "Chunk.hpp"
+#include "DataSource.hpp"
 #include "EncodingMode.hpp"
 
 namespace Casc
@@ -36,26 +38,65 @@ namespace Casc
          */
         class Handler
         {
+        protected:
+            std::shared_ptr<DataSource> source;
+
         public:
+            /**
+             * Constructor.
+             */
+            class Handler(Chunk chunk, std::shared_ptr<DataSource> source)
+                : chunk(chunk), source(source) { }
+
+            /**
+             * Destructor.
+             */
             virtual ~Handler() { }
 
             /**
-             * The encoding mode of the handler.
+             * What kind of encoding this handler supports.
              */
             virtual EncodingMode mode() const = 0;
 
             /**
-             * Decodes data from the filebuf and returns the result.
+             * Decodes a chunk of data.
              */
-            virtual std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize) = 0;
+            virtual std::vector<char> decode(size_t offset, size_t count) = 0;
 
             /**
              * Encodes data from the stream and returns the result.
              */
             virtual std::vector<char> encode(std::vector<char> input) const = 0;
+
+            /**
+             * Returns the logical, decoded size of the chunk.
+             */
+            virtual size_t logicalSize() = 0;
+
+            /**
+             * Clears the buffers.
+             */
+            virtual void reset() = 0;
+
+            /**
+             * Checks the data against the MD5 checksum.
+             */
+            bool validate()
+            {
+                auto data = this->source->get(1, SIZE_MAX);
+                auto hash = Hex(md5(data));
+
+                return hash == chunk.checksum;
+            }
+            
+            /**
+             * Chunk metadata.
+             */
+            const Chunk chunk;
         };
     }
 }
 
-#include "Impl/DefaultHandler.hpp"
+#include "Impl/NoneHandler.hpp"
 #include "Impl/ZlibHandler.hpp"
+#include "Impl/CryptHandler.hpp"

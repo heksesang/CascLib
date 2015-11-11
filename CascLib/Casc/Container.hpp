@@ -52,10 +52,6 @@
 
 namespace Casc
 {
-    using namespace Casc::Functions;
-    using namespace Casc::Functions::Endian;
-    using namespace Casc::Functions::Hash;
-
     /**
      * A container for a CASC archive.
      */
@@ -65,25 +61,17 @@ namespace Casc
         typedef std::pair<Parsers::Text::EncodingBlock, std::vector<char>> descriptor_type;
 
     public:
-        std::shared_ptr<IO::Stream<false>> openFileByKey(Hex key, std::string params) const
+        std::shared_ptr<IO::Stream> openFileByKey(Hex key, std::string params) const
         {
-            return allocator->data<false>(findFileLocation(key), params);
+            return allocator->data(findFileLocation(key));
         }
 
-        std::shared_ptr<IO::Stream<false>> openFileByHash(std::string hash) const
+        std::shared_ptr<IO::Stream> openFileByHash(std::string hash) const
         {
+            auto files = encoding->listFileInfo(0, 10);
             auto key = encoding->findFileInfo(hash).keys.at(0);
             auto enc = encoding->findEncodedFileInfo(key);
             return openFileByKey(enc.key, enc.params);
-        }
-
-        std::shared_ptr<IO::Stream<true>> write()
-        {
-            IO::Stream<true>::insert_func inserter =
-                std::bind(&Container::insertFile,
-                    this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-
-            return allocator->data<true>(inserter);
         }
 
     private:
@@ -128,34 +116,6 @@ namespace Casc
             return index->find(key.begin(), key.begin() + 9);
         }
 
-        void insertEncoding(Parsers::Binary::Reference ref)
-        {
-            if (index != nullptr)
-            {
-                index->insert(ref.key(), ref);
-            }
-        }
-
-        void insertFile(Parsers::Binary::Reference ref, Hex hash, size_t size)
-        {
-            if (index != nullptr)
-            {
-                index->insert(ref.key(), ref);
-            }
-
-            if (encoding != nullptr)
-            {
-                //encoding->insert(hash, ref.key(), size);
-
-                /*IO::Stream<true>::insert_func inserter =
-                    std::bind(&Container::insertEncoding,
-                        this, std::placeholders::_1);
-
-                auto stream = allocator->allocate<true>(inserter);
-                encoding->write(stream);*/
-            }
-        }
-
     public:
         /**
          * Constructor.
@@ -165,12 +125,11 @@ namespace Casc
             buildInfo(path + "\\.build.info"),
             buildConfig(allocator->config<true, false>(buildInfo.build(0).at("Build Key"))),
             cdnConfig(allocator->config<true, false>(buildInfo.build(0).at("CDN Key"))),
-            shadowMemory(Functions::createPath(
-                path, dataPath, IO::DataFolders::Data, "shmem")),
+            shadowMemory(allocator->shmem<true, false>()),
             index(new Parsers::Binary::Index(shadowMemory.versions(), allocator)),
             encoding(new Parsers::Binary::Encoding(
-                index->find(Hex(buildConfig["encoding"].back().substr(0, 18U))), allocator)),
-            root(new Filesystem::Root(buildConfig["root"].front(), encoding, index, allocator))
+                index->find(Hex(buildConfig["encoding"].back().substr(0, 18U))), allocator))//,
+            //root(new Filesystem::Root(buildConfig["root"].front(), encoding, index, allocator))
         {
         }
 

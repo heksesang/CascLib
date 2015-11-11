@@ -19,18 +19,27 @@
 
 #pragma once
 
+#include "../md5.hpp"
+
 namespace Casc
 {
-    namespace IO
+    namespace Crypto
     {
-        /**
-        * The available encoding modes.
-        */
-        enum EncodingMode
+        inline std::string md5(const std::string str)
         {
-            None = 0x4E,
-            Zlib = 0x5A,
-            Crypt = 0x45
-        };
+            return MD5(str).hexdigest();
+        }
+
+        template <typename Container>
+        inline std::string md5(const Container &input)
+        {
+            return MD5(input).hexdigest();
+        }
+
+        template <typename InputIt>
+        inline std::string md5(InputIt begin, InputIt end)
+        {
+            return MD5(begin, end).hexdigest();
+        }
     }
 }

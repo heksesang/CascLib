@@ -20,6 +20,11 @@
 #pragma once
 
 #include "../Common.hpp"
+#include "Handler.hpp"
+#include "../Parsers/Binary/Encoding.hpp"
+#include "../Parsers/Binary/Index.hpp"
+#include "../IO/StreamAllocator.hpp"
+#include "../IO/Endian.hpp"
 
 namespace Casc
 {
@@ -27,21 +32,39 @@ namespace Casc
     {
         class Root
         {
-            std::shared_ptr<Parsers::Binary::Encoding> encoding;
-            std::shared_ptr<Parsers::Binary::Index> index;
-            std::shared_ptr<IO::StreamAllocator> allocator;
+            std::unique_ptr<Handler> handler = nullptr;
 
         public:
             Root(Hex hash, std::shared_ptr<Parsers::Binary::Encoding> encoding = nullptr,
                  std::shared_ptr<Parsers::Binary::Index> index = nullptr,
                  std::shared_ptr<IO::StreamAllocator> allocator = nullptr)
-                : encoding(encoding), index(index), allocator(allocator)
             {
+                auto fi = encoding->findFileInfo(hash);
+                auto enc = encoding->findEncodedFileInfo(fi.keys[0]);
+                auto ref = index->find(fi.keys[0]);
+                
+                auto stream = allocator->data(ref);
+
+                std::vector<char> buf(fi.size);
+                stream->read(buf.data(), buf.size());
+
+                auto signature = IO::Endian::read<
+                    IO::EndianType::Little, uint32_t>(buf.begin());
+
+                switch (signature)
+                {
+                case WoWHandler::Signature():
+                    handler = std::unique_ptr<Handler>(new WoWHandler(buf));
+                    break;
+
+                default:
+                    throw Exceptions::FilesystemException("Unsupported root file format");
+                }
             }
 
-            std::string find(std::string path)
+            Hex find(std::string path) const
             {
-                return "";
+                return handler->findHash(path);
             }
         };
     }

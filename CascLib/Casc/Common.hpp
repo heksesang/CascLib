@@ -55,60 +55,13 @@ namespace Casc
     const std::string PathSeparator = conv_type().to_bytes({ fs::path::preferred_separator });
 }
 
-// Forward declarations
-namespace Casc
-{
-    namespace Filesystem
-    {
-        class Handler;
-        class Root;
-    }
-
-    namespace IO
-    {
-        namespace Impl
-        {
-            class DefaultHandler;
-            class ZlibHandler;
-        }
-
-        class Handler;
-        class ReadBuffer;
-        class WriteBuffer;
-        template <bool Writeable>
-        class Stream;
-        class StreamAllocator;
-    }
-
-    namespace Parsers
-    {
-        namespace Binary
-        {
-            class Encoding;
-            class Index;
-            class Reference;
-            class ShadowMemory;
-        }
-
-        namespace Text
-        {
-            class BuildInfo;
-            class Configuration;
-            class EncodingBlock;
-        }
-    }
-
-    class Container;
-}
-
 // Enums
 #include "IO/DataFolders.hpp"
 #include "IO/EncodingMode.hpp"
 #include "IO/EndianType.hpp"
 
 // Helpers
-#include "Shared/Functions.hpp"
-#include "Shared/Hex.hpp"
+#include "Hex.hpp"
 
 /**
 * Stream operators
@@ -148,7 +101,6 @@ namespace Casc
     template <typename T>
     inline std::ifstream &operator>>(std::ifstream  &input, T &value)
     {
-        using namespace Functions::Endian;
         char b[sizeof(T)];
         input.read(b, sizeof(T));
 
@@ -156,12 +108,12 @@ namespace Casc
 
         if (input.iword(endian_index) == 0)
         {
-            value = read<IO::EndianType::Little, uint32_t>(b, b + sizeof(T));
+            value = IO::Endian::read<IO::EndianType::Little, uint32_t>(b);
         }
 
         if (input.iword(endian_index) == 1)
         {
-            value = read<IO::EndianType::Big, uint32_t>(b, b + sizeof(T));
+            value = IO::Endian::read<IO::EndianType::Big, uint32_t>(b);
         }
 
         return input;
@@ -206,6 +158,8 @@ namespace Casc
     }
 }
 
+#include "../Casc/Crypto/Lookup3.hpp"
+
 // Hash algorithm for unordered_map
 namespace std
 {
@@ -215,7 +169,7 @@ namespace std
     public:
         size_t operator()(const Casc::Hex &key) const
         {
-            return Casc::Functions::Hash::lookup3(key.begin(), key.end(), 0);
+            return Casc::Crypto::lookup3(key.begin(), key.end(), 0);
         }
     };
 }

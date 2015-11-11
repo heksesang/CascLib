@@ -19,18 +19,37 @@
 
 #pragma once
 
+#include "../Hex.hpp"
+
 namespace Casc
 {
     namespace IO
     {
-        /**
-        * The available encoding modes.
-        */
-        enum EncodingMode
+        struct Chunk
         {
-            None = 0x4E,
-            Zlib = 0x5A,
-            Crypt = 0x45
+            // The offset of the first byte in the decompressed data.
+            size_t begin;
+
+            // The offset of the last byte in the decompressed data.
+            size_t end;
+
+            // The offset where the compressed data starts.
+            size_t offset;
+
+            // The size of the compressed data.
+            size_t size;
+
+            // The checksum of the data.
+            Hex checksum;
+
+            bool operator <(const Chunk &b) const
+            {
+                return this->begin < b.begin;
+            }
+            bool operator >(const Chunk &b) const
+            {
+                return this->begin > b.begin;
+            }
         };
     }
 }

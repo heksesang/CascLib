@@ -51,63 +51,6 @@ namespace Casc
              */
             class ShadowMemory
             {
-            public:
-                /**
-                 * Finds free space and reserves it.
-                 */
-                Reference reserveSpace(uint32_t size)
-                {
-                    uint32_t available = 0;
-
-                    for (auto it = freeSpaceLength_.begin(),
-                        end = freeSpaceLength_.end(); it != end; ++it)
-                    {
-                        if (it->offset() > available)
-                        {
-                            available = it->offset();
-                        }
-
-                        if (it->offset() >= size)
-                        {
-                            std::vector<char> key;
-
-                            auto location = freeSpaceOffset_.begin() + (it - freeSpaceLength_.begin());
-
-                            Reference result(
-                                key.begin(), key.end(),
-                                location->file(),
-                                location->offset(),
-                                size);
-
-                            if (it->offset() == size)
-                            {
-                                freeSpaceLength_.erase(it);
-                                freeSpaceOffset_.erase(location);
-                            }
-                            else
-                            {
-                                *location = Reference(
-                                    key.begin(), key.end(),
-                                    location->file(),
-                                    location->offset() + size,
-                                    0);
-
-                                *it = Reference(
-                                    key.begin(), key.end(),
-                                    0,
-                                    0,
-                                    it->offset() - size);
-                            }
-
-                            //write();
-
-                            return result;
-                        }
-                    }
-
-                    throw Exceptions::ReserveSpaceException(size, available);
-                }
-
             private:
                 static const int EntriesPerBlock = 1090U;
                 static const int BlockSize = EntriesPerBlock * 5U;
@@ -123,15 +66,6 @@ namespace Casc
                     FreeSpace = 1
                 };
 
-                // The base directory of the archive.
-                std::string basePath_;
-
-                // The directory where the data files are stored.
-                std::string dataPath_;
-
-                // The path of the shemem file.
-                std::string path_;
-
                 // The list of versions for IDX files. Contains 16 values for WoD beta.
                 std::map<uint32_t, uint32_t> versions_;
 
@@ -144,7 +78,6 @@ namespace Casc
                  */
                 void readFreeSpace(std::ifstream &file)
                 {
-                    using namespace Functions::Endian;
                     uint32_t writeableMemoryCount;
                     file >> writeableMemoryCount;
 
@@ -196,14 +129,6 @@ namespace Casc
                     }
 
                     path.resize(path.find_first_of('\0'));
-
-                    if (fs::path(path).is_relative())
-                    {
-                        path = fs::path(basePath_).append(path.begin(), path.end()).string();
-                    }
-
-                    // To make sure it works with shares mounted on linux.
-                    path = dataPath_ = fs::path(path_).parent_path().string();
 
                     for (fs::directory_iterator iter(path), end; iter != end; ++iter)
                     {
@@ -262,26 +187,22 @@ namespace Casc
                 /**
                  * Reads a shadow memory file.
                  */
-                void readFile(std::string path)
+                void readFile(std::shared_ptr<std::ifstream> stream)
                 {
-                    using namespace Functions::Endian;
-                    std::ifstream file;
-                    file.open(path, std::ios_base::in | std::ios_base::binary);
-
                     uint32_t type = 0;
-                    file >> le >> type;
+                    *stream >> le >> type;
 
                     switch (type)
                     {
                     case BlockType::Header:
-                        readHeader(file);
+                        readHeader(*stream);
                         break;
 
                     case BlockType::FreeSpace:
                         break;
                     }
 
-                    file.close();
+                    stream->close();
                 }
 
                 /**
@@ -292,119 +213,13 @@ namespace Casc
                     return (count % 1090) == 0 ? count / 1090 : 1 + count / 1090;
                 }
 
-                /**
-                 * Writes the free space data.
-                 */
-                void writeFreeSpace(std::ofstream &str) const
-                {
-                    uint32_t freeSpaceCount = freeSpaceLength_.size();
-
-                    str << le << (uint32_t)BlockType::FreeSpace;
-                    str << le << freeSpaceCount;
-
-                    str.seekp(0x18, std::ios_base::cur);
-
-                    for (auto i = 0U; i < EntriesPerBlock; i++)
-                    {
-                        if (i < freeSpaceCount)
-                        {
-                            auto bytes = freeSpaceLength_.at(i).serialize(0, 5, 0, 30);
-                            str.write(bytes.data(), bytes.size());
-                        }
-                        else
-                        {
-                            str.write(std::array<char, 5>{ '\0', '\0', '\0', '\0', '\0' }.data(), 5);
-                        }
-                    }
-
-                    for (auto i = 0U; i < EntriesPerBlock; i++)
-                    {
-                        if (i < freeSpaceCount)
-                        {
-                            auto bytes = freeSpaceOffset_.at(i).serialize(0, 5, 0, 30);
-                            str.write(bytes.data(), bytes.size());
-                        }
-                        else
-                        {
-                            str.write(std::array<char, 5>{ '\0', '\0', '\0', '\0', '\0' }.data(), 5);
-                        }
-                    }
-
-                    auto pos = str.tellp() % 16;
-
-                    std::array<char, 16> padding{};
-
-                    if (pos < 16)
-                    {
-                        str.write(padding.data() + pos, 16 - pos);
-                    }
-                }
-
-                /**
-                 * Writes the header data.
-                 */
-                void writeHeader(std::ofstream &str) const
-                {
-                    uint32_t versionCount = versions_.size();
-                    uint32_t blockCount = calcBlockCount(freeSpaceLength_.size());
-
-                    uint32_t headerSize = 264 + versionCount * sizeof(uint32_t) +
-                        blockCount * (sizeof(uint32_t) * 2);
-
-                    str << le << (uint32_t)BlockType::Header;
-                    str << le << (uint32_t)headerSize;
-
-                    std::array<char, 0x100> buf{};
-
-                    std::string prefix("Global\\");
-                    std::string dataPath(dataPath_);
-                    std::replace(dataPath.begin(), dataPath.end(), '\\', '/');
-                    std::copy(prefix.begin(), prefix.end(), buf.begin());
-                    std::copy(dataPath.begin(), dataPath.end(), buf.begin() + prefix.size());
-
-                    str.write(buf.data(), 0x100);
-
-                    for (auto i = 0U; i < blockCount; ++i)
-                    {
-                        uint32_t size = 0x24 + BlockSize * 2;
-                        uint32_t offset = headerSize + size * i;
-
-                        if ((offset % 16) != 0)
-                        {
-                            offset += 16 - (offset % 16);
-                        }
-
-                        str << le << size;
-                        str << le << offset;
-                    }
-
-                    for (auto i = 0U; i < versionCount; ++i)
-                    {
-                        str << le << versions_.at(i);
-                    }
-                }
-
-                /**
-                 * Writes to file.
-                 */
-                void write() const
-                {
-                    std::ofstream file;
-                    std::string path = path_;
-                    file.open(path, std::ios_base::out | std::ios_base::binary);
-
-                    writeHeader(file);
-                    writeFreeSpace(file);
-                }
-
             public:
                 /**
                  * Constructor.
                  */
-                ShadowMemory(std::string path)
-                    : path_(path)
+                ShadowMemory(std::shared_ptr<std::ifstream> stream)
                 {
-                    parse(path);
+                    parse(stream);
                 }
 
                 /**
@@ -417,18 +232,9 @@ namespace Casc
                 /**
                  * Parses a shadow memory file.
                  */
-                void parse(std::string path)
+                void parse(std::shared_ptr<std::ifstream> stream)
                 {
-                    path_ = path;
-                    readFile(path);
-                }
-
-                /**
-                 * Gets the directory where the data files are stored.
-                 */
-                const std::string &path() const
-                {
-                    return dataPath_;
+                    readFile(stream);
                 }
 
                 /**

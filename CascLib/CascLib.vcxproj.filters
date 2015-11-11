@@ -27,12 +27,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Casc\Shared\Functions.hpp">
-      <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\Shared\Hex.hpp">
-      <Filter>Header Files\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\Common.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -120,9 +114,6 @@
     <ClInclude Include="Casc\IO\Impl\ZlibHandler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\IO\Impl\DefaultHandler.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\Filesystem\Handler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -135,14 +126,44 @@
     <ClInclude Include="Casc\IO\DataFolders.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Casc\IO\ReadBuffer.hpp">
-      <Filter>Header Files\Types</Filter>
-    </ClInclude>
-    <ClInclude Include="Casc\IO\WriteBuffer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Casc\Exceptions\InvalidEncodingModeException.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Filesystem\Impl\WoWHandler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Impl\CryptHandler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\DataSource.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Impl\NoneHandler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Impl\MemoryMappedSource.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Impl\StreamSource.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Crypto\MD5.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Chunk.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Buffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Crypto\Lookup3.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\IO\Endian.hpp">
+      <Filter>Header Files\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Casc\Hex.hpp">
+      <Filter>Header Files\Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

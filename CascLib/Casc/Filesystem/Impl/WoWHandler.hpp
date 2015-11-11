@@ -26,50 +26,54 @@
 #include <array>
 #include <fstream>
 
-#include "../Common.hpp"
+#include "../../Common.hpp"
+#include "../Handler.hpp"
 
 namespace Casc
 {
     namespace Filesystem
     {
         /**
-         * Maps filename to file content MD5 hash.
-         *
-         * TODO: Finish implementation, need different handling per game.
-         */
-        class Handler
+        * Maps filename to file content MD5 hash.
+        *
+        * TODO: Finish implementation, need different handling per game.
+        */
+        class WoWHandler : public Handler
         {
         public:
             /**
-             * Find the file content hash for the given filename.
-             *
-             * @param filename  the filename.
-             * @return          the hash in hex format.
-             */
-            virtual std::string findHash(std::string filename) const = 0;
+            * Find the file content hash for the given filename.
+            *
+            * @param filename  the filename.
+            * @return          the hash in hex format.
+            */
+            virtual std::string findHash(std::string filename) const
+            {
+                return "";
+            };
 
         protected:
             /**
-             * Reads data from a stream and puts it in a struct.
-             *
-             * @param T     the type of the struct.
-             * @param input the input stream.
-             * @param value the output object to write the data to.
-             * @param big   true if big endian.
-             * @return      the data.
-             */
+            * Reads data from a stream and puts it in a struct.
+            *
+            * @param T     the type of the struct.
+            * @param input the input stream.
+            * @param value the output object to write the data to.
+            * @param big   true if big endian.
+            * @return      the data.
+            */
             template <IO::EndianType Endian, typename T>
             const T &read(std::ifstream &stream, T &value) const
             {
                 char b[sizeof(T)];
                 stream.read(b, sizeof(T));
 
-                return value = read<Endian, T>(b, b + sizeof(T));
+                return value = Functions::Endian::read<Endian, T>(b, b + sizeof(T));
             }
 
             /**
-             * Throws if the fail or bad bit are set on the stream.
-             */
+            * Throws if the fail or bad bit are set on the stream.
+            */
             void checkForErrors(std::unique_ptr<std::istream>&& stream) const
             {
                 if (stream->fail())
@@ -80,29 +84,35 @@ namespace Casc
 
         public:
             /**
-             * Default constructor.
-             */
-            Handler()
+            * Default constructor.
+            */
+            WoWHandler(std::vector<char> &data)
             {
 
             }
 
             /**
-             * Move constructor.
-             */
-            Handler(Handler &&) = default;
+            * Move constructor.
+            */
+            WoWHandler(WoWHandler &&) = default;
 
             /**
             * Move operator.
             */
-            Handler &operator= (Handler &&) = default;
+            WoWHandler &operator= (WoWHandler &&) = default;
 
             /**
-             * Destructor.
-             */
-            virtual ~Handler() = default;
+            * Destructor.
+            */
+            virtual ~WoWHandler() = default;
+
+            /**
+            * The file magic of the root file.
+            */
+            static constexpr uint32_t Signature()
+            {
+                return 0;
+            }
         };
     }
 }
-
-#include "Impl/WoWHandler.hpp"

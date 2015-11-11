@@ -70,8 +70,6 @@ namespace Casc
                 Reference(InputIt first, InputIt last,
                     size_t keySize, size_t locationSize, size_t lengthSize, size_t segmentBits)
                 {
-                    using namespace Casc::Functions::Endian;
-
                     auto it = first;
 
                     std::vector<char> key(keySize);
@@ -88,11 +86,11 @@ namespace Casc
                         throw Exceptions::ParserException("Field size is outside the accepted range of the system.");
                     }
 
-                    auto file = read<IO::EndianType::Little, size_t>(it, it + fileSize);
+                    auto file = IO::Endian::read<IO::EndianType::Little, size_t>(it, it + fileSize);
                     it += fileSize;
-                    auto offset = read<IO::EndianType::Big, size_t>(it, it + offsetSize);
+                    auto offset = IO::Endian::read<IO::EndianType::Big, size_t>(it, it + offsetSize);
                     it += offsetSize;
-                    auto size = read<IO::EndianType::Little, size_t>(it, it + lengthSize);
+                    auto size = IO::Endian::read<IO::EndianType::Little, size_t>(it, it + lengthSize);
                     it += lengthSize;
 
                     auto extraBits = (offsetSize * 8U) - segmentBits;
@@ -162,72 +160,6 @@ namespace Casc
                 size_t size() const
                 {
                     return size_;
-                }
-
-                /**
-                 * Serializes the object to a binary structure.
-                 */
-                std::vector<char> serialize(size_t keySize, size_t locationSize,
-                    size_t lengthSize, size_t segmentBits) const
-                {
-                    using namespace Casc::Functions::Endian;
-
-                    std::vector<char> v(keySize + locationSize + lengthSize);
-
-                    if (keySize > 0)
-                        std::copy(key_.begin(), key_.begin() + keySize, v.begin());
-
-                    if (locationSize > 0)
-                    {
-                        auto totalBits = locationSize * 8U;
-
-                        if (totalBits < segmentBits)
-                        {
-                            throw Exceptions::ParserException("Too few bits.");
-                        }
-
-                        auto fileBits = totalBits - segmentBits;
-                        auto offsetBits = segmentBits;
-
-                        std::vector<char> location(locationSize);
-
-                        auto offsetSize = (offsetBits + 7U) / 8U;
-                        auto fileSize = locationSize - offsetSize;
-
-                        if (offset_ >= (size_t)std::pow(2, offsetBits) || file_ >= (size_t)std::pow(2, fileBits))
-                        {
-                            throw Exceptions::ParserException("Too few bits.");
-                        }
-
-                        auto extraBits = 0U;
-
-                        for (auto i = 0U; i < (fileBits - fileSize * 8U); ++i)
-                        {
-                            extraBits = extraBits | (file_ & (size_t)std::pow(2U, i));
-                        }
-
-                        extraBits <<= offsetBits;
-
-                        auto file = file_ >> (fileBits - fileSize * 8U);
-                        auto fileBytes = write<IO::EndianType::Big>(file);
-                        std::copy(fileBytes.rbegin(), fileBytes.rbegin() + fileSize,
-                            v.begin() + keySize);
-
-                        auto offset = offset_ | extraBits;
-                        auto offsetBytes = write<IO::EndianType::Big>(offset);
-                        std::copy(offsetBytes.begin(), offsetBytes.begin() + offsetSize,
-                            v.begin() + keySize + fileSize);
-
-                    }
-
-                    if (lengthSize > 0)
-                    {
-                        auto length = write<IO::EndianType::Little>(size_);
-                        std::copy(length.begin(), length.end() + lengthSize,
-                            v.begin() + keySize + locationSize);
-                    }
-
-                    return v;
                 }
             };
         }

@@ -23,9 +23,6 @@
 #include <memory>
 
 #include "../../zlib.hpp"
-#include "../../Common.hpp"
-
-#include "../EncodingMode.hpp"
 
 namespace Casc
 {
@@ -41,33 +38,46 @@ namespace Casc
                 const int CompressionLevel = 9;
                 const int WindowBits = 15;
 
-                ZStreamBase::char_t* out = nullptr;
-                size_t avail_out = 0;
+                std::vector<char> decoded;
 
+            public:
                 EncodingMode mode() const override
                 {
                     return EncodingMode::Zlib;
                 }
 
-                std::unique_ptr<char[]> decode(std::filebuf &buf, std::filebuf::off_type offset, size_t inSize, size_t outSize) override
+                std::vector<char> decode(size_t offset, size_t count) override
                 {
-                    if (offset == 0 || avail_out - offset < outSize)
+                    auto in = source->get(1, chunk.size - 1);
+
+                    if (decoded.size() == 0)
                     {
-                        auto in = std::make_unique<ZStreamBase::char_t[]>(inSize);
-                        if (buf.sgetn(reinterpret_cast<char*>(in.get()), inSize) == inSize)
-                        {
-                            ZInflateStream(in.get(), inSize).readAll(&out, avail_out);
-                        }
-                        else
-                        {
-                            return nullptr;
-                        }
+                        ZStreamBase::char_t* out = nullptr;
+                        size_t avail_out = 0;
+
+                        ZInflateStream(reinterpret_cast<unsigned char*>(
+                            in.data()), in.size()).readAll(&out, avail_out);
+
+                        decoded.resize(avail_out);
+                        std::memcpy(decoded.data(), out, avail_out);
+
+                        delete out;
                     }
 
-                    ZStreamBase::char_t *resizedOut = new ZStreamBase::char_t[outSize];
-                    std::memcpy(resizedOut, out + offset, outSize);
+                    if (offset >= decoded.size())
+                    {
+                        throw Exceptions::IOException("Invalid offset.");
+                    }
 
-                    return std::unique_ptr<char[]>(reinterpret_cast<char*>(resizedOut));
+                    if ((decoded.size() - offset) < count)
+                    {
+                        //throw Exceptions::IOException("Count exceeds array bounds.");
+                    }
+
+                    auto begin = decoded.begin() + offset;
+                    auto end = size_t(decoded.end() - begin) < count ? decoded.end() : begin + count;
+
+                    return { begin, end };
                 }
 
                 std::vector<char> encode(std::vector<char> input) const override
@@ -87,11 +97,17 @@ namespace Casc
                     return std::move(v);
                 }
 
-            public:
-                virtual ~ZlibHandler() override
+                size_t logicalSize() override
                 {
-                    delete[] out;
+                    return chunk.end - chunk.begin;
                 }
+
+                void reset() override
+                {
+                    decoded.clear();
+                }
+
+                using Handler::Handler;
             };
         }
     }

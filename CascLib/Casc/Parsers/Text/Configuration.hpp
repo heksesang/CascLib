@@ -34,8 +34,6 @@ namespace Casc
     {
         namespace Text
         {
-            using namespace Casc::Functions;
-
             /**
              * Parser for CASC configuration files.
              */
@@ -56,6 +54,17 @@ namespace Casc
 
                 // The parsed values.
                 std::map<std::string, std::vector<std::string>> values_;
+
+                /**
+                 * Trims the leading and trailing whitespace of a string.
+                 */
+                std::string trim(const std::string s)
+                {
+                    int(*pred)(int c) = std::isspace;
+                    auto wsfront = std::find_if_not(s.begin(), s.end(), pred);
+                    auto wsback = std::find_if_not(s.rbegin(), s.rend(), pred).base();
+                    return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
+                }
 
                 /**
                 * Clears old values and parses a configuration file.

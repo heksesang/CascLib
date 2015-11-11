@@ -75,9 +75,6 @@ namespace Casc
                  */
                 std::vector<Reference> parse(std::ifstream& fs)
                 {
-                    using namespace Functions::Endian;
-                    using namespace Functions::Hash;
-
                     uint32_t size;
                     uint32_t hash;
 
@@ -85,7 +82,7 @@ namespace Casc
                     fs >> le >> hash;
 
                     uint32_t headerHash{ 0 };
-                    if ((hash != (headerHash = lookup3(fs, size, 0))))
+                    if ((hash != (headerHash = Crypto::lookup3(fs, size, 0))))
                     {
                         throw Exceptions::InvalidHashException(hash, headerHash, "");
                     }
@@ -141,7 +138,7 @@ namespace Casc
                             lengthFieldSize,
                             segmentBits);
 
-                        dataHash = lookup3(begin, end, dataHash);
+                        dataHash = Crypto::lookup3(begin, end, dataHash);
                     }
 
                     if (hash != dataHash.first)
@@ -167,99 +164,9 @@ namespace Casc
                         auto files = parse(*allocator->index<true, false>(i, versions.at(i)));
                         for (auto it = files.begin(); it != files.end(); ++it)
                         {
-                            files_.insert({ Functions::Hash::lookup3(it->key(), 0), *it });
+                            files_.insert({ Crypto::lookup3(it->key(), 0), *it });
                         }
                     }
-                }
-
-                /**
-                 * Write the file list to an .idx file.
-                 */
-                void write(std::ofstream &stream, uint32_t bucket)
-                {
-                    using namespace Functions;
-                    using namespace Functions::Hash;
-
-                    std::vector<char> v(24);
-
-                    std::vector<Reference> files;
-
-                    for (auto &file : this->files_)
-                    {
-                        if (findBucket(file.second.key().begin(), file.second.key().begin() + 9U) == bucket)
-                        {
-                            files.push_back(file.second);
-                        }
-                    }
-
-                    auto version = Endian::write<IO::EndianType::Little, uint16_t>(7U);
-                    auto file = Endian::write<IO::EndianType::Little, uint16_t>(bucket);
-                    auto lengthSize = Endian::write<IO::EndianType::Little, uint8_t>(4U);
-                    auto locationSize = Endian::write<IO::EndianType::Little, uint8_t>(5U);
-                    auto keySize = Endian::write<IO::EndianType::Little, uint8_t>(9U);
-                    auto segmentBits = Endian::write<IO::EndianType::Little, uint8_t>(30U);
-                    auto start = Endian::write<IO::EndianType::Big, uint32_t>(0U);
-                    auto end = Endian::write<IO::EndianType::Big, uint32_t>(0x40000000);
-
-                    auto it = v.begin();
-                    
-                    it = std::copy(version.begin(), version.end(), it);
-                    it = std::copy(file.begin(), file.end(), it);
-                    it = std::copy(lengthSize.begin(), lengthSize.end(), it);
-                    it = std::copy(locationSize.begin(), locationSize.end(), it);
-                    it = std::copy(keySize.begin(), keySize.end(), it);
-                    it = std::copy(segmentBits.begin(), segmentBits.end(), it);
-                    it = std::copy(start.begin(), start.end(), it);
-                    it = std::copy(end.begin(), end.end(), it);
-
-                    auto headerSize = Endian::write<IO::EndianType::Little, uint32_t>(16U);
-                    auto headerHash = Endian::write<IO::EndianType::Little, uint32_t>(lookup3(v.begin(), v.begin() + 16U, 0));
-
-                    stream.write(headerSize.data(), headerSize.size());
-                    stream.write(headerHash.data(), headerHash.size());
-                    stream.write(v.data(), v.size());
-
-                    auto dataSize = Endian::write<IO::EndianType::Little, uint32_t >(files.size() * 18U);
-                    stream.write(dataSize.data(), dataSize.size());
-
-                    std::pair<uint32_t, uint32_t> hash{ 0, 0 };
-                    auto hashPos = stream.tellp();
-                    stream.seekp(4, std::ios_base::cur);
-
-                    std::sort(files.begin(), files.end(), [](
-                        Reference &a,
-                        Reference &b)
-                    {
-                        for (auto i = 0U; i < a.key().size(); ++i)
-                        {
-                            if (*reinterpret_cast<const unsigned char*>(&a.key()[i]) !=
-                                *reinterpret_cast<const unsigned char*>(&b.key()[i]))
-                            {
-                                return *reinterpret_cast<const unsigned char*>(&b.key()[i]) >
-                                    *reinterpret_cast<const unsigned char*>(&a.key()[i]);
-                            }
-                        }
-
-                        return b.key() > a.key();
-                    });
-
-                    for (auto &file : files)
-                    {
-                        auto bytes = file.serialize(9, 5, 4, 30);
-                        hash = lookup3(bytes, hash);
-
-                        stream.write(bytes.data(), bytes.size());
-                    }
-
-                    auto pos = stream.tellp();
-                    pos = pos + (0xE000 - pos % 0xD000 - 1);
-
-                    auto dataHash = Endian::write<IO::EndianType::Little, uint32_t>(hash.first);
-                    stream.seekp(hashPos);
-                    stream.write(dataHash.data(), dataHash.size());
-
-                    stream.seekp(pos); // Seek to end of reserved space.
-                    stream.write("\0", 1);
                 }
 
             public:
@@ -304,7 +211,7 @@ namespace Casc
                 template <typename KeyIt>
                 Reference find(KeyIt first, KeyIt last) const
                 {
-                    auto result = files_.find(Functions::Hash::lookup3(first, last, 0));
+                    auto result = files_.find(Crypto::lookup3(first, last, 0));
 
                     if (result == files_.end())
                     {
@@ -321,34 +228,6 @@ namespace Casc
                 Reference find(Container container) const
                 {
                     return find(std::begin(container), std::end(container));
-                }
-
-                /**
-                 * Inserts a file record.
-                 */
-                void insert(const Hex key, const Reference loc)
-                {
-                    files_[Functions::Hash::lookup3(key, 0)] = loc;
-                }
-
-                /**
-                 * Writes the file list back to the .idx files.
-                 */
-                void write()
-                {
-                    for (auto it = versions_.begin(); it != versions_.end(); ++it)
-                    {
-                        std::stringstream ss;
-
-                        ss << std::setw(2) << std::setfill('0') << std::hex << it->first;
-                        ss << std::setw(8) << std::setfill('0') << std::hex << it->second;
-                        ss << ".idx";
-
-                        std::ofstream out;
-                        out.open(ss.str(), std::ios_base::out | std::ios_base::binary);
-                        write(out, it->first);
-                        out.close();
-                    }
                 }
 
                 /**

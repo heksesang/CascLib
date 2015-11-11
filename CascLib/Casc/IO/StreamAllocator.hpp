@@ -116,6 +116,18 @@ namespace Casc
             }
 
             /**
+            * Shadow Memory
+            */
+            template <bool Readable, bool Writeable, typename TStream =
+                typename std::conditional<Readable && Writeable, std::fstream,
+                typename std::conditional<Writeable, std::ofstream, std::ifstream >::type>::type >
+                std::shared_ptr<TStream> shmem()
+            {
+                return allocate<Writeable, TStream>(
+                    createPath(DataFolders::Data, "shmem"));
+            }
+
+            /**
             * Config
             */
             template <bool Readable, bool Writeable, typename TStream =
@@ -161,23 +173,14 @@ namespace Casc
                     createPath(DataFolders::Data, ss.str()));
             }
 
-            template <bool Writeable>
-            typename std::enable_if<!Writeable, std::shared_ptr<Stream<Writeable>>>::type
-                data(const Parsers::Binary::Reference &ref, std::string parameters = "") const
+            std::shared_ptr<Stream> data(const Parsers::Binary::Reference &ref) const
             {
                 std::stringstream ss;
 
                 ss << "data." << std::setw(3) << std::setfill('0') << ref.file();
 
-                return std::make_shared<Stream<Writeable>>(
-                    createPath(DataFolders::Data, ss.str()), ref.offset(), parameters);
-            }
-
-            template <bool Writeable>
-            typename std::enable_if<Writeable, std::shared_ptr<Stream<Writeable>>>::type
-                data(typename Stream<Writeable>::insert_func inserter) const
-            {
-                return std::make_shared<Stream<Writeable>>(basePath, inserter);
+                return std::make_shared<Stream>(
+                    createPath(DataFolders::Data, ss.str()), ref.offset());
             }
         };
     }

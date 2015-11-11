@@ -28,16 +28,16 @@ namespace Casc
 {
     class Hex
     {
-        std::vector<uint8_t> bytes;
-        std::string str;
-
     public:
         typedef uint8_t value_type;
 
-        Hex()
-        {
+    private:
+        std::vector<value_type> bytes;
+        std::string str;
 
-        }
+    public:
+
+        Hex() { }
 
         template <typename Container>
         Hex(const Container &container)
@@ -63,7 +63,7 @@ namespace Casc
             
             for (auto it = first; it != last; ++it)
             {
-                ss << std::setw(2) << (int)uint8_t(*it);
+                ss << std::setw(2) << (int)value_type(*it);
             }
 
             this->str = ss.str();

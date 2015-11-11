@@ -25,122 +25,42 @@
 #include <type_traits>
 #include <typeinfo>
 
-#include "../Common.hpp"
-
-#include "../Parsers/Binary/Reference.hpp"
-#include "ReadBuffer.hpp"
-#include "WriteBuffer.hpp"
+#include "Buffer.hpp"
 
 namespace Casc
 {
     namespace IO
     {
         /**
-         * A stream that uses the Buffer as the underlying buffer.
+         * 
          */
-        template <bool Writeable>
-        class Stream : public std::conditional<Writeable, std::ostream, std::istream>::type
+        class Stream : public std::istream
         {
-        public:
-            typedef std::function<void(Parsers::Binary::Reference, Hex, size_t)> insert_func;
-
         private:
-            // Typedefs
-            typedef WriteBuffer write_buf_type;
-            typedef ReadBuffer read_buf_type;
-            typedef std::filebuf base_buf_type;
-
-            typedef typename std::conditional<Writeable,
-                std::ostream, std::istream>::type base_type;
-            typedef typename std::conditional<Writeable,
-                write_buf_type, read_buf_type>::type buf_type;
-
             // The underlying buffer.
-            std::unique_ptr<base_buf_type> buffer;
-
-            // The base path of the CASC archive.
-            std::string basePath;
-
-            // The index table.
-            insert_func inserter;
-
-            /**
-             * Opens a file from the currently opened CASC file.
-             */
-            void open(size_t offset)
-            {
-                if (Writeable)
-                {
-                    auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
-                    if (buf->pubseekoff(offset, std::ios_base::beg, std::ios_base::out) != (std::streampos)offset)
-                    {
-                        throw Exceptions::IOException("Failed to open CASC archive for writing at given position.");
-                    }
-                }
-                else
-                {
-                    auto buf = reinterpret_cast<read_buf_type*>(buffer.get());
-                    buf->open(offset);
-                }
-            }
-
-            /**
-             * Opens a file in a CASC file.
-             */
-            void open(const char *filename, size_t offset, std::string parameters)
-            {
-                if (Writeable)
-                {
-                    auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
-                    buf->open(filename, std::ios_base::out | std::ios_base::in | std::ios_base::binary);
-                    if (buf->pubseekoff(offset, std::ios_base::beg, std::ios_base::out) != (std::streampos)offset)
-                    {
-                        throw Exceptions::IOException("Failed to open CASC archive for writing at given position.");
-                    }
-                }
-                else
-                {
-                    auto buf = reinterpret_cast<read_buf_type*>(buffer.get());
-                    buf->open(filename, offset, parameters);
-                }
-            }
-
-            /**
-             * Opens a file in a CASC file.
-             */
-            void open(const std::string filename, size_t offset, std::string parameters)
-            {
-                open(filename.c_str(), offset, parameters);
-            }
+            std::unique_ptr<Buffer> buf;
 
         public:
             /**
              * Constructor.
              */
-            template <bool ReadConstructible = !Writeable,
-                typename std::enable_if<ReadConstructible>::type* = nullptr>
-            Stream(const std::string filename, size_t offset, std::string parameters) :
-                buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
-                base_type(new buf_type())
-            {
-                open(filename, offset, parameters);
-            }
-
-            template <bool WriteConstructible = Writeable,
-                typename std::enable_if<WriteConstructible>::type* = nullptr>
-            Stream(const std::string basePath,
-                   insert_func inserter) :
-                buffer(reinterpret_cast<buf_type*>(this->rdbuf())),
-                basePath(basePath),
-                base_type(new buf_type(basePath)),
-                inserter(inserter)
-            {
-            }
-
+            Stream() :
+                buf(reinterpret_cast<Buffer*>(this->rdbuf())),
+                std::istream(new Buffer()) { }
 
             /**
-            * Move constructor.
-            */
+             * Constructor.
+             */
+            Stream(const std::string filename, size_t offset) :
+                buf(reinterpret_cast<Buffer*>(this->rdbuf())),
+                std::istream(new Buffer())
+            {
+                open(filename, offset);
+            }
+
+            /**
+             * Move constructor.
+             */
             Stream(Stream &&) = default;
 
             /**
@@ -154,44 +74,35 @@ namespace Casc
             Stream &operator= (Stream &&) = default;
 
             /**
-             * Closes the currently opened CASC file.
+             * Opens a file.
+             */
+            void open(const char *filename, size_t offset)
+            {
+                buf->open(filename, offset);
+            }
+
+            /**
+             * Opens a file.
+             */
+            void open(const std::string filename, size_t offset)
+            {
+                open(filename.c_str(), offset);
+            }
+
+            /**
+             * Closes the file.
              */
             void close()
             {
-                if (Writeable)
-                {
-                    Parsers::Binary::Reference ref;
-                    std::string encodingProfile;
-                    Hex hash;
-                    size_t size;
-
-                    auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
-                    buf->close(ref, encodingProfile, hash, size);
-
-                    if (inserter)
-                        inserter(ref, hash, size);
-                }
-                this->rdbuf((buffer = std::make_unique<buf_type>(basePath)).get());
+                this->rdbuf((buf = std::make_unique<Buffer>()).get());
             }
 
             /**
-             * Checks if the buffer is open.
+             * Checks if the stream is open.
              */
             bool is_open() const
             {
-                return buffer->is_open();
-            }
-
-            /**
-             * Sets the encoding mode for writeable streams.
-             */
-            void setMode(IO::EncodingMode mode)
-            {
-                if (Writeable)
-                {
-                    auto buf = reinterpret_cast<write_buf_type*>(buffer.get());
-                    buf->setMode(mode);
-                }
+                return buf->is_open();
             }
         };
     }
