@@ -68,6 +68,15 @@ namespace Casc
 
                 }
 
+                NoneHandler(std::shared_ptr<DataSource> source) :
+                    Handler({
+                        0, source->upper_bound - source->lower_bound - 1,
+                        0, source->upper_bound - source->lower_bound },
+                    source)
+                {
+
+                }
+
                 using Handler::Handler;
             };
         }

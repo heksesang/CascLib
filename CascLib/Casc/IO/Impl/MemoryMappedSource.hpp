@@ -38,8 +38,9 @@ namespace Casc
                 /**
                  * Constructor.
                  */
-                MemoryMappedSource(std::vector<char> bytes)
-                    : DataSource(DataSourceType::MemoryMapped), buf(bytes) { }
+                MemoryMappedSource(std::vector<char> bytes) :
+                    DataSource(DataSourceType::MemoryMapped, { 0, bytes.size() }), buf(bytes)
+                { }
 
                 /**
                  * Gets a chunk of data.

@@ -125,6 +125,20 @@ namespace Casc
                         handlers.push_back(createHandler(mode, chunk, source));
                     }
                 }
+                else
+                {
+                    auto offset = fbuf->tellg();
+
+                    if (offset < 0)
+                    {
+                        throw Exceptions::IOException("Negative stream offset is invalid.");
+                    }
+
+                    EncodingMode mode = (EncodingMode)fbuf->get();
+                    auto source = std::make_shared<Impl::StreamSource>(fbuf, std::make_pair(size_t(offset), size_t(offset) + size));
+
+                    handlers.push_back(createHandler(mode, source));
+                }
 
                 for (auto &handler : handlers)
                 {
@@ -432,7 +446,9 @@ namespace Casc
                     throw Exceptions::InvalidSignatureException(signature, 0x45544C42);
                 }
 
-                return std::max(Endian::read<EndianType::Big, uint32_t>(begin + 4) - 8, 0U);
+                auto size = Endian::read<EndianType::Big, uint32_t>(begin + 4);
+
+                return size > 0 ? size - 8 : size;
             }
 
             /**
@@ -487,6 +503,27 @@ namespace Casc
 
                 case EncodingMode::Crypt:
                     return std::make_shared<Impl::CryptHandler>(chunk, source);
+
+                default:
+                    throw Exceptions::InvalidEncodingModeException(mode);
+                }
+            }
+
+            /**
+            * Create the handler for an encoding mode.
+            */
+            static std::shared_ptr<Handler> createHandler(EncodingMode mode, std::shared_ptr<DataSource> source)
+            {
+                switch (mode)
+                {
+                case EncodingMode::None:
+                    return std::make_shared<Impl::NoneHandler>(source);
+
+                case EncodingMode::Zlib:
+                    return std::make_shared<Impl::ZlibHandler>(source);
+
+                case EncodingMode::Crypt:
+                    return std::make_shared<Impl::CryptHandler>(source);
 
                 default:
                     throw Exceptions::InvalidEncodingModeException(mode);

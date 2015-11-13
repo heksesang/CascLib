@@ -42,7 +42,7 @@ namespace Casc
                  * Constructor.
                  */
                 StreamSource(std::shared_ptr<std::istream> stream, std::pair<size_t, size_t> bounds) :
-                    DataSource(DataSourceType::Stream), stream(stream),
+                    DataSource(DataSourceType::Stream, bounds), stream(stream),
                     begin(bounds.first), end(bounds.second) { }
 
                 /**

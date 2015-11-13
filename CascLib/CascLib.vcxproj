@@ -268,6 +268,7 @@
     <ClInclude Include="Casc\IO\EncodingMode.hpp" />
     <ClInclude Include="Casc\Parsers\Binary\ShadowMemory.hpp" />
     <ClInclude Include="Casc\IO\Endian.hpp" />
+    <ClInclude Include="Casc\ProgramCodes.hpp" />
     <ClInclude Include="Casc\zlib.hpp" />
   </ItemGroup>
   <ItemGroup>

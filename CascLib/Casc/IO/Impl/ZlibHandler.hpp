@@ -40,15 +40,17 @@ namespace Casc
 
                 std::vector<char> decoded;
 
-            public:
-                EncodingMode mode() const override
+                Chunk constructChunk(std::shared_ptr<DataSource> source)
                 {
-                    return EncodingMode::Zlib;
+                    auto decoded = decode(source);
+                    return{ 0, decoded.size(), 0, source->upper_bound - source->lower_bound };
                 }
 
-                std::vector<char> decode(size_t offset, size_t count) override
+                std::vector<char> decode(std::shared_ptr<DataSource> source)
                 {
-                    auto in = source->get(1, chunk.size - 1);
+                    auto in = source->get(1, SIZE_MAX);
+
+                    std::vector<char> decoded;
 
                     if (decoded.size() == 0)
                     {
@@ -64,14 +66,25 @@ namespace Casc
                         delete out;
                     }
 
+                    return decoded;
+                }
+
+            public:
+                EncodingMode mode() const override
+                {
+                    return EncodingMode::Zlib;
+                }
+
+                std::vector<char> decode(size_t offset, size_t count) override
+                {
+                    if (decoded.size() == 0)
+                    {
+                        decoded = decode(source);
+                    }
+
                     if (offset >= decoded.size())
                     {
                         throw Exceptions::IOException("Invalid offset.");
-                    }
-
-                    if ((decoded.size() - offset) < count)
-                    {
-                        //throw Exceptions::IOException("Count exceeds array bounds.");
                     }
 
                     auto begin = decoded.begin() + offset;
@@ -99,12 +112,28 @@ namespace Casc
 
                 size_t logicalSize() override
                 {
+                    if (chunk.end == chunk.begin)
+                    {
+                        if (decoded.size() == 0)
+                        {
+                            return decode(0, source->upper_bound - source->lower_bound).size();
+                        }
+
+                        return decoded.size();
+                    }
+
                     return chunk.end - chunk.begin;
                 }
 
                 void reset() override
                 {
                     decoded.clear();
+                }
+
+                ZlibHandler(std::shared_ptr<DataSource> source) :
+                    Handler(constructChunk(source), source)
+                {
+
                 }
 
                 using Handler::Handler;

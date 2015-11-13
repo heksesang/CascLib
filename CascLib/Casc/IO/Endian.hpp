@@ -95,6 +95,16 @@ namespace Casc
                 return read<Type, T>(first, last);
             }
 
+            template <IO::EndianType Type, typename T, bool Increment, typename InputIt>
+            inline T read(InputIt &first)
+            {
+                auto last = first + sizeof(T);
+                auto val = read<Type, T>(first, last);
+                if (Increment)
+                    first += sizeof(T);
+                return val;
+            }
+
             template <IO::EndianType Type, typename T>
             inline std::array<char, sizeof(T)> write(T value)
             {

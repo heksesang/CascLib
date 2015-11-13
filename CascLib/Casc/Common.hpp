@@ -56,6 +56,7 @@ namespace Casc
 }
 
 // Enums
+#include "ProgramCodes.hpp"
 #include "IO/DataFolders.hpp"
 #include "IO/EncodingMode.hpp"
 #include "IO/EndianType.hpp"

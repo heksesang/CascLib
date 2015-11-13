@@ -61,16 +61,22 @@ namespace Casc
         typedef std::pair<Parsers::Text::EncodingBlock, std::vector<char>> descriptor_type;
 
     public:
-        std::shared_ptr<IO::Stream> openFileByKey(Hex key, std::string params) const
+        std::shared_ptr<IO::Stream> openFileByKey(Hex key) const
         {
             return allocator->data(findFileLocation(key));
         }
 
-        std::shared_ptr<IO::Stream> openFileByHash(std::string hash) const
+        std::shared_ptr<IO::Stream> openFileByHash(Hex hash) const
         {
             auto key = encoding->findFileInfo(hash).keys.at(0);
             auto enc = encoding->findEncodedFileInfo(key);
-            return openFileByKey(enc.key, enc.params);
+            return openFileByKey(enc.key);
+        }
+
+        std::shared_ptr<IO::Stream> openFileByName(std::string path) const
+        {
+            auto hash = root->find(path);
+            return openFileByHash(hash);
         }
 
     private:
@@ -127,8 +133,9 @@ namespace Casc
             shadowMemory(allocator->shmem<true, false>()),
             index(new Parsers::Binary::Index(shadowMemory.versions(), allocator)),
             encoding(new Parsers::Binary::Encoding(
-                index->find(Hex(buildConfig["encoding"].back().substr(0, 18U))), allocator))//,
-            //root(new Filesystem::Root(buildConfig["root"].front(), encoding, index, allocator))
+                index->find(Hex(buildConfig["encoding"].back().substr(0, 18U))), allocator)),
+            root(new Filesystem::Root(getProgramCode(buildConfig["build-uid"].front()),
+                buildConfig["root"].front(), encoding, index, allocator))
         {
         }
 

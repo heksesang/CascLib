@@ -367,6 +367,7 @@ namespace Casc
                     uint32_t stringTableSize;
                     read<IO::EndianType::Big>(stream, stringTableSize);
 
+                    int ij = 0;
                     while (stream->tellg() < (HeaderSize + stringTableSize - 1))
                     {
                         std::string profile;
@@ -378,6 +379,7 @@ namespace Casc
                         }
 
                         profiles.emplace_back(profile);
+                        ij++;
                     }
 
                     // Table A

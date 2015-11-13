@@ -45,8 +45,9 @@ namespace Casc
             /**
              * Constructor.
              */
-            DataSource(DataSourceType type)
-                : type(type) { }
+            DataSource(DataSourceType type, std::pair<size_t, size_t> bounds)
+                : type(type), lower_bound(bounds.first), upper_bound(bounds.second)
+            { }
 
             /**
              * Destructor.
@@ -62,6 +63,16 @@ namespace Casc
              * The type of data source.
              */
             const DataSourceType type;
+
+            /**
+             * The lower accessible offset.
+             */
+            const size_t lower_bound;
+
+            /**
+             * The upper accessible offset.
+             */
+            const size_t upper_bound;
         };
     }
 }

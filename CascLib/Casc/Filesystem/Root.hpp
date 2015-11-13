@@ -35,26 +35,25 @@ namespace Casc
             std::unique_ptr<Handler> handler = nullptr;
 
         public:
-            Root(Hex hash, std::shared_ptr<Parsers::Binary::Encoding> encoding = nullptr,
+            Root(ProgramCode game, Hex hash, std::shared_ptr<Parsers::Binary::Encoding> encoding = nullptr,
                  std::shared_ptr<Parsers::Binary::Index> index = nullptr,
                  std::shared_ptr<IO::StreamAllocator> allocator = nullptr)
             {
                 auto fi = encoding->findFileInfo(hash);
                 auto enc = encoding->findEncodedFileInfo(fi.keys[0]);
-                auto ref = index->find(fi.keys[0]);
+                auto ref = index->find(fi.keys[0].begin(), fi.keys[0].begin() + 9);
                 
                 auto stream = allocator->data(ref);
 
                 std::vector<char> buf(fi.size);
                 stream->read(buf.data(), buf.size());
 
-                auto signature = IO::Endian::read<
-                    IO::EndianType::Little, uint32_t>(buf.begin());
-
-                switch (signature)
+                switch (game)
                 {
-                case WoWHandler::Signature():
-                    handler = std::unique_ptr<Handler>(new WoWHandler(buf));
+                case ProgramCode::wow:
+                case ProgramCode::wowt:
+                case ProgramCode::wow_beta:
+                    handler = std::make_unique<Impl::WoWHandler>(buf);
                     break;
 
                 default:

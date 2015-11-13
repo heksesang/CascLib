@@ -225,8 +225,8 @@ namespace CascLibTest
         TEST_METHOD(LoadContainer)
         {
             auto container = std::make_unique<Container>(
-                R"(I:\Overwatch)",
-                R"(data\casc)");
+                R"(I:\World of Warcraft)",
+                R"(Data)");
         }
 
         TEST_METHOD(GetFileByKey)
@@ -242,7 +242,7 @@ namespace CascLibTest
             Parsers::Text::Configuration configuration(
                 alloc.config<true, false>(buildInfo.build(0).at("Build Key")));
 
-            auto file = container->openFileByKey(configuration["encoding"].back(), "");
+            auto file = container->openFileByKey(configuration["encoding"].back());
 
             file->seekg(0, std::ios_base::end);
             auto size = file->tellg();
@@ -302,6 +302,40 @@ namespace CascLibTest
 
             delete[] arr;
 		}
+
+        TEST_METHOD(GetFileByName)
+        {
+            auto container = std::make_unique<Container>(
+                R"(I:\World of Warcraft)",
+                R"(Data)");
+
+            auto file = container->openFileByName("SPELLS\\BONE_CYCLONE_STATE.M2");
+
+            file->seekg(0, std::ios_base::end);
+            auto size = file->tellg();
+
+            std::fstream fs;
+            char* arr;
+
+            char magic[4];
+            int count;
+
+            file->seekg(0, std::ios_base::beg);
+            file->read(magic, 4);
+            file->read((char*)&count, 4);
+
+            file->seekg(0, std::ios_base::beg);
+            arr = new char[(size_t)size];
+
+            file->read(arr, size);
+
+            fs.open("BONE_CYCLONE_STATE.M2", std::ios_base::out | std::ios_base::binary);
+
+            fs.write(arr, size);
+            fs.close();
+
+            delete[] arr;
+        }
 
 	};
 }

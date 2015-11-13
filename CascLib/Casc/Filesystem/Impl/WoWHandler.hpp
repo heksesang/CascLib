@@ -27,49 +27,78 @@
 #include <fstream>
 
 #include "../../Common.hpp"
+#include "../../Hex.hpp"
 #include "../Handler.hpp"
+
+#include "../../IO/Endian.hpp"
+#include "../../Crypto/Lookup3.hpp"
 
 namespace Casc
 {
     namespace Filesystem
     {
-        /**
-        * Maps filename to file content MD5 hash.
-        *
-        * TODO: Finish implementation, need different handling per game.
-        */
-        class WoWHandler : public Handler
+        namespace Impl
         {
-        public:
             /**
-            * Find the file content hash for the given filename.
-            *
-            * @param filename  the filename.
-            * @return          the hash in hex format.
-            */
-            std::string findHash(std::string filename) const override
+             * Maps filename to file content MD5 hash. Uses lookup3.
+             */
+            class WoWHandler : public Handler
             {
-                return "";
+                std::map<std::pair<uint32_t, uint32_t>, uint32_t> integers;
+                std::map<std::pair<uint32_t, uint32_t>, Hex> checksums;
+
+            public:
+                /**
+                 * Find the file content hash for the given filename.
+                 */
+                Hex findHash(std::string path) const override
+                {
+                    return checksums.at(Crypto::lookup3(path));
+                };
+
+            public:
+                /**
+                 * Default constructor.
+                 */
+                WoWHandler(std::vector<char> &data)
+                {
+                    for (auto it = data.begin(), end = data.end(); it < end;)
+                    {
+                        auto count = IO::Endian::read<IO::EndianType::Little, uint32_t, true>(it);
+                        auto flags = IO::Endian::read<IO::EndianType::Little, uint32_t, true>(it);
+                        auto locale = IO::Endian::read<IO::EndianType::Little, uint32_t, true>(it);
+
+                        std::vector<std::pair<uint32_t, uint32_t>> hashes;
+                        std::vector<uint32_t> integers;
+                        std::vector<Hex> checksums;
+
+                        std::map<uint32_t, uint32_t> counts;
+
+                        for (auto i = 0U; i < count; ++i)
+                        {
+                            integers.push_back(IO::Endian::read<IO::EndianType::Little, uint32_t, true>(it));
+                        }
+
+                        for (auto i = 0U; i < count; ++i)
+                        {
+                            checksums.emplace_back(it, it + 16);
+                            it += 16;
+
+                            hashes.push_back(std::make_pair(
+                                IO::Endian::read<IO::EndianType::Little, uint32_t, true>(it),
+                                IO::Endian::read<IO::EndianType::Little, uint32_t, true>(it)));
+                        }
+
+                        for (auto i = 0U; i < count; i++)
+                        {
+                            this->integers[hashes[i]] = integers[i];
+                            this->checksums[hashes[i]] = checksums[i];
+                        }
+                    }
+                }
+
+                using Handler::Handler;
             };
-
-        public:
-            /**
-            * Default constructor.
-            */
-            WoWHandler(std::vector<char> &data)
-            {
-
-            }
-
-            /**
-            * The file magic of the root file.
-            */
-            static constexpr uint32_t Signature()
-            {
-                return 0x1967;
-            }
-
-            using Handler::Handler;
-        };
+        }
     }
 }

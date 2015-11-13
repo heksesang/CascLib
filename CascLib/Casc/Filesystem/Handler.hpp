@@ -27,6 +27,7 @@
 #include <fstream>
 
 #include "../Common.hpp"
+#include "../Hex.hpp"
 
 namespace Casc
 {
@@ -42,21 +43,12 @@ namespace Casc
         public:
             /**
              * Find the file content hash for the given filename.
-             *
-             * @param filename  the filename.
-             * @return          the hash in hex format.
              */
-            virtual std::string findHash(std::string filename) const = 0;
+            virtual Hex findHash(std::string path) const = 0;
 
         protected:
             /**
              * Reads data from a stream and puts it in a struct.
-             *
-             * @param T     the type of the struct.
-             * @param input the input stream.
-             * @param value the output object to write the data to.
-             * @param big   true if big endian.
-             * @return      the data.
              */
             template <IO::EndianType Endian, typename T>
             const T &read(std::ifstream &stream, T &value) const

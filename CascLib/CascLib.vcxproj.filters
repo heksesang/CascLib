@@ -165,6 +165,9 @@
     <ClInclude Include="Casc\Hex.hpp">
       <Filter>Header Files\Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="Casc\ProgramCodes.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\The CASC Filesystem_v1-2.txt" />
