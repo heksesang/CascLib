@@ -1,7 +1,7 @@
 ## CascLib
 
 CascLib is C++ library that allows you to access files from a CASC library from any Blizzard game.
-It aims for a modern C++14 design, being mostly header-only, and leveraging standard C++ features like streams.
+It aims for a modern C++14 design, being header-only, and leveraging standard C++ features like streams.
 
 ### CASC
 
@@ -10,6 +10,7 @@ It is a replacement for the older MPQ format used by Blizzard in previous game t
 
 ### Features
 
+* Header-only library.
 * Look up files based on either file key, file content hash, or filename.
 * Read files from any CASC archive.
 * Write files to any CASC archive.
@@ -17,13 +18,16 @@ It is a replacement for the older MPQ format used by Blizzard in previous game t
 
 ### Implemented features
 
-* Look up files based on either file key or file content hash.
-* Reading files.
+* Look up files based on either file key or file content hash in any CASC archive.
+* Look up files based on filename in WoW CASC archives.
+* Read files from any non-Overwatch CASC archive.
 
 ### Features currently being implemented
 
+* Look up files based on filename in Diablo III, Heroes of the Storm, Starcraft II and Overwatch.
+* Encryption support (needed for Overwatch support at the time of writing).
 * Write files.
-* Look up files based on filename.
+* Apply patches.
 
 ### Requirements
 
@@ -36,6 +40,7 @@ It is a replacement for the older MPQ format used by Blizzard in previous game t
 1. Include Casc/Common.hpp in your project.
 2. Include and link to zlib and boost filesystem (if not compiling with Visual Studio 2015).
 
+**Example**
 ``` c++
     #include "Casc/Common.hpp"
     
@@ -48,10 +53,8 @@ It is a replacement for the older MPQ format used by Blizzard in previous game t
     {
         // Init the container, specifying the path and handlers.
         Casc::Container container(
-            R"(C:\Program Files (x86)\Diablo III\)",
-            std::vector<std::shared_ptr<Casc::IO::Handler>> {
-                std::make_shared<Casc::ZlibHandler>()
-            }
+            R"(C:\Program Files (x86)\World of Warcraft)",
+            R"(Data)"
         );
         
         // Open a file by using one of the openFileByXXX methods.
