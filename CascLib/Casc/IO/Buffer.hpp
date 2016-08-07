@@ -113,7 +113,7 @@ namespace Casc
 
                     // TODO: Compare checksums
 
-                    auto chunks = parseBlockTable(blockTable.begin(), blockTable.end());
+                    auto chunks = parseBlockTable(blockTable.cbegin(), blockTable.cend());
 
                     for (auto &chunk : chunks)
                     {
@@ -474,7 +474,7 @@ namespace Casc
                     auto physicalSize = Endian::read<EndianType::Big, uint32_t>(it);
                     auto logicalSize = Endian::read<EndianType::Big, uint32_t>(it + 4);
                     std::array<char, 16> checksumBytes;
-                    std::copy(it + 8, it + 24, checksumBytes.data());
+                    std::copy(it + 8, it + 24, checksumBytes.begin());
 
                     chunks.push_back({
                         chunks.size() > 0 ? chunks.rbegin()->end : 0,

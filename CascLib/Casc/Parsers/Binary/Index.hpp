@@ -23,7 +23,6 @@
 #include <functional>
 #include <fstream>
 #include <map>
-#include <omp.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -67,7 +66,7 @@ namespace Casc
                         xorred = xorred ^ *it;
                     }
 
-                    return xorred & 0xF ^ (xorred >> 4);
+                    return (xorred & 0xF) ^ (xorred >> 4);
                 }
 
                 /**

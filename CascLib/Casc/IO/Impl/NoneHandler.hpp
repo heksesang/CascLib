@@ -21,6 +21,7 @@
 
 #include <fstream>
 #include <memory>
+#include <cstring>
 
 #include "../../zlib.hpp"
 #include "../../md5.hpp"

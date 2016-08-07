@@ -41,7 +41,7 @@ typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mb
 #ifdef _MSC_VER
 #include <experimental/filesystem>
 #else
-#include <boost/filesystem.hpp>
+#include <experimental/filesystem>
 #endif
 
 namespace Casc
@@ -49,10 +49,10 @@ namespace Casc
 #ifdef _MSC_VER
     namespace fs = std::experimental::filesystem::v1;
 #else
-    namespace fs = boost::filesystem;
+    namespace fs = std::experimental::filesystem::v1;
 #endif
 
-    const std::string PathSeparator = conv_type().to_bytes({ fs::path::preferred_separator });
+    const std::string PathSeparator = conv_type().to_bytes(fs::path::preferred_separator);
 }
 
 // Enums

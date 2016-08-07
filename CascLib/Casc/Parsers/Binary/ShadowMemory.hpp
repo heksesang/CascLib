@@ -23,7 +23,7 @@
 #ifdef _MSC_VER
 #include <experimental/filesystem>
 #else
-#include <boost/filesystem.hpp>
+#include <experimental/filesystem>
 #endif
 #include <fstream>
 #include <iomanip>
@@ -69,7 +69,7 @@ namespace Casc
                 // The list of versions for IDX files. Contains 16 values for WoD beta.
                 std::map<uint32_t, uint32_t> versions_;
 
-                // The list of free spaces of memory in the data files. 
+                // The list of free spaces of memory in the data files.
                 std::vector<Reference> freeSpaceLength_;
                 std::vector<Reference> freeSpaceOffset_;
 

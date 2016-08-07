@@ -25,8 +25,6 @@
 #include <vector>
 #include <unordered_map>
 
-#include <omp.h>
-
 #include "../../Common.hpp"
 #include "../../Exceptions.hpp"
 
@@ -92,7 +90,7 @@ namespace Casc
                             return *it;
                         }
                     }
-                    
+
                     throw Exceptions::HashDoesNotExistException(hash.string());
                 }
 
@@ -315,7 +313,7 @@ namespace Casc
                         it += sizeof(fileSize);
 
                         auto &profile = profiles[profileIndex];
-                        
+
                         if (profileIndex >= 0)
                         {
                             files.emplace_back(EncodedFileInfo{ { checksumIt, checksumIt + hashSizeB }, fileSize, profile });
@@ -434,7 +432,7 @@ namespace Casc
                 {
                     // Get a file stream.
                      auto fs = allocator->data<true, false>(ref.file());
-                    
+
                     // Read size.
                     fs->seekg(ref.offset() + 16, std::ios_base::beg);
                     std::array<char, sizeof(uint32_t)> arr;

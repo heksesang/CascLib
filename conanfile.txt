@@ -1,0 +1,6 @@
+[requires]
+zlib/1.2.8@lasote/stable
+
+[generators]
+visual_studio
+gcc
