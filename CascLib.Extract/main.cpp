@@ -21,8 +21,8 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
-#include "../CascLib/Casc/Common.hpp"
-#include "../CascLib/Casc/Exceptions.hpp"
+#include "Casc/Common.hpp"
+#include "Casc/Exceptions.hpp"
 
 const char* usageText =
 "Usage: casc <location> <mode> <key> [<output_name>]\n\n"
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 
         try
         {
-            std::shared_ptr<Casc::IO::Stream> file;
+            std::shared_ptr<std::istream> file;
             
             if (strcmp(argv[2], "key") == 0)
             {

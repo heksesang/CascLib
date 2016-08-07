@@ -20,11 +20,7 @@
 #pragma once
 
 #include <array>
-#ifdef _MSC_VER
 #include <experimental/filesystem>
-#else
-#include <experimental/filesystem>
-#endif
 #include <fstream>
 #include <iomanip>
 #include <limits>

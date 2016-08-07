@@ -9,10 +9,10 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #include <vector>
 #include <experimental/filesystem>
 
-#include "../CascLib/Casc/IO/Handler.hpp"
-#include "../CascLib/Casc/IO/Buffer.hpp"
-#include "../CascLib/Casc/IO/Stream.hpp"
-#include "../CascLib/Casc/Common.hpp"
+#include "Casc/IO/Handler.hpp"
+#include "Casc/IO/Buffer.hpp"
+#include "Casc/IO/Stream.hpp"
+#include "Casc/Common.hpp"
 
 using namespace Casc;
  

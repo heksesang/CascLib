@@ -37,20 +37,11 @@ struct deletable_facet : Facet
 
 typedef std::wstring_convert<deletable_facet<std::codecvt<wchar_t, char, std::mbstate_t>>> conv_type;
 
-// Define boost or std <filesystem> header
-#ifdef _MSC_VER
 #include <experimental/filesystem>
-#else
-#include <experimental/filesystem>
-#endif
 
 namespace Casc
 {
-#ifdef _MSC_VER
     namespace fs = std::experimental::filesystem::v1;
-#else
-    namespace fs = std::experimental::filesystem::v1;
-#endif
 
     const std::string PathSeparator = conv_type().to_bytes(fs::path::preferred_separator);
 }

@@ -194,3 +194,13 @@ FakesAssemblies/
 
 # Visual Studio 6 workspace options file
 *.opt
+
+# Visual Studio DB files
+*.VC.opendb
+*.VC.db
+
+# Conan generated files
+conaninfo.txt
+conanbuildinfo.txt
+*.gcc
+*.props

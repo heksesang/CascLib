@@ -19,11 +19,7 @@
 
 #pragma once
 
-#ifdef _MSC_VER
 #include <experimental/filesystem>
-#else
-#include <experimental/filesystem>
-#endif
 #include <fstream>
 #include <iomanip>
 #include <locale>
@@ -61,19 +57,19 @@ namespace Casc
         typedef std::pair<Parsers::Text::EncodingBlock, std::vector<char>> descriptor_type;
 
     public:
-        std::shared_ptr<IO::Stream> openFileByKey(Hex key) const
+        std::shared_ptr<std::istream> openFileByKey(Hex key) const
         {
             return allocator->data(findFileLocation(key));
         }
 
-        std::shared_ptr<IO::Stream> openFileByHash(Hex hash) const
+        std::shared_ptr<std::istream> openFileByHash(Hex hash) const
         {
             auto fi = encoding->findFileInfo(hash);
             auto enc = encoding->findEncodedFileInfo(fi.keys.at(0));
             return openFileByKey(enc.key);
         }
 
-        std::shared_ptr<IO::Stream> openFileByName(std::string path) const
+        std::shared_ptr<std::istream> openFileByName(std::string path) const
         {
             auto hash = root->find(path);
             return openFileByHash(hash);

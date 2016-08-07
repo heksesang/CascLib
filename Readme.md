@@ -1,7 +1,7 @@
 ## CascLib
 
-CascLib is C++ library that allows you to access files from a CASC library from any Blizzard game.
-It aims for a modern C++14 design, being header-only, and leveraging standard C++ features like streams.
+CascLib is C++ library that allows you to access files from CASC archives used in recent Blizzard games.
+The library has been designed with modern C++ in mind. Leveraging C++17 and standard features as much as possible, the goal to easily integrate with other libraries.
 
 ### CASC
 
@@ -10,7 +10,7 @@ It is a replacement for the older MPQ format used by Blizzard in previous game t
 
 ### Features
 
-* Header-only library.
+* Mostly header-only library.
 * Look up files based on either file key, file content hash, or filename.
 * Read files from any CASC archive.
 * Write files to any CASC archive.
@@ -22,23 +22,46 @@ It is a replacement for the older MPQ format used by Blizzard in previous game t
 * Look up files based on filename in WoW CASC archives.
 * Read files from any non-Overwatch CASC archive.
 
-### Features currently being implemented
+### Future features
 
-* Look up files based on filename in Diablo III, Heroes of the Storm, Starcraft II and Overwatch.
 * Encryption support (needed for Overwatch support at the time of writing).
+* Reading files from Overwatch CASC archives.
+* Look up files based on filename in Diablo III, Heroes of the Storm, Starcraft II and Overwatch.
 * Write files.
 * Apply patches.
 
 ### Requirements
 
-* GCC 5, Clang 3.6 or Visual Studio 2015.
-* Zlib
-* Boost Filesystem (not required for Visual Studio 2015).
+* GCC 6, Clang 3.8 or Visual Studio 2015.
+* libstdc++-6 (on linux)
+* zlib
 
 ### How to use
 
-1. Include Casc/Common.hpp in your project.
-2. Include and link to zlib and boost filesystem (if not compiling with Visual Studio 2015).
+#### From conan
+
+The package is also hosted on [Conan](https://www.conan.io/).
+
+Add the following package to your project:
+```
+casc/1.0.0@heksesang/stable
+```
+
+#### From source
+
+1. Clone the library.
+   ```
+   git clone https://github.com/heksesang/CascLib.git
+   ```
+
+2. Add the CascLib project folder to your include directories.
+
+3. Add zlib to your include directories and linker.
+
+4. Include "Casc/Common.hpp" to include the Casc namespace.
+   ``` c++
+   #include "Casc/Common.hpp"
+   ```
 
 **Example**
 ``` c++
