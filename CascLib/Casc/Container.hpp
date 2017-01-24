@@ -128,8 +128,7 @@ namespace Casc
             cdnConfig(allocator->config<true, false>(buildInfo.build(0).at("CDN Key"))),
             shadowMemory(allocator->shmem<true, false>()),
             index(new Parsers::Binary::Index(shadowMemory.versions(), allocator)),
-            encoding(new Parsers::Binary::Encoding(
-                index->find(Hex(buildConfig["encoding"].back().substr(0, 18U))), allocator)),
+            encoding(new Parsers::Binary::Encoding(allocator->data(index->find(Hex(buildConfig["encoding"].back().substr(0, 18U)))))),
             root(new Filesystem::Root(getProgramCode(buildConfig["build-uid"].front()),
                 buildConfig["root"].front(), encoding, index, allocator))
         {

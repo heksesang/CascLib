@@ -74,90 +74,203 @@ namespace Casc
             std::vector<std::shared_ptr<Handler>> handlers;
 
             /**
-             * Read the header for the current file, create handlers
-             * and confirm checksums.
+             * Set default values for counts and clear collections.
              */
-            void init()
+            void setDefaults()
             {
                 handlers.clear();
                 length = 0;
                 current = 0;
+            }
 
+            /**
+             * Read the data header (only present in local CASC archives).
+             */
+            std::array<char, DataHeaderSize> readDataHeader()
+            {
                 std::array<char, DataHeaderSize> dataHeader;
-                fbuf->read(dataHeader.data(), DataHeaderSize);
+                this->fbuf->read(dataHeader.data(), DataHeaderSize);
                 this->offset += 30;
 
-                std::array<uint8_t, 16> blockTableChecksum;
-                std::copy(dataHeader.data(), dataHeader.data() + 16, blockTableChecksum.begin());
-                std::reverse(blockTableChecksum.begin(), blockTableChecksum.end());
-                auto size = Endian::read<EndianType::Little, uint32_t>(dataHeader.data() + 16);
+                return std::move(dataHeader);
+            }
 
-                MD5 blockTableVerficiation;
+            template <typename T, size_t Size>
+            std::string arrayToHexString(const std::array<T, Size>& arr) const
+            {
+                std::stringstream ss;
+                for (const T& byte : arr)
+                {
+                    ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+                }
 
+                return ss.str();
+            }
+
+            /**
+             * Read the checksum of the header (BLTE).
+             */
+            std::string getChecksum(const std::array<char, DataHeaderSize>& dataHeader) const
+            {
+                std::array<uint8_t, 16> checksum;
+                std::copy(dataHeader.data(), dataHeader.data() + 16, checksum.begin());
+                std::reverse(checksum.begin(), checksum.end());
+
+                return arrayToHexString(checksum);
+            }
+
+            /**
+             * Read the size of the file from data header.
+             */
+            size_t getFileSize(const std::array<char, DataHeaderSize>& dataHeader) const
+            {
+                return static_cast<size_t>(Endian::read<EndianType::Little, uint32_t>(dataHeader.data() + 16));
+            }
+
+            /**
+             * Read the header (BLTE).
+             */
+            std::array<char, 8> readHeader()
+            {
                 std::array<char, 8> header;
                 fbuf->read(header.data(), header.size());
                 this->offset += 8;
 
-                blockTableVerficiation.update(header.data(), header.size());
+                return std::move(header);
+            }
+
+            /**
+             * Checks the signature of the file.
+             */
+            template <typename InputIt>
+            static void checkSignature(InputIt begin)
+            {
+                uint32_t signature;
+
+                if ((signature = Endian::read<EndianType::Little, uint32_t>(begin)) != Signature)
+                {
+                    throw Exceptions::InvalidSignatureException(signature, 0x45544C42);
+                }
+            }
+
+            /**
+             * Calculate the total logical size of the file.
+             */
+            void calculateLogicalStreamLength()
+            {
+                for (auto &handler : handlers)
+                {
+                    this->length += handler->logicalSize();
+                }
+            }
+
+            /**
+             * Handle parsing of a file without block table.
+             */
+            void handleMissingBlockTable(size_t fileSize)
+            {
+                auto offset = fbuf->tellg();
+
+                if (offset < 0)
+                {
+                    throw Exceptions::IOException("Negative stream offset.");
+                }
+
+                EncodingMode mode = (EncodingMode)fbuf->get();
+                auto source = std::make_shared<Impl::StreamSource>(fbuf, std::make_pair(size_t(offset), size_t(offset) + fileSize));
+
+                handlers.push_back(createHandler(mode, source));
+            }
+
+            /**
+             * Create handlers for all the chunks.
+             */
+            void createHandlers(std::vector<Chunk> chunks)
+            {
+                for (auto &chunk : chunks)
+                {
+                    fbuf->seekg(this->offset + chunk.offset);
+                    EncodingMode mode = (EncodingMode)fbuf->get();
+
+                    auto source = std::make_shared<Impl::StreamSource>(fbuf, std::make_pair(this->offset + chunk.offset, this->offset + chunk.offset + chunk.size));
+
+                    handlers.push_back(createHandler(mode, chunk, source));
+                }
+            }
+
+            bool isArchive(const std::string& filename) const
+            {
+                return std::experimental::filesystem::path(filename).has_extension();
+            }
+
+            size_t getFileSize(const std::string& filename) const
+            {
+                return static_cast<size_t>(std::experimental::filesystem::file_size(filename));
+            }
+
+            /**
+             * Read the header for the current file, create handlers and confirm checksums.
+             */
+            void init(std::string filename)
+            {
+                setDefaults();
+
+                auto headerChecksum = filename;
+                auto fileSize = getFileSize(filename);
+
+                if (isArchive(filename))
+                {
+                    auto dataHeader = readDataHeader();
+                    headerChecksum = getChecksum(dataHeader);
+                    fileSize = getFileSize(dataHeader);
+                }
+
+                MD5 calculatedHeaderChecksum;
+
+                auto header = readHeader();
+                calculatedHeaderChecksum.update(header.data(), static_cast<MD5::size_type>(header.size()));
+
+                checkSignature(header.begin());
 
                 auto blockTableSize = getBlockTableSize(header.begin());
-                this->offset += blockTableSize;
 
                 if (blockTableSize > 0)
                 {
                     std::vector<char> blockTable(blockTableSize);
                     fbuf->read(blockTable.data(), blockTableSize);
 
-                    blockTableVerficiation.update(blockTable);
-                    blockTableVerficiation.finalize();
+                    calculatedHeaderChecksum.update(blockTable);
+                    calculatedHeaderChecksum.finalize();
 
-                    // TODO: Compare checksums
+                    auto actualHeaderChecksum = calculatedHeaderChecksum.hexdigest();
 
-                    auto chunks = parseBlockTable(blockTable.cbegin(), blockTable.cend());
-
-                    for (auto &chunk : chunks)
+                    if (actualHeaderChecksum != headerChecksum)
                     {
-                        fbuf->seekg(this->offset + chunk.offset);
-                        EncodingMode mode = (EncodingMode)fbuf->get();
-
-                        auto source = std::make_shared<Impl::StreamSource>(fbuf, std::make_pair(this->offset + chunk.offset, this->offset + chunk.offset + chunk.size));
-
-                        handlers.push_back(createHandler(mode, chunk, source));
+                        throw Exceptions::InvalidHashException<std::string>(headerChecksum, actualHeaderChecksum, filename);
                     }
+
+                    createHandlers(createChunks(blockTable.cbegin(), blockTable.cend()));
                 }
                 else
                 {
-                    auto offset = fbuf->tellg();
-
-                    if (offset < 0)
-                    {
-                        throw Exceptions::IOException("Negative stream offset is invalid.");
-                    }
-
-                    EncodingMode mode = (EncodingMode)fbuf->get();
-                    auto source = std::make_shared<Impl::StreamSource>(fbuf, std::make_pair(size_t(offset), size_t(offset) + size));
-
-                    handlers.push_back(createHandler(mode, source));
+                    handleMissingBlockTable(fileSize);
                 }
 
-                for (auto &handler : handlers)
-                {
-                    length += handler->logicalSize();
-                }
+                calculateLogicalStreamLength();
             }
 
             /**
              * The current position in the stream.
              */
-            pos_type pos()
+            size_t pos()
             {
-                return pos_type(current + gptr() - eback());
+                return size_t(current + gptr() - eback());
             }
 
             /**
              * Seeks within the current buffer.
              */
-            pos_type seekbuf(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
+            size_t seekbuf(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
             {
                 switch (dir)
                 {
@@ -183,27 +296,30 @@ namespace Casc
             /**
              * Seeks relatively within the file.
              */
-            pos_type seekrel(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
+            size_t seekrel(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
             {
-                if (dir != std::ios_base::cur || offset == 0)
+                if (dir != std::ios_base::cur || offset == 0 || (pos() + offset) >= length || (pos() + offset) < 0)
                 {
                     return pos();
                 }
 
-                auto newOffset = pos() + offset;
+                size_t position = pos() + static_cast<size_t>(offset);
 
-                if (newOffset >= current && newOffset < current + 4096)
-                {
-                    return seekbuf(offset, dir);
+                if (position != traits_type::eof()) {
+
+                    if (position >= current && position < current + 4096)
+                    {
+                        return seekbuf(offset, dir);
+                    }
                 }
 
-                return buffer(pos() + offset);
+                return buffer(position);
             }
 
             /**
              * Seeks absolutely within the file.
              */
-            pos_type seekabs(off_type offset, std::ios_base::seekdir dir = std::ios_base::beg)
+            size_t seekabs(size_t offset, std::ios_base::seekdir dir = std::ios_base::beg)
             {
                 if (dir != std::ios_base::beg && dir != std::ios_base::end)
                 {
@@ -226,7 +342,7 @@ namespace Casc
             /**
              * Seeks within the file.
              */
-            pos_type seek(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
+            size_t seek(off_type offset, std::ios_base::seekdir dir = std::ios_base::cur)
             {
                 if (dir == std::ios_base::cur)
                 {
@@ -234,24 +350,25 @@ namespace Casc
                 }
                 else
                 {
-                    return seekabs(offset, dir);
+                    return seekabs(static_cast<size_t>(offset), dir);
                 }
             }
 
             /**
              * Read the decompressed data from the current chunk into the buffer.
              */
-            pos_type buffer(off_type offset)
+            size_t buffer(size_t offset)
             {
-                auto count = 0U;
+                size_t count = 0U;
 
                 for (auto &handler : handlers)
                 {
-                    if (count < BufferSize && ((handler->chunk.begin < offset
-                        && handler->chunk.end > offset) || handler->chunk.begin >= offset))
+                    if (count < BufferSize && (
+                        (handler->chunk.begin < offset && handler->chunk.end > offset) ||
+                         handler->chunk.begin >= offset))
                     {
                         auto begin = (handler->chunk.begin < offset
-                            && handler->chunk.end > offset) ? size_t(offset - handler->chunk.begin) : 0;
+                            && handler->chunk.end > offset) ? offset - handler->chunk.begin : 0;
                         auto decoded = handler->decode(begin, BufferSize - count);
 
                         std::memcpy(buf.data() + count, decoded.data(), decoded.size());
@@ -329,12 +446,12 @@ namespace Casc
                 {
                     do
                     {
-                        if (showmanyc() == 0)
+                        if (showmanyc() == 0 && pos() != pos_type(length))
                         {
                             buffer(pos());
                         }
 
-                        auto numRead = std::min<size_t>(
+                        auto numRead = std::min(
                             static_cast<size_t>(showmanyc()), static_cast<size_t>(count - copied));
                         std::memcpy(s + copied, gptr(), numRead);
                         copied += numRead;
@@ -370,15 +487,15 @@ namespace Casc
             Buffer &operator= (Buffer &&) = default;
 
             /**
-            * Destructor.
-            */
+             * Destructor.
+             */
             virtual ~Buffer() = default;
 
             /**
-             * Reads a file from a new offset within the open data file.
+             * Initializes the buffer for reading a new file.
              * Throws if is_open() is false.
              */
-            void open(size_t offset)
+            void initialize(std::string filename, size_t offset)
             {
                 this->isInitialized = false;
 
@@ -390,24 +507,28 @@ namespace Casc
                 this->offset = offset;
                 fbuf->seekg(offset);
 
-                this->init();
+                this->init(filename);
 
                 this->isInitialized = true;
             }
 
             /**
-             * Opens a data file and reads a file from an offset.
+             * Opens a file and starts initialization from offset.
              */
             void open(const std::string filename, size_t offset)
             {
+                if (fbuf->is_open()) {
+                    fbuf->close();
+                }
+
                 fbuf->open(filename, std::ios_base::in | std::ios_base::binary);
-                
+
                 if (fbuf->fail())
                 {
                     throw Exceptions::IOException("Couldn't open buffer.");
                 }
 
-                open(offset);
+                initialize(filename, offset);
             }
 
             /**
@@ -434,42 +555,37 @@ namespace Casc
             }
 
             /**
-            * Checks if the file has a block table.
-            */
+             * Checks if the file has a block table.
+             */
             template <typename InputIt>
-            static size_t getBlockTableSize(InputIt begin)
+            size_t getBlockTableSize(InputIt begin)
             {
-                uint32_t signature;
-
-                if ((signature = Endian::read<EndianType::Little, uint32_t>(begin)) != Signature)
-                {
-                    throw Exceptions::InvalidSignatureException(signature, 0x45544C42);
-                }
-
                 auto size = Endian::read<EndianType::Big, uint32_t>(begin + 4);
+                size = size > 0 ? size - 8 : size;
+                this->offset += size;
 
-                return size > 0 ? size - 8 : size;
+                return size;
             }
 
             /**
-            * Parses the block table.
-            */
+             * Parses the block table.
+             */
             template <typename InputIt>
-            static std::vector<Chunk> parseBlockTable(InputIt begin, InputIt end)
+            static std::vector<Chunk> createChunks(InputIt beginBlockTable, InputIt endBlockTable)
             {
-                auto tableMarker = Endian::read<EndianType::Big, uint8_t>(begin);
+                auto tableMarker = Endian::read<EndianType::Big, uint8_t>(beginBlockTable);
 
                 if (tableMarker != 0x0F)
                 {
                     throw Exceptions::IOException("Invalid block table format.");
                 }
 
-                auto blockCount = Endian::read<EndianType::Big, uint8_t>(begin + 1) << 16 |
-                    Endian::read<EndianType::Big, uint16_t>(begin + 1 + sizeof(uint8_t));
+                auto blockCount = Endian::read<EndianType::Big, uint8_t>(beginBlockTable + 1) << 16 |
+                    Endian::read<EndianType::Big, uint16_t>(beginBlockTable + 1 + sizeof(uint8_t));
 
                 std::vector<Chunk> chunks;
 
-                for (auto it = begin + 4; it < end; it += 24)
+                for (auto it = beginBlockTable + 4; it < endBlockTable; it += 24)
                 {
                     auto physicalSize = Endian::read<EndianType::Big, uint32_t>(it);
                     auto logicalSize = Endian::read<EndianType::Big, uint32_t>(it + 4);
@@ -510,8 +626,8 @@ namespace Casc
             }
 
             /**
-            * Create the handler for an encoding mode.
-            */
+             * Create the handler for an encoding mode.
+             */
             static std::shared_ptr<Handler> createHandler(EncodingMode mode, std::shared_ptr<DataSource> source)
             {
                 switch (mode)

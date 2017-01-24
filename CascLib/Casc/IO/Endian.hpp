@@ -81,6 +81,8 @@ namespace Casc
                         {
                             output |= *reinterpret_cast<signed_ptr>(&*it) << ((sizeof(T) - 1) - (it - first)) * 8;
                         }
+
+                        if (it == first) break;
                     }
                     break;
                 }

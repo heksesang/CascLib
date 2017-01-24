@@ -22,64 +22,66 @@
 #include <fstream>
 #include <map>
 #include <string>
+#include <type_traits>
 #include <vector>
 #include <unordered_map>
 
 #include "../../Common.hpp"
 #include "../../Exceptions.hpp"
-
-#include "../../Parsers/Binary/Reference.hpp"
-#include "../../IO/StreamAllocator.hpp"
 #include "../../IO/Endian.hpp"
 
-namespace Casc
+#include "Parser.hpp"
+
+namespace Casc::Parsers::Binary
 {
-    namespace Parsers
+    struct FileInfo
     {
-        namespace Binary
+        Hex hash;
+        size_t size;
+        std::vector<Hex> keys;
+    };
+
+    struct EncodedFileInfo
+    {
+        Hex key;
+        size_t size;
+        std::string params;
+    };
+
+    struct FileLookupTableData
+    {
+        std::vector<std::pair<Hex, Hex>> headers;
+        std::vector<char> table;
+        size_t hashSize;
+    };
+
+    /**
+     * Maps decoded file hashes to encoded file hashes.
+     */
+    class Encoding
+    {
+        auto getTableIterators(FileLookupTableData fileInfoTable, size_t index, Hex checksum) const
         {
-            /**
-             * Maps file content MD5 hash to file key.
-             */
-            class Encoding
+            auto begin = fileInfoTable.table.begin() + EntrySize * index;
+            auto end = begin + EntrySize;
+
+            verify(begin, end, checksum);
+
+            return std::make_pair(begin, end);
+        }
+
+    public:
+        /**
+         * Find the file info for a file hash.
+         */
+        FileInfo findFileInfo(Hex hash) const
+        {
+            for (auto i = 0U; i < fileInfoTable.headers.size(); ++i)
             {
-            public:
-                struct FileInfo
+                if (fileInfoTable.headers[i].first <= hash)
                 {
-                    Hex hash;
-                    size_t size;
-                    std::vector<Hex> keys;
-                };
-
-                struct EncodedFileInfo
-                {
-                    Hex key;
-                    size_t size;
-                    std::string params;
-                };
-
-                /**
-                 * Find the file info for a file hash.
-                 */
-                FileInfo findFileInfo(Hex hash) const
-                {
-                    auto index = -1;
-                    Hex checksum;
-
-                    for (auto i = 0U; i < headersA.size(); ++i)
-                    {
-                        if (headersA[i].first <= hash)
-                        {
-                            index = headersA.size() - 1 - i;
-                            checksum = headersA[i].second;
-                            break;
-                        }
-                    }
-
-                    if (index == -1)
-                    {
-                        throw Exceptions::HashDoesNotExistException(hash.string());
-                    }
+                    auto index = fileInfoTable.headers.size() - 1 - i;
+                    auto checksum = fileInfoTable.headers[i].second;
 
                     auto files = parseEntry(index, checksum);
 
@@ -93,29 +95,22 @@ namespace Casc
 
                     throw Exceptions::HashDoesNotExistException(hash.string());
                 }
+            }
 
-                /**
-                 * Find the encoding info for a file key.
-                 */
-                EncodedFileInfo findEncodedFileInfo(Hex key) const
+            throw Exceptions::HashDoesNotExistException(hash.string());
+        }
+
+        /**
+         * Find the encoding info for a file key.
+         */
+        EncodedFileInfo findEncodedFileInfo(Hex key) const
+        {
+            for (auto i = 0U; i < encodedFileInfoTable.headers.size(); ++i)
+            {
+                if (encodedFileInfoTable.headers[i].first <= key)
                 {
-                    auto index = -1;
-                    Hex checksum;
-
-                    for (auto i = 0U; i < headersB.size(); ++i)
-                    {
-                        if (headersB[i].first <= key)
-                        {
-                            index = headersB.size() - 1 - i;
-                            checksum = headersB[i].second;
-                            break;
-                        }
-                    }
-
-                    if (index == -1)
-                    {
-                        throw Exceptions::KeyDoesNotExistException(key.string());
-                    }
+                    auto index = encodedFileInfoTable.headers.size() - 1 - i;
+                    auto checksum = encodedFileInfoTable.headers[i].second;
 
                     auto files = parseEncodedEntry(index, checksum);
 
@@ -129,365 +124,344 @@ namespace Casc
 
                     throw Exceptions::KeyDoesNotExistException(key.string());
                 }
+            }
 
-                /**
-                 * Get file info for a range of files.
-                 */
-                std::vector<FileInfo> listFileInfo(uint32_t offset, uint32_t count) const
-                {
-                    std::vector<FileInfo> list;
-
-                    while (list.size() < count)
-                    {
-                        auto remaining = count - list.size();
-
-                        auto index = -1;
-                        Hex checksum;
-
-                        if (offset < headersA.size())
-                        {
-                            index = headersA.size() - 1 - offset;
-                            checksum = headersA[offset].second;
-                        }
-                        else
-                        {
-                            break;
-                        }
-
-                        auto files = parseEntry(index, checksum);
-                        auto n = remaining < files.size() ? remaining : files.size();
-
-                        files.insert(list.end(), files.begin(), files.begin() + n);
-
-                        offset += n;
-                    }
-
-                    return list;
-                }
-
-                 /**
-                  * Get encoding info for a range of files.
-                  */
-                std::vector<EncodedFileInfo> listEncodedFileInfo(uint32_t offset, uint32_t count) const
-                {
-                    std::vector<EncodedFileInfo> list;
-
-                    while (list.size() < count)
-                    {
-                        auto remaining = list.size() - count;
-
-                        auto index = -1;
-                        Hex checksum;
-
-                        if (offset < headersB.size())
-                        {
-                            index = headersB.size() - 1 - offset;
-                            checksum = headersB[offset].second;
-                        }
-                        else
-                        {
-                            break;
-                        }
-
-                        auto files = parseEncodedEntry(index, headersB[index].second);
-                        auto count = remaining < files.size() ? remaining : files.size();
-
-                        files.insert(list.end(), files.begin(), files.begin() + count);
-
-                        offset += count;
-                    }
-
-                    return list;
-                }
-
-            private:
-                // The file signature.
-                static const uint16_t Signature = 0x4E45;
-
-                // The header size of an encoding file.
-                static const unsigned int HeaderSize = 22U;
-
-                // The size of each chunk body (second block for each table).
-                static const unsigned int EntrySize = 4096U;
-
-                std::vector<std::pair<Hex, Hex>> headersA;
-                std::vector<char> tableA;
-                size_t hashSizeA;
-
-                std::vector<std::pair<Hex, Hex>> headersB;
-                std::vector<char> tableB;
-                size_t hashSizeB;
-
-                // The encoding profiles
-                std::vector<std::string> profiles;
-
-                /**
-                * Reads data from a stream and puts it in a struct.
-                */
-                template <IO::EndianType Endian = IO::EndianType::Little, typename T>
-                const T &read(std::shared_ptr<std::istream> stream, T &value) const
-                {
-                    char b[sizeof(T)];
-                    stream->read(b, sizeof(T));
-
-                    return value = IO::Endian::read<Endian, T>(b);
-                }
-
-                /**
-                 * Parse an entry in the table.
-                 */
-                std::vector<FileInfo> parseEntry(uint32_t index, Hex checksum) const
-                {
-                    std::vector<FileInfo> files;
-
-                    auto begin = tableA.begin() + EntrySize * index;
-                    auto end = begin + EntrySize;
-
-                    Hex actual(md5(begin, end));
-
-                    if (actual != checksum)
-                    {
-                        throw Exceptions::InvalidHashException(Crypto::lookup3(checksum, 0), Crypto::lookup3(actual, 0), "");
-                    }
-
-                    for (auto it = begin; it < end;)
-                    {
-                        auto keyCount =
-                            IO::Endian::read<IO::EndianType::Little, uint16_t>(it);
-                        it += sizeof(keyCount);
-
-                        if (keyCount == 0)
-                            break;
-
-                        auto fileSize =
-                            IO::Endian::read<IO::EndianType::Big, uint32_t>(it);
-                        it += sizeof(fileSize);
-
-                        auto checksumIt = it;
-                        it += hashSizeA;
-
-                        std::vector<Hex> keys;
-
-                        for (auto i = 0U; i < keyCount; ++i)
-                        {
-                            keys.emplace_back(it, it + hashSizeA);
-                            it += hashSizeA;
-                        }
-
-                        files.emplace_back(FileInfo{ { checksumIt, checksumIt + hashSizeA }, fileSize, keys });
-                    }
-
-                    return files;
-                }
-
-                /**
-                 * Parse an entry in the table.
-                 */
-                std::vector<EncodedFileInfo> parseEncodedEntry(uint32_t index, Hex checksum) const
-                {
-                    std::vector<EncodedFileInfo> files;
-
-                    auto begin = tableB.begin() + EntrySize * index;
-                    auto end = begin + EntrySize;
-
-                    Hex actual(md5(begin, end));
-
-                    if (actual != checksum)
-                    {
-                        throw Exceptions::InvalidHashException(Crypto::lookup3(checksum, 0), Crypto::lookup3(actual, 0), "");
-                    }
-
-                    for (auto it = begin; it < end;)
-                    {
-                        auto checksumIt = it;
-                        it += hashSizeB;
-
-                        auto profileIndex =
-                            IO::Endian::read<IO::EndianType::Big, int32_t>(it);
-                        it += sizeof(profileIndex);
-
-                        ++it;
-
-                        auto fileSize =
-                            IO::Endian::read<IO::EndianType::Big, uint32_t>(it);
-                        it += sizeof(fileSize);
-
-                        auto &profile = profiles[profileIndex];
-
-                        if (profileIndex >= 0)
-                        {
-                            files.emplace_back(EncodedFileInfo{ { checksumIt, checksumIt + hashSizeB }, fileSize, profile });
-                        }
-                        else
-                        {
-                            files.emplace_back(EncodedFileInfo{ { checksumIt, checksumIt + hashSizeB }, fileSize, "" });
-                        }
-                    }
-
-                    return files;
-                }
-
-                /**
-                * Parse an encoding file.
-                */
-                void parse(std::shared_ptr<std::istream> stream)
-                {
-                    uint16_t signature;
-                    read<IO::EndianType::Little>(stream, signature);
-
-                    if (signature != Signature)
-                    {
-                        throw Exceptions::InvalidSignatureException(signature, 0x4E45);
-                    }
-
-                    // Header
-
-                    stream->seekg(1, std::ios_base::cur); // Skip unknown
-
-                    uint8_t hashSizeA;
-                    this->hashSizeA = read<IO::EndianType::Little, uint8_t>(stream, hashSizeA);
-
-                    uint8_t hashSizeB;
-                    this->hashSizeB = read<IO::EndianType::Little, uint8_t>(stream, hashSizeB);
-
-                    stream->seekg(4, std::ios_base::cur); // Skip flags
-
-                    uint32_t tableSizeA;
-                    read<IO::EndianType::Big>(stream, tableSizeA);
-
-                    uint32_t tableSizeB;
-                    read<IO::EndianType::Big>(stream, tableSizeB);
-
-                    stream->seekg(1, std::ios_base::cur); // Skip unknown
-
-                    // Encoding profiles for table B
-
-                    uint32_t stringTableSize;
-                    read<IO::EndianType::Big>(stream, stringTableSize);
-
-                    int ij = 0;
-                    while (stream->tellg() < (HeaderSize + stringTableSize - 1))
-                    {
-                        std::string profile;
-                        std::getline(*stream, profile, '\0');
-
-                        if (stream->fail())
-                        {
-                            throw Exceptions::IOException("Stream faulted after getline()");
-                        }
-
-                        profiles.emplace_back(profile);
-                        ij++;
-                    }
-
-                    // Table A
-                    for (auto i = 0U; i < tableSizeA; ++i)
-                    {
-                        std::vector<char> hash(hashSizeA);
-                        std::vector<char> checksum(hashSizeA);
-
-                        stream->read(hash.data(), hashSizeA);
-                        stream->read(checksum.data(), hashSizeA);
-
-                        headersA.emplace_back(std::make_pair(hash, checksum));
-                    }
-
-                    std::reverse(headersA.begin(), headersA.end());
-
-                    tableA.resize(EntrySize * tableSizeA);
-                    stream->read(tableA.data(), tableA.size());
-
-                    // Table B
-
-                    for (auto i = 0U; i < tableSizeB; ++i)
-                    {
-                        std::vector<char> hash(hashSizeA);
-                        std::vector<char> checksum(hashSizeA);
-
-                        stream->read(hash.data(), hashSizeA);
-                        stream->read(checksum.data(), hashSizeA);
-
-                        headersB.emplace_back(std::make_pair(hash, checksum));
-                    }
-
-                    std::reverse(headersB.begin(), headersB.end());
-
-                    tableB.resize(EntrySize * tableSizeB);
-                    stream->read(tableB.data(), tableB.size());
-
-                    // Encoding profile for this file
-
-                    std::string profile;
-                    std::getline(*stream, profile, '\0');
-
-                    profiles.emplace_back(profile);
-                }
-
-            public:
-                /**
-                 * Constructor.
-                 */
-                Encoding(Parsers::Binary::Reference ref,
-                         std::shared_ptr<IO::StreamAllocator> allocator)
-                {
-                    // Get a file stream.
-                     auto fs = allocator->data<true, false>(ref.file());
-
-                    // Read size.
-                    fs->seekg(ref.offset() + 16, std::ios_base::beg);
-                    std::array<char, sizeof(uint32_t)> arr;
-                    fs->read(arr.data(), arr.size());
-                    auto size = IO::Endian::read<IO::EndianType::Little, uint32_t>(arr.begin());
-
-                    // Read params.
-                    std::string params;
-                    std::vector<char> buf(size - 20);
-                    fs->read(buf.data(), buf.size());
-                    for (int i = size - 21; i >= 2; --i)
-                    {
-                        if (buf[i] == '\xDA' && buf[i - 1] == '\x78')
-                        {
-                            ZStreamBase::char_t* out = nullptr;
-                            size_t outSize = 0;
-
-                            auto inSize = size - 20 - i + 1;
-                            auto in = std::make_unique<ZStreamBase::char_t[]>(inSize);
-                            ZInflateStream(reinterpret_cast<ZStreamBase::char_t*>(
-                                buf.data() + i - 1), inSize).readAll(&out, outSize);
-                            params.assign(reinterpret_cast<char*>(out), outSize);
-                            break;
-                        }
-                    }
-
-                    // Parse CASC stream.
-                    parse(allocator->data(ref));
-                }
-
-                /**
-                * Copy constructor.
-                */
-                Encoding(const Encoding &) = default;
-
-                /**
-                 * Move constructor.
-                 */
-                Encoding(Encoding &&) = default;
-
-                /**
-                * Copy operator.
-                */
-                Encoding &operator= (const Encoding &) = default;
-
-                /**
-                 * Move operator.
-                 */
-                Encoding &operator= (Encoding &&) = default;
-
-                /**
-                 * Destructor.
-                 */
-                virtual ~Encoding() = default;
-            };
+            throw Exceptions::KeyDoesNotExistException(key.string());
         }
-    }
+
+        /**
+         * Get file info for a range of files.
+         */
+        std::vector<FileInfo> createFileInfoList(size_t offset, size_t count) const
+        {
+            std::vector<FileInfo> list;
+
+            while (insertFileInfo(list, offset, count) != 0) {
+
+            }
+
+            return list;
+        }
+
+        /**
+         * Insert FileInfo objects into a list.
+         */
+        template <template<typename, typename> class Container, class Alloc>
+        size_t insertFileInfo(Container<FileInfo, Alloc> &destination, size_t &source, size_t &count) const
+        {
+            if (destination.size() < count && source < fileInfoTable.headers.size()) {
+                auto remaining = count - destination.size();
+
+                auto index = fileInfoTable.headers.size() - 1 - source;
+                auto checksum = fileInfoTable.headers[source].second;
+
+                auto newEntries = parseEntry(index, checksum);
+                auto n = std::min(remaining, newEntries.size());
+
+                newEntries.insert(destination.end(), newEntries.begin(), newEntries.begin() + n);
+
+                source += n;
+
+                return n;
+            }
+
+            return 0;
+        }
+
+        /**
+         * Get encoding info for a range of files.
+         */
+        std::vector<EncodedFileInfo> createEncodedFileInfoList(size_t offset, size_t count) const
+        {
+            std::vector<EncodedFileInfo> list;
+
+            while (insertEncodedFileInfo(list, offset, count) != 0) {
+
+            }
+
+            return list;
+        }
+
+        /**
+         * Insert EncodedFileInfo objects into a list.
+         */
+        template <template<typename, typename> class Container, class Alloc>
+        size_t insertEncodedFileInfo(Container<EncodedFileInfo, Alloc> &destination, size_t &source, size_t &count) const
+        {
+            if (destination.size() < count && source < fileInfoTable.headers.size()) {
+                auto remaining = count - destination.size();
+
+                auto index = encodedFileInfoTable.headers.size() - 1 - source;
+                auto checksum = encodedFileInfoTable.headers[source].second;
+
+                auto newEntries = parseEncodedEntry(index, checksum);
+                auto n = std::min(remaining, newEntries.size());
+
+                newEntries.insert(destination.end(), newEntries.begin(), newEntries.begin() + n);
+
+                source += n;
+
+                return n;
+            }
+
+            return 0;
+        }
+
+    private:
+        static const uint16_t Signature = 0x454E;
+        static const unsigned int HeaderSize = 22U;
+        static const unsigned int EntrySize = 4096U;
+
+        /*struct FileLookupTableData
+        {
+            std::vector<std::pair<Hex, Hex>> headers;
+            std::vector<char> table;
+            size_t hashSize;
+        };*/
+
+        template <typename Ty>
+        friend class Parser;
+
+        FileLookupTableData fileInfoTable;
+        FileLookupTableData encodedFileInfoTable;
+
+        std::vector<std::string> profiles;
+
+        template <typename T>
+        T const& read(std::shared_ptr<std::istream> stream, T &value) const
+        {
+            char b[sizeof(T)];
+            stream->read(b, sizeof(T));
+
+            return value = IO::Endian::read<IO::EndianType::Big, T>(b);
+        }
+
+        /*auto getTableIterators(FileLookupTableData fileInfoTable, size_t index, Hex checksum) const
+        {
+            auto begin = fileInfoTable.table.begin() + EntrySize * index;
+            auto end = begin + EntrySize;
+
+            verify(begin, end, checksum);
+
+            return std::make_pair(begin, end);
+        }*/
+
+        template <typename Iterator>
+        void verify(Iterator begin, Iterator end, Hex expectedChecksum) const
+        {
+            Hex actualChecksum(md5(begin, end));
+
+            if (actualChecksum != expectedChecksum)
+            {
+                throw Exceptions::InvalidHashException<uint32_t>(Crypto::lookup3(expectedChecksum, 0), Crypto::lookup3(actualChecksum, 0), "");
+            }
+        }
+
+        std::vector<FileInfo> parseEntry(size_t index, Hex checksum) const
+        {
+            std::vector<FileInfo> files;
+
+            auto iterators = getTableIterators(fileInfoTable, index, checksum);
+
+            for (auto it = iterators.first; it < iterators.second;)
+            {
+                auto keyCount =
+                    IO::Endian::read<IO::EndianType::Little, uint16_t>(it);
+                it += sizeof(keyCount);
+
+                if (keyCount == 0)
+                    break;
+
+                files.emplace_back(readFileInfo(it, keyCount));
+            }
+
+            return files;
+        }
+
+        template <typename Iterator>
+        FileInfo readFileInfo(Iterator &it, size_t keyCount) const
+        {
+            auto fileSize =
+                IO::Endian::read<IO::EndianType::Big, uint32_t>(it);
+            it += sizeof(fileSize);
+
+            auto checksumIt = it;
+            it += fileInfoTable.hashSize;
+
+            std::vector<Hex> keys;
+
+            for (auto i = 0U; i < keyCount; ++i)
+            {
+                keys.emplace_back(it, it + fileInfoTable.hashSize);
+                it += fileInfoTable.hashSize;
+            }
+
+            return FileInfo{ { checksumIt, checksumIt + fileInfoTable.hashSize }, fileSize, keys };
+        }
+
+        std::vector<EncodedFileInfo> parseEncodedEntry(size_t index, Hex checksum) const
+        {
+            std::vector<EncodedFileInfo> files;
+
+            auto iterators = getTableIterators(encodedFileInfoTable, index, checksum);
+
+            for (auto it = iterators.first; it < iterators.second;)
+            {
+                files.emplace_back(readEncodedFileInfo(it));
+            }
+
+            return files;
+        }
+
+        template <typename Iterator>
+        EncodedFileInfo readEncodedFileInfo(Iterator &it) const
+        {
+            auto checksumIt = it;
+            it += encodedFileInfoTable.hashSize;
+
+            auto profileIndex =
+                IO::Endian::read<IO::EndianType::Big, int32_t>(it);
+            it += sizeof(profileIndex);
+
+            ++it;
+
+            auto fileSize =
+                IO::Endian::read<IO::EndianType::Big, uint32_t>(it);
+            it += sizeof(fileSize);
+
+            auto &profile = profiles[profileIndex];
+
+            return profileIndex >= 0 ? EncodedFileInfo{ { checksumIt, checksumIt + encodedFileInfoTable.hashSize }, fileSize, profile }
+                                     : EncodedFileInfo{ { checksumIt, checksumIt + encodedFileInfoTable.hashSize }, fileSize, "" };
+        }
+
+        void parse(std::shared_ptr<std::istream> stream)
+        {
+            verifySignature(stream);
+
+            stream->seekg(1, std::ios_base::cur); // Skip unknown
+            readHashSize(stream);
+            stream->seekg(4, std::ios_base::cur); // Skip flags
+            readTableSize(stream);
+            stream->seekg(1, std::ios_base::cur); // Skip unknown
+
+            Parser<std::string> profileParser;
+            profiles = profileParser.readMany(stream);
+
+            readFileInfoHeaders(stream);
+            readFileInfoTable(stream);
+            readEncodedFileInfoHeaders(stream);
+            readEncodedFileInfoTable(stream);
+
+            profiles.push_back(profileParser.readOne(stream));
+        }
+
+        void verifySignature(std::shared_ptr<std::istream> stream)
+        {
+            uint16_t signature;
+            read(stream, signature);
+
+            if (signature != Signature)
+            {
+                throw Exceptions::InvalidSignatureException(signature, Signature);
+            }
+        }
+
+        void readHashSize(std::shared_ptr<std::istream> stream)
+        {
+            uint8_t hashSize;
+            fileInfoTable.hashSize = read(stream, hashSize);
+            encodedFileInfoTable.hashSize = read(stream, hashSize);
+        }
+
+        void readTableSize(std::shared_ptr<std::istream> stream)
+        {
+            uint32_t tableSize;
+            fileInfoTable.table.resize(EntrySize * read(stream, tableSize));
+            encodedFileInfoTable.table.resize(EntrySize * read(stream, tableSize));
+        }
+
+        /**
+         * Header functions
+         */
+
+        void readFileInfoHeaders(std::shared_ptr<std::istream> stream)
+        {
+            readHeaders(stream, fileInfoTable);
+        }
+
+        void readEncodedFileInfoHeaders(std::shared_ptr<std::istream> stream)
+        {
+            readHeaders(stream, encodedFileInfoTable);
+        }
+
+        void readHeaders(std::shared_ptr<std::istream> stream, FileLookupTableData &lookup) const
+        {
+            for (auto i = 0U; i < lookup.table.size() / EntrySize; ++i)
+            {
+                std::vector<char> hash(lookup.hashSize);
+                std::vector<char> checksum(lookup.hashSize);
+
+                stream->read(hash.data(), lookup.hashSize);
+                stream->read(checksum.data(), lookup.hashSize);
+
+                lookup.headers.emplace_back(std::make_pair(hash, checksum));
+            }
+
+            std::reverse(lookup.headers.begin(), lookup.headers.end());
+        }
+
+        /**
+         * Table functions
+         */
+
+        void readFileInfoTable(std::shared_ptr<std::istream> stream)
+        {
+            readTable(stream, fileInfoTable);
+        }
+
+        void readEncodedFileInfoTable(std::shared_ptr<std::istream> stream)
+        {
+            readTable(stream, encodedFileInfoTable);
+        }
+
+        void readTable(std::shared_ptr<std::istream> stream, FileLookupTableData &lookup)
+        {
+            stream->read(lookup.table.data(), lookup.table.size());
+        }
+
+    public:
+        /**
+         * Constructor.
+         */
+        Encoding(std::shared_ptr<std::istream> stream)
+        {
+            parse(stream);
+        }
+
+        /**
+         * Copy constructor.
+         */
+        Encoding(const Encoding &) = default;
+
+        /**
+         * Move constructor.
+         */
+        Encoding(Encoding &&) = default;
+
+        /**
+         * Copy operator.
+         */
+        Encoding &operator= (const Encoding &) = default;
+
+        /**
+         * Move operator.
+         */
+        Encoding &operator= (Encoding &&) = default;
+
+        /**
+         * Destructor.
+         */
+        virtual ~Encoding() = default;
+    };
 }

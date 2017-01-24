@@ -163,7 +163,7 @@ namespace Casc
             template <bool Readable, bool Writeable, typename TStream =
                 typename std::conditional<Readable && Writeable, std::fstream,
                     typename std::conditional<Writeable, std::ofstream, std::ifstream >::type>::type >
-            std::shared_ptr<TStream> data(uint32_t number) const
+            std::shared_ptr<TStream> data(size_t number) const
             {
                 std::stringstream ss;
 

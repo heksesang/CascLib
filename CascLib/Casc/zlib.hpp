@@ -72,7 +72,7 @@ public:
 	*/
 	void write(char_t* buf, size_t buf_size)
 	{
-		z_stream_.avail_in = buf_size;
+		z_stream_.avail_in = static_cast<uInt>(buf_size);
 		z_stream_.next_in = reinterpret_cast< Bytef* >(buf);
 	}
 
@@ -152,7 +152,7 @@ public:
 
 	void read(char_t* buf, size_t buf_size)
 	{
-		z_stream_.avail_out = buf_size;
+		z_stream_.avail_out = static_cast<uInt>(buf_size);
 		z_stream_.next_out = reinterpret_cast< Bytef* >(buf);
 
 		int ret = deflate(&z_stream_, flush_ ? Z_FINISH : Z_NO_FLUSH);
@@ -173,7 +173,7 @@ public:
 		z_stream_.zalloc = Z_NULL;
 		z_stream_.zfree = Z_NULL;
 		z_stream_.opaque = Z_NULL;
-		z_stream_.avail_in = avail_in;
+		z_stream_.avail_in = static_cast<uInt>(avail_in);
 		z_stream_.next_in = in;
 
 		int ret = inflateInit(&z_stream_);
@@ -189,7 +189,7 @@ public:
 
 	void read(char_t* buf, size_t buf_size)
 	{
-		z_stream_.avail_out = buf_size;
+		z_stream_.avail_out = static_cast<uInt>(buf_size);
 		z_stream_.next_out = reinterpret_cast< Bytef* >(buf);
 
 		int ret = inflate(&z_stream_, Z_NO_FLUSH);

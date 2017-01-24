@@ -7,6 +7,7 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #include <memory>
 #include <thread>
 #include <vector>
+#include <string>
 #include <experimental/filesystem>
 
 #include "Casc/IO/Handler.hpp"
@@ -18,14 +19,21 @@ using namespace Casc;
  
 namespace CascLibTest
 {
+    using namespace std::string_literals;
 
     std::vector<char> noneData;
     std::vector<char> zData;
+    std::string buildInfoData;
+    std::string buildConfigData;
+
+    const char* NONE_FILENAME = "5fef29fa35057813d4fcb108d9f25b3b";
+    const char* ZLIB_FILENAME = "47bde729d15e8d502669556abdf271f5";
+    const char* BUILD_INFO_FILENAME = ".build.info";
+    const char* BUILD_CONFIG_FILENAME = "8e374bc49d4f3314a2a4497b065441e3";
 
 	TEST_CLASS(CascLibTests)
 	{
 	public:
-
         TEST_CLASS_INITIALIZE(Setup)
         {
             noneData = std::vector<char>({ '\x42', '\x4C', '\x54', '\x45', '\x00', '\x00', '\x00', '\x3C', '\x0F', '\x00', '\x00', '\x02', '\x00', '\x00', '\x00', '\x05',
@@ -37,25 +45,131 @@ namespace CascLibTest
                 '\x00', '\x00', '\x00', '\x04', '\xE3', '\xF8', '\x49', '\xB6', '\xC2', '\xB6', '\x06', '\x9C', '\xD7', '\xE8', '\xD3', '\x23',
                 '\x13', '\xDC', '\xDE', '\x42', '\x5A', '\x78', '\xDA', '\x2B', '\x49', '\x2D', '\x2E', '\x01', '\x00', '\x04', '\x5D', '\x01',
                 '\xC1' });
+            buildInfoData = R"(Branch!STRING:0|Active!DEC:1|Build Key!HEX:16|CDN Key!HEX:16|Install Key!HEX:16|IM Size!DEC:4|CDN Path!STRING:0|CDN Hosts!STRING:0|Tags!STRING:0|Armadillo!STRING:0|Last Activated!STRING:0|Version!STRING:0|KeyService!STRING:0
+eu|1|da20cf2b7e65e2f2352397b6295e10c0|07d527cb36304d51fd1c6ef689cbca34|74b367347d660c8c5ef6563159f4d7d2|12274|/tpr/d3|blzddist1-a.akamaihd.net blzddist2-a.akamaihd.net|Windows EU? enUS speech?:Windows EU? enUS text?||2016-10-04T16:01:04Z|2.4.2.39192|http://eu.patch.battle.net:1119/d3/keyring
+)";
+            buildConfigData = R"(# Build Configuration
+
+root = eee756b2f8307b30bad5fd99393d03c9
+install = 748b2047d90dc20e0b935a0a49d0e507
+install-size = 17862
+download = 2747fec970f46a0cf98e971dbca32794
+download-size = 32141073
+partial-priority = ea0d5b151e2f32dacb48517dd1565a65
+partial-priority-size = 0
+encoding = 39135a163b3c371c3bb450fd6613f14e 688062e88dea2bf300588519f18bb363
+encoding-size = 70889899 70867109
+patch = 8712a4f35bc244e6f0ef87e6f41ce57d
+patch-size = 6003601
+patch-config = 243725e28d4778da17f2cfc1a03cf4d0
+build-name = WOW-22996patch7.1.0_Retail
+build-playbuild-installer = ngdptool_casc2
+build-product = WoW
+build-uid = wow)";
 
             std::fstream fs;
 
-            fs.open("none.bin", std::ios_base::out | std::ios_base::binary);
+            fs.open(NONE_FILENAME, std::ios_base::out | std::ios_base::binary);
             fs.write(reinterpret_cast<char*>(noneData.data()), noneData.size());
             fs.close();
 
-            fs.open("zlib.bin", std::ios_base::out | std::ios_base::binary);
+            fs.open(ZLIB_FILENAME, std::ios_base::out | std::ios_base::binary);
             fs.write(reinterpret_cast<char*>(zData.data()), zData.size());
+            fs.close();
+
+            fs.open(BUILD_INFO_FILENAME, std::ios_base::out);
+            fs.write(buildInfoData.c_str(), buildInfoData.size());
+            fs.close();
+
+            fs.open(BUILD_CONFIG_FILENAME, std::ios_base::out);
+            fs.write(buildConfigData.c_str(), buildConfigData.size());
             fs.close();
         }
 
         TEST_CLASS_CLEANUP(Cleanup)
         {
             noneData.clear();
-            std::experimental::filesystem::remove("none.bin");
+            std::experimental::filesystem::remove(NONE_FILENAME);
 
             zData.clear();
-            std::experimental::filesystem::remove("zlib.bin");
+            std::experimental::filesystem::remove(ZLIB_FILENAME);
+
+            buildInfoData.assign("");
+            std::experimental::filesystem::remove(BUILD_INFO_FILENAME);
+
+            buildConfigData.assign("");
+            std::experimental::filesystem::remove(BUILD_CONFIG_FILENAME);
+        }
+
+        TEST_METHOD(ReadBuildInfo)
+        {
+            Parsers::Text::BuildInfo buildInfo(BUILD_INFO_FILENAME);
+            
+            Assert::IsTrue(buildInfo.size() == 1);
+            Assert::IsTrue(buildInfo.build(0).count("Branch") == 1, L"Missing key 'Branch'");
+            Assert::AreEqual("eu"s, buildInfo.build(0).at("Branch"), L"Wrong value for key 'Branch'");
+
+            Assert::IsTrue(buildInfo.build(0).count("Active") == 1, L"Missing key 'Active'");
+            Assert::AreEqual("1"s, buildInfo.build(0).at("Active"), L"Wrong value for key 'Active'");
+
+            Assert::IsTrue(buildInfo.build(0).count("Build Key") == 1, L"Missing key 'Build Key'");
+            Assert::AreEqual("da20cf2b7e65e2f2352397b6295e10c0"s, buildInfo.build(0).at("Build Key"), L"Wrong value for key 'Build Key'");
+
+            Assert::IsTrue(buildInfo.build(0).count("CDN Key") == 1, L"Missing key 'CDN Key'");
+            Assert::AreEqual("07d527cb36304d51fd1c6ef689cbca34"s, buildInfo.build(0).at("CDN Key"), L"Wrong value for key 'CDN Key'");
+
+            Assert::IsTrue(buildInfo.build(0).count("Install Key") == 1, L"Missing key 'Install Key'");
+            Assert::AreEqual("74b367347d660c8c5ef6563159f4d7d2"s, buildInfo.build(0).at("Install Key"), L"Wrong value for key 'Install Key'");
+
+            Assert::IsTrue(buildInfo.build(0).count("IM Size") == 1, L"Missing key 'IM Size'");
+            Assert::AreEqual("12274"s, buildInfo.build(0).at("IM Size"), L"Wrong value for key 'IM Size'");
+
+            Assert::IsTrue(buildInfo.build(0).count("CDN Path") == 1, L"Missing key 'CDN Path'");
+            Assert::AreEqual("/tpr/d3"s, buildInfo.build(0).at("CDN Path"), L"Wrong value for key 'CDN Path'");
+
+            Assert::IsTrue(buildInfo.build(0).count("CDN Hosts") == 1, L"Missing key 'CDN Hosts'");
+            Assert::AreEqual("blzddist1-a.akamaihd.net blzddist2-a.akamaihd.net"s, buildInfo.build(0).at("CDN Hosts"), L"Wrong value for key 'CDN Hosts'");
+
+            Assert::IsTrue(buildInfo.build(0).count("Tags") == 1, L"Missing key 'Tags'");
+            Assert::AreEqual("Windows EU? enUS speech?:Windows EU? enUS text?"s, buildInfo.build(0).at("Tags"), L"Wrong value for key 'Tags'");
+
+            Assert::IsTrue(buildInfo.build(0).count("Armadillo") == 1, L"Missing key 'Armadillo'");
+            Assert::AreEqual(""s, buildInfo.build(0).at("Armadillo"), L"Wrong value for key 'Armadillo'");
+
+            Assert::IsTrue(buildInfo.build(0).count("Last Activated") == 1, L"Missing key 'Last Activated'");
+            Assert::AreEqual("2016-10-04T16:01:04Z"s, buildInfo.build(0).at("Last Activated"), L"Wrong value for key 'Last Activated'");
+
+            Assert::IsTrue(buildInfo.build(0).count("Version") == 1, L"Missing key 'Version'");
+            Assert::AreEqual("2.4.2.39192"s, buildInfo.build(0).at("Version"), L"Wrong value for key 'Version'");
+
+            Assert::IsTrue(buildInfo.build(0).count("KeyService") == 1, L"Missing key 'KeyService'");
+            Assert::AreEqual("http://eu.patch.battle.net:1119/d3/keyring"s, buildInfo.build(0).at("KeyService"), L"Wrong value for key 'KeyService'");
+        }
+
+        TEST_METHOD(ReadConfiguration)
+        {
+            Parsers::Text::Configuration configuration(BUILD_CONFIG_FILENAME);
+
+            Assert::IsTrue(configuration.hasKey("root"), L"Missing key 'root'");
+            Assert::AreEqual("eee756b2f8307b30bad5fd99393d03c9"s, configuration["root"].at(0), L"Wrong value for key 'root'");
+
+            Assert::IsTrue(configuration.hasKey("install"), L"Missing key 'install'");
+            Assert::AreEqual("748b2047d90dc20e0b935a0a49d0e507"s, configuration["install"].at(0), L"Wrong value for key 'install'");
+        }
+
+        TEST_METHOD(ReadShmem)
+        {
+            auto stream = std::make_shared<std::ifstream>(R"(I:\Diablo III\Data\data\shmem)", std::ios_base::in | std::ios_base::binary);
+            Parsers::Binary::ShadowMemory shadowMemory(stream);
+        }
+
+        TEST_METHOD(GetFileSize)
+        {
+            IO::Buffer b;
+            b.open(NONE_FILENAME, 0);
+            auto pos = b.pubseekoff(0, std::ios_base::end);
+
+            Assert::AreEqual(8U, (size_t)pos);
         }
 
         TEST_METHOD(NoneHandler)
@@ -143,9 +257,9 @@ namespace CascLibTest
 
         TEST_METHOD(ParseBlockTable)
         {
-            auto blockTableSize = IO::Buffer::getBlockTableSize(noneData.begin());
+            /*auto blockTableSize = IO::Buffer::getBlockTableSize(noneData.begin());
             auto chunks = IO::Buffer::parseBlockTable(noneData.begin() + 8, noneData.begin() + blockTableSize);
-            Assert::AreEqual(2U, chunks.size());
+            Assert::AreEqual(2U, chunks.size());*/
         }
 
         TEST_METHOD(BufferWithNoneHandlers)
@@ -160,15 +274,6 @@ namespace CascLibTest
             Assert::AreEqual(0, equal);
             equal = std::memcmp(arr + 4, noneData.data() + 60 + 6, 4);
             Assert::AreEqual(0, equal);
-        }
-
-        TEST_METHOD(GetFileSize)
-        {
-            IO::Buffer b;
-            b.open("none.bin", 0);
-            auto pos = b.pubseekoff(0, std::ios_base::end);
-
-            Assert::AreEqual(8U, (size_t)pos);
         }
 
         TEST_METHOD(StreamRead)
@@ -197,29 +302,6 @@ namespace CascLibTest
             }
 
             Assert::AreEqual(0, equal);
-        }
-
-        TEST_METHOD(ReadBuildInfo)
-        {
-            Parsers::Text::BuildInfo buildInfo(R"(I:\Diablo III\.build.info)");
-        }
-
-        TEST_METHOD(ReadConfiguration)
-        {
-            Parsers::Text::BuildInfo buildInfo(R"(I:\Diablo III\.build.info)");
-
-            auto buildConfigHash = buildInfo.build(0).at("Build Key");
-
-            IO::StreamAllocator alloc(R"(I:\Diablo III\Data)");
-
-            Parsers::Text::Configuration configuration(
-                alloc.config<true, false>(buildInfo.build(0).at("Build Key")));
-        }
-
-        TEST_METHOD(ReadShmem)
-        {
-            auto stream = std::make_shared<std::ifstream>(R"(I:\Diablo III\Data\data\shmem)", std::ios_base::in | std::ios_base::binary);
-            Parsers::Binary::ShadowMemory shadowMemory(stream);
         }
 
         TEST_METHOD(LoadContainer)

@@ -252,6 +252,7 @@
     <ClInclude Include="Casc\IO\Impl\StreamSource.hpp" />
     <ClInclude Include="Casc\IO\Impl\ZlibHandler.hpp" />
     <ClInclude Include="Casc\IO\StreamAllocator.hpp" />
+    <ClInclude Include="Casc\Parsers\Binary\Parser.hpp" />
     <ClInclude Include="Casc\Parsers\Text\EncodingBlock.hpp" />
     <ClInclude Include="Casc\Parsers\Text\Configuration.hpp" />
     <ClInclude Include="Casc\Parsers\Text\BuildInfo.hpp" />

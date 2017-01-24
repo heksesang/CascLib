@@ -89,7 +89,7 @@ namespace Casc
                 /**
                  * Gets the number of values stored from the last parsed .build.info file.
                  */
-                int size() const
+                size_t size() const
                 {
                     return values.size();
                 }
@@ -125,7 +125,6 @@ namespace Casc
                     fs.seekg(0, std::ios_base::beg);
 
                     std::vector<Key> keys;
-                    std::string str;
 
                     int index = -1;
 
@@ -225,13 +224,16 @@ namespace Casc
                                 buffer[++bufferCurrent] = '\0';
                                 bufferCurrent = -1;
 
-                                str = buffer.get();
-
                                 values.back()[keys[++index].name] = buffer.get();
                                 break;
 
                             case '\n':
                                 currentState = State::ValueBegin;
+                                buffer[++bufferCurrent] = '\0';
+                                bufferCurrent = -1;
+
+                                values.back()[keys[++index].name] = buffer.get();
+
                                 index = -1;
                                 break;
 

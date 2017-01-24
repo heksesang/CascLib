@@ -26,17 +26,18 @@ namespace Casc
 {
     namespace Exceptions
     {
+        template <typename T>
         class InvalidHashException : public CascException
         {
         public:
-            InvalidHashException(uint32_t expected, uint32_t actual, std::string path)
+            InvalidHashException(T expected, T actual, std::string path)
                 : actual(actual), expected(expected), path(path), CascException("The hash of the file did not match the expected value.")
             {
 
             }
 
-            const uint32_t actual;
-            const uint32_t expected;
+            const T actual;
+            const T expected;
             const std::string path;
         };
     }

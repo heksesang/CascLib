@@ -79,7 +79,7 @@
 class MD5
 {
 public:
-    typedef unsigned int size_type; // must be 32bit
+    typedef uint32_t size_type; // must be 32bit
 
     MD5()
     {
@@ -88,21 +88,21 @@ public:
     MD5(const std::string& text)
     {
         init();
-        update(text.c_str(), text.length());
+        update(text.c_str(), static_cast<size_type>(text.length()));
         finalize();
     }
     template <typename Container>
     MD5(const Container& input)
     {
         init();
-        update(input.data(), input.size());
+        update(input.data(), static_cast<size_type>(input.size()));
         finalize();
     }
     template <typename InputIt>
     MD5(InputIt begin, InputIt end)
     {
         init();
-        update(&*begin, end - begin);
+        update(&*begin, static_cast<size_type>(end - begin));
         finalize();
     }
     MD5(std::ifstream &stream, size_type length)
@@ -164,7 +164,7 @@ public:
     }
     void update(const std::vector<char> &input)
     {
-        update((const unsigned char*)&input[0], input.size());
+        update((const unsigned char*)&input[0], static_cast<size_type>(input.size()));
     }
     MD5& finalize()
     {

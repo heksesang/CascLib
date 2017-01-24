@@ -156,7 +156,7 @@ namespace Casc
 namespace std
 {
     template <>
-    class std::hash<Casc::Hex>
+    class hash<Casc::Hex>
     {
     public:
         size_t operator()(const Casc::Hex &key) const

@@ -113,8 +113,8 @@ namespace Casc
                     std::string path(256, '\0');
                     file.read(&path[0], 256);
 
-                    int pathTypeLength = path.find_first_of(R"(\)");
-                    if (pathTypeLength != -1)
+                    size_t pathTypeLength = path.find_first_of(R"(\)");
+                    if (pathTypeLength != std::string::npos)
                     {
                         std::string pathType = path.substr(0, pathTypeLength);
 

@@ -149,6 +149,21 @@ namespace Casc
                 }
 
                 /**
+                 * Constructor.
+                 */
+                Configuration(std::string path)
+                {
+                    std::ifstream fs;
+
+                    fs.open(path, std::ios_base::in);
+                    fs.seekg(0, std::ios_base::end);
+
+                    parse(fs);
+
+                    fs.close();
+                }
+
+                /**
                  * Destructor.
                  */
                 virtual ~Configuration()
@@ -162,6 +177,11 @@ namespace Casc
                 const std::vector<std::string> &operator[] (const std::string key) const
                 {
                     return values_.at(key);
+                }
+
+                bool hasKey(const std::string& key) const
+                {
+                    return values_.count(key) > 0;
                 }
             };
         }
