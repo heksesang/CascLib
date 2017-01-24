@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CascLib", "CascLib\CascLib.vcxproj", "{DD09A695-7FDD-45E0-9778-E97A8D40A17F}"
 EndProject
@@ -20,7 +20,6 @@ Global
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Debug|Win32.Build.0 = Debug|Win32
 		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Debug|x64.ActiveCfg = Debug|x64
 		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Debug|x64.Build.0 = Debug|x64
 		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Fast|Win32.ActiveCfg = Fast|Win32
@@ -28,7 +27,6 @@ Global
 		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Fast|x64.ActiveCfg = Fast|x64
 		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Fast|x64.Build.0 = Fast|x64
 		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Release|Win32.ActiveCfg = Release|Win32
-		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Release|Win32.Build.0 = Release|Win32
 		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Release|x64.ActiveCfg = Release|x64
 		{DD09A695-7FDD-45E0-9778-E97A8D40A17F}.Release|x64.Build.0 = Release|x64
 		{2FFC49A4-865F-4A94-89DB-8ACCF9739585}.Debug|Win32.ActiveCfg = Debug|Win32
